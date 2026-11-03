@@ -53,7 +53,11 @@ const Online = (() => {
     $("btn-logout").addEventListener("click", () => auth?.signOut().then(() => hooks.showScreen("menu-screen")));
     $("me-army").addEventListener("change", () => updateProfile({ army: $("me-army").value }));
     $("user-search").addEventListener("input", renderLobby);
+    $("acct-login").addEventListener("click", () => openAuth("login"));
+    $("acct-register").addEventListener("click", () => openAuth("register"));
+    $("acct-logout").addEventListener("click", () => auth?.signOut());
     setMode("login");
+    renderAccount();
     if (!configured()) return;
     firebase.initializeApp(FIREBASE_CONFIG);
     auth = firebase.auth();
@@ -82,6 +86,30 @@ const Online = (() => {
   }
 
   // ---------------------------------------------------------------- accounts
+  // Sign in / Register from the main menu. Without Firebase set up, explain instead of failing.
+  function openAuth(next) {
+    if (!configured()) return open();
+    if (user && profile) return openLobby();
+    setMode(next);
+    hooks.showScreen("auth-screen");
+  }
+
+  // The main menu's account bar: buttons when signed out, the commander's name when signed in.
+  function renderAccount() {
+    const signedIn = Boolean(user && profile);
+    $("acct-login").hidden = signedIn;
+    $("acct-register").hidden = signedIn;
+    $("acct-logout").hidden = !signedIn;
+    const name = $("account-name");
+    name.replaceChildren();
+    if (signedIn) {
+      name.append(`${ARMIES[profile.army]?.mark || ""} ${profile.name}`);
+      const record = document.createElement("small");
+      record.textContent = `${profile.wins || 0}W · ${profile.losses || 0}L · ${profile.draws || 0}D`;
+      name.appendChild(record);
+    }
+  }
+
   function setMode(next) {
     mode = next;
     $("auth-form").classList.toggle("login", mode === "login");
@@ -133,7 +161,7 @@ const Online = (() => {
     user = u;
     stopLobby();
     clearInterval(heartbeat);
-    if (!u) { profile = null; return; }
+    if (!u) { profile = null; renderAccount(); return; }
     const ref = db.collection("users").doc(u.uid);
     let snap = await ref.get();
     if (!snap.exists) {
@@ -146,6 +174,7 @@ const Online = (() => {
     }
     pendingProfile = null;
     profile = { id: u.uid, ...snap.data() };
+    renderAccount();
     beat();
     heartbeat = setInterval(beat, HEARTBEAT_MS);
     startLobby();
@@ -176,6 +205,7 @@ const Online = (() => {
       const mine = users.find(u => u.id === uid);
       if (mine) profile = mine;
       renderLobby();
+      renderAccount();
     }, () => {}));
     lobbySubs.push(db.collection("challenges").where("to", "==", uid).onSnapshot(snap => {
       const known = new Set(incoming.map(c => c.id));

@@ -169,6 +169,15 @@
     .combo.level-3 .combo-title, .combo.level-4 .combo-title { color: #ffb0a0; text-shadow: 0 0 34px #ff1a00, 0 4px 0 #3a0c04; }
     .combo-tags { margin-top: 8px; color: #fff; font: 12px "Segoe UI", sans-serif; letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 2px 6px #000; }
 
+    /* ---- Account bar on the main menu ---- */
+    .account-bar {
+      position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 2;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .account-bar .btn.small { min-height: 38px; }
+    .account-name { color: var(--gold-light); font: 15px Georgia, serif; white-space: nowrap; }
+    .account-name small { display: block; color: var(--muted); font: 10px "Segoe UI", sans-serif; letter-spacing: 1px; text-transform: uppercase; }
+
     /* ---- Online: auth & lobby ---- */
     .tabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }
     .tab { padding: 7px 16px; border: 1px solid #45473c; border-radius: 3px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; }
@@ -217,6 +226,9 @@
 
     /* ---- Phones: menus ---- */
     @media (max-width: 760px) {
+      /* The account bar sits above the title instead of floating over it. */
+      .account-bar { position: static; justify-content: flex-end; width: 100%; margin-bottom: 8px; }
+      #menu-screen { grid-template-rows: auto 1fr; }
       .screen { place-items: start center; padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom)); }
       .screen-inner, .card { margin: auto 0; }
       .card { padding: 22px 18px; }
@@ -293,6 +305,12 @@
 
   <!-- Title -->
   <section class="screen" id="menu-screen">
+    <div class="account-bar" id="account-bar">
+      <span class="account-name" id="account-name"></span>
+      <button class="btn small" id="acct-login" type="button">Sign in</button>
+      <button class="btn small primary" id="acct-register" type="button">Register</button>
+      <button class="btn small" id="acct-logout" type="button" hidden>Sign out</button>
+    </div>
     <div class="screen-inner">
       <div class="eyebrow">Every capture is a battle</div>
       <h1 class="title">CHESS WARS</h1>
