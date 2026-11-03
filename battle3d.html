@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10120f">
+  <title>Chess Wars — Battle</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #ece7d8;
+      --muted: #9a9c90;
+      --panel: #15171399;
+      --line: #ffffff1f;
+      --gold: #d6ad66;
+      --gold-light: #f0d39a;
+      --danger: #d4564a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; background: #0d0f0c; color: var(--ink); font-family: "Segoe UI", "Trebuchet MS", sans-serif; }
+    button, select { font: inherit; color: inherit; }
+    #stage { position: fixed; inset: 0; }
+    #stage canvas { display: block; touch-action: none; }
+
+    /* ---- Full-screen menus ---- */
+    .screen {
+      position: fixed; inset: 0; z-index: 20;
+      display: none; place-items: center; padding: 20px;
+      background: radial-gradient(ellipse at 50% 0%, #2a2c22d9, #0b0c0af2 70%);
+      overflow-y: auto;
+    }
+    .screen.open { display: grid; }
+    .screen-inner { width: min(980px, 100%); text-align: center; }
+    .eyebrow { color: var(--gold); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
+    .title { margin: 10px 0 8px; font: 400 clamp(38px, 7vw, 74px)/1 Georgia, serif; letter-spacing: 2px; }
+    .lede { max-width: 620px; margin: 0 auto 26px; color: #c4c0b2; font: italic 16px/1.6 Georgia, serif; }
+    .menu-buttons { display: grid; gap: 10px; width: min(320px, 100%); margin: 0 auto; }
+    .btn {
+      min-height: 42px; padding: 9px 16px; cursor: pointer;
+      border: 1px solid #4a4b3f; border-radius: 3px; background: #23261ecc; color: #e0dccd;
+      font-size: 13px; letter-spacing: .5px; transition: border-color 120ms, background 120ms;
+    }
+    .btn:hover { border-color: var(--gold); background: #2e3127; }
+    .btn.primary { border-color: #a07f45; background: #7f6436; color: #fff4d6; }
+    .btn.primary:hover { background: #937540; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn.small { min-height: 34px; padding: 6px 11px; font-size: 12px; }
+    .link-row { margin-top: 18px; font-size: 12px; color: var(--muted); }
+    .link-row a { color: var(--gold-light); }
+
+    .army-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 22px 0; }
+    .army-card {
+      display: grid; gap: 6px; padding: 16px 12px; cursor: pointer; text-align: center;
+      border: 1px solid #3b3d33; border-radius: 4px; background: #1b1d18e6;
+      transition: transform 120ms, border-color 120ms;
+    }
+    .army-card:hover, .army-card:focus-visible { transform: translateY(-3px); border-color: var(--gold); outline: none; }
+    .army-card .icons { font-size: 26px; letter-spacing: 2px; }
+    .army-card .name { font: 17px Georgia, serif; }
+    .army-card .units { color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+    .chapters { display: grid; gap: 9px; max-width: 640px; margin: 22px auto; text-align: left; }
+    .chapter {
+      display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center;
+      padding: 12px 14px; border: 1px solid #3b3d33; border-radius: 4px; background: #1b1d18e6;
+    }
+    .chapter.locked { opacity: .45; }
+    .chapter.done { border-color: #6f6040; }
+    .chapter .num { font: 22px Georgia, serif; color: var(--gold); text-align: center; }
+    .chapter .ch-title { font: 16px Georgia, serif; }
+    .chapter .ch-sub { margin-top: 3px; color: var(--muted); font-size: 11px; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: min(520px, 100%); margin: 24px auto; text-align: left; }
+    .form-grid label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; }
+    .form-grid select { width: 100%; padding: 9px 8px; border: 1px solid #45473c; border-radius: 3px; background: #131510; }
+
+    /* ---- Story card ---- */
+    .card {
+      width: min(560px, 100%); padding: 30px 28px; text-align: center;
+      border: 1px solid #766845; background: linear-gradient(160deg, #22241dee, #151712f5);
+      box-shadow: 0 24px 80px #000c;
+    }
+    .card h2 { margin: 8px 0 14px; font: 400 30px/1.15 Georgia, serif; }
+    .card p { margin: 0 0 14px; color: #d6d1c2; font: 16px/1.6 Georgia, serif; }
+    .card .quote { color: var(--gold-light); font-style: italic; }
+    .card-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+
+    /* ---- In-game HUD ---- */
+    #hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; display: none; }
+    #hud.open { display: block; }
+    #hud > * { pointer-events: auto; }
+    .hud-top {
+      position: absolute; top: 0; left: 0; right: 0;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+      padding: 14px 16px; background: linear-gradient(#000a, transparent); pointer-events: none;
+    }
+    .hud-top > * { pointer-events: auto; }
+    .hud-title { font: 18px Georgia, serif; }
+    .hud-sub { margin-top: 3px; color: var(--muted); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+    .turn-banner {
+      padding: 7px 14px; border: 1px solid #d6ad6670; border-radius: 3px; background: #15171399;
+      color: var(--gold-light); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap;
+    }
+    .turn-banner.thinking { animation: pulse 1s ease-in-out infinite; }
+    .turn-banner.check { border-color: var(--danger); color: #ffb3a8; }
+    @keyframes pulse { 50% { opacity: .45; } }
+    .hud-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+    .hud-buttons .btn { min-height: 32px; padding: 5px 10px; font-size: 11px; background: #15171399; backdrop-filter: blur(4px); }
+    .hud-buttons .btn[aria-pressed="false"] { opacity: .55; }
+
+    .side-panel {
+      position: absolute; right: 16px; top: 74px; width: 220px;
+      border: 1px solid var(--line); border-radius: 4px; background: var(--panel); backdrop-filter: blur(6px);
+    }
+    .side-panel h3 { margin: 0; padding: 10px 12px; border-bottom: 1px solid var(--line); font: 13px Georgia, serif; color: #d8d2c1; }
+    .captured { padding: 8px 12px; font-size: 18px; line-height: 1.3; min-height: 30px; }
+    .captured small { display: block; color: var(--muted); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; }
+    .move-log { max-height: 200px; overflow-y: auto; padding: 6px 12px 10px; font: 12px Georgia, serif; scrollbar-width: thin; }
+    .move-log .row { display: grid; grid-template-columns: 26px 1fr 1fr; padding: 2px 0; border-bottom: 1px solid #ffffff08; }
+    .move-log .n { color: var(--muted); font-size: 10px; }
+
+    .narration {
+      position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+      width: min(640px, calc(100% - 32px)); padding: 11px 16px;
+      border-left: 2px solid var(--gold); background: #15171399; backdrop-filter: blur(6px);
+      font: italic 15px/1.45 Georgia, serif; text-align: center;
+    }
+    .narration .label { display: block; margin-bottom: 3px; color: var(--gold); font: normal 9px "Segoe UI", sans-serif; letter-spacing: 2px; text-transform: uppercase; }
+
+    /* ---- Cinematic overlay ---- */
+    .letterbox { position: fixed; left: 0; right: 0; z-index: 8; height: 0; background: #000; transition: height 380ms ease; pointer-events: none; }
+    .letterbox.top { top: 0; }
+    .letterbox.bottom { bottom: 0; }
+    body.cinematic .letterbox { height: 11vh; }
+    body.cinematic #hud { opacity: 0; transition: opacity 250ms; }
+    #hud { transition: opacity 250ms; }
+    .kill-caption {
+      position: fixed; left: 0; right: 0; bottom: 2.5vh; z-index: 9; padding: 0 20px;
+      text-align: center; font: italic clamp(16px, 2.6vw, 26px)/1.3 Georgia, serif; color: #f3e4bf;
+      text-shadow: 0 2px 10px #000; opacity: 0; transform: translateY(8px); transition: opacity 300ms, transform 300ms; pointer-events: none;
+    }
+    .kill-caption.show { opacity: 1; transform: none; }
+    .kill-caption .who { display: block; margin-bottom: 4px; color: var(--gold); font: 11px "Segoe UI", sans-serif; letter-spacing: 3px; text-transform: uppercase; font-style: normal; }
+    .flash { position: fixed; inset: 0; z-index: 7; background: #fff; opacity: 0; pointer-events: none; transition: opacity 400ms; }
+
+    /* ---- Battle fury meter ---- */
+    .turn-wrap { display: grid; justify-items: center; gap: 5px; }
+    .fury { width: 170px; height: 5px; border-radius: 3px; background: #ffffff1a; overflow: hidden; }
+    .fury-fill { width: 0; height: 100%; background: linear-gradient(90deg, #d6ad66, #ff7a2a, #ff2a10); transition: width 600ms ease; }
+    .fury-label { color: var(--muted); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; }
+    .fury-label.hot { color: #ff9a5a; animation: pulse 1.2s ease-in-out infinite; }
+
+    /* ---- Kill combo banner ---- */
+    .combo {
+      position: fixed; left: 50%; top: 22vh; z-index: 10; transform: translate(-50%, 0) scale(.6);
+      text-align: center; opacity: 0; pointer-events: none; transition: opacity 200ms, transform 260ms cubic-bezier(.2, 1.6, .4, 1);
+    }
+    .combo.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    .combo-title {
+      font: 900 clamp(34px, 7vw, 76px)/1 Georgia, serif; letter-spacing: 3px; text-transform: uppercase; white-space: nowrap;
+      color: #ffe2a0; -webkit-text-stroke: 2px #6b1a08; text-shadow: 0 0 24px #ff5a1a, 0 4px 0 #3a0c04;
+    }
+    .combo.level-3 .combo-title, .combo.level-4 .combo-title { color: #ffb0a0; text-shadow: 0 0 34px #ff1a00, 0 4px 0 #3a0c04; }
+    .combo-tags { margin-top: 8px; color: #fff; font: 12px "Segoe UI", sans-serif; letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 2px 6px #000; }
+
+    #loading { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: #0d0f0c; color: var(--muted); font: italic 16px Georgia, serif; text-align: center; padding: 20px; }
+
+    @media (max-width: 760px) {
+      .army-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .form-grid { grid-template-columns: 1fr; }
+      .hud-top { flex-wrap: wrap; padding: 10px; }
+      .turn-wrap { order: 3; width: 100%; }
+      .turn-banner { width: 100%; text-align: center; }
+      .side-panel { display: none; }
+      .narration { bottom: 12px; font-size: 13px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .turn-banner.thinking { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+  <div id="loading">Raising the armies…</div>
+
+  <!-- Title -->
+  <section class="screen" id="menu-screen">
+    <div class="screen-inner">
+      <div class="eyebrow">Every capture is a battle</div>
+      <h1 class="title">CHESS WARS</h1>
+      <p class="lede">The rules of chess, unchanged. The pieces, alive. Lead an army across the board and watch every capture play out.</p>
+      <div class="menu-buttons">
+        <button class="btn primary" id="menu-story" type="button">Story campaign</button>
+        <button class="btn" id="menu-continue" type="button" hidden>Continue campaign</button>
+        <button class="btn" id="menu-skirmish" type="button">Skirmish</button>
+      </div>
+      <div class="link-row">Prefer a flat board? <a href="index.html">Play the 2D version</a></div>
+    </div>
+  </section>
+
+  <!-- Story: choose an army -->
+  <section class="screen" id="army-screen">
+    <div class="screen-inner">
+      <div class="eyebrow">Story campaign</div>
+      <h2 class="title" style="font-size: clamp(30px, 5vw, 48px)">Choose your army</h2>
+      <p class="lede">An ancient board has woken and pulled eight armies out of time. Only one can leave it. Win every battle and yours walks home.</p>
+      <div class="army-grid" id="army-grid"></div>
+      <button class="btn" type="button" data-back>Back</button>
+    </div>
+  </section>
+
+  <!-- Story: chapter list -->
+  <section class="screen" id="campaign-screen">
+    <div class="screen-inner">
+      <div class="eyebrow" id="campaign-army"></div>
+      <h2 class="title" style="font-size: clamp(30px, 5vw, 48px)">The Campaign</h2>
+      <div class="chapters" id="chapters"></div>
+      <div class="card-buttons">
+        <button class="btn" type="button" data-back>Main menu</button>
+        <button class="btn" type="button" id="campaign-reset">Change army</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Skirmish setup -->
+  <section class="screen" id="skirmish-screen">
+    <div class="screen-inner">
+      <div class="eyebrow">Skirmish</div>
+      <h2 class="title" style="font-size: clamp(30px, 5vw, 48px)">Set the field</h2>
+      <div class="form-grid">
+        <div><label for="sk-white">Ivory army (moves first)</label><select id="sk-white"></select></div>
+        <div><label for="sk-black">Onyx army</label><select id="sk-black"></select></div>
+        <div>
+          <label for="sk-opponent">Opponent</label>
+          <select id="sk-opponent">
+            <option value="b">Computer plays Onyx</option>
+            <option value="w">Computer plays Ivory</option>
+            <option value="human">Human (same device)</option>
+          </select>
+        </div>
+        <div>
+          <label for="sk-depth">Computer rank</label>
+          <select id="sk-depth">
+            <option value="1">Recruit</option>
+            <option value="2" selected>Veteran</option>
+            <option value="3">Warlord</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-buttons">
+        <button class="btn" type="button" data-back>Back</button>
+        <button class="btn primary" type="button" id="sk-start">To battle</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Story / result card -->
+  <section class="screen" id="card-screen">
+    <div class="card">
+      <div class="eyebrow" id="card-eyebrow"></div>
+      <h2 id="card-title"></h2>
+      <div id="card-body"></div>
+      <div class="card-buttons" id="card-buttons"></div>
+    </div>
+  </section>
+
+  <!-- Promotion -->
+  <section class="screen" id="promo-screen">
+    <div class="card">
+      <div class="eyebrow">Promotion</div>
+      <h2>A new champion rises</h2>
+      <p id="promo-text"></p>
+      <div class="card-buttons" id="promo-buttons"></div>
+    </div>
+  </section>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <div>
+        <div class="hud-title" id="hud-title"></div>
+        <div class="hud-sub" id="hud-sub"></div>
+      </div>
+      <div class="turn-wrap">
+        <div class="turn-banner" id="turn-banner" aria-live="polite"></div>
+        <div class="fury" title="Battle fury: rises with kills, checks and combos"><div class="fury-fill" id="fury-fill"></div></div>
+        <div class="fury-label" id="fury-label">Calm</div>
+      </div>
+      <div class="hud-buttons">
+        <button class="btn" id="btn-undo" type="button">↶ Undo</button>
+        <button class="btn" id="btn-view" type="button">⟳ View</button>
+        <button class="btn" id="btn-taunt" type="button">⚑ Taunt</button>
+        <button class="btn" id="btn-cine" type="button" aria-pressed="true">🎬 Cinematics</button>
+        <button class="btn" id="btn-blood" type="button" aria-pressed="true">🩸 Blood</button>
+        <button class="btn" id="btn-sound" type="button" aria-pressed="true">🔊 Sound</button>
+        <button class="btn" id="btn-menu" type="button">☰ Menu</button>
+      </div>
+    </div>
+    <aside class="side-panel">
+      <h3>Fallen</h3>
+      <div class="captured"><small id="cap-w-label">Ivory losses</small><span id="cap-w"></span></div>
+      <div class="captured"><small id="cap-b-label">Onyx losses</small><span id="cap-b"></span></div>
+      <h3>Field report</h3>
+      <div class="move-log" id="move-log"></div>
+    </aside>
+    <div class="narration" aria-live="polite"><span class="label" id="narr-label">The opening</span><span id="narr-text"></span></div>
+  </div>
+
+  <div class="letterbox top"></div>
+  <div class="letterbox bottom"></div>
+  <div class="kill-caption" id="kill-caption"><span class="who" id="kill-who"></span><span id="kill-text"></span></div>
+  <div class="flash" id="flash"></div>
+  <div class="combo" id="combo" aria-live="assertive"><div class="combo-title" id="combo-title"></div><div class="combo-tags" id="combo-tags"></div></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script src="js/armies.js"></script>
+  <script src="js/engine.js"></script>
+  <script type="module">
+    // Three.js arrives as an ES module; the game files are classic scripts so the page also runs from file://.
+    try {
+      const THREE = await import("three");
+      const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
+      window.THREE = THREE;
+      window.OrbitControls = OrbitControls;
+      for (const src of ["js/models3d.js", "js/fx3d.js", "js/terrain3d.js", "js/war3d.js", "js/stage3d.js", "js/game3d.js"]) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error(`Could not load ${src}`));
+          document.body.appendChild(script);
+        });
+      }
+    } catch (error) {
+      document.getElementById("loading").textContent =
+        `The armies could not be raised: ${error.message}. Three.js loads from the internet, so check your connection.`;
+      console.error(error);
+    }
+  </script>
+</body>
+</html>

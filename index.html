@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10120f">
+  <title>Warboard — The last move wins</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #e8e5da;
+      --muted: #92958b;
+      --panel: #191c18;
+      --panel-raised: #20231e;
+      --line: #34372f;
+      --gold: #d6ad66;
+      --gold-light: #f0d39a;
+      --olive: #65704f;
+      --square-light: #c9c4ad;
+      --square-dark: #4a5441;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 48% -14%, #343729 0, transparent 43%),
+        #10120f;
+      color: var(--ink);
+      font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+    }
+
+    button, select { font: inherit; }
+    button { color: inherit; }
+
+    .app-shell { max-width: 1480px; margin: 0 auto; padding: 0 34px 32px; }
+    .topbar {
+      height: 82px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #ffffff12;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 1px solid #d6ad665c;
+      color: var(--gold);
+      font-size: 19px;
+      transform: rotate(45deg);
+    }
+    .brand-mark span { transform: rotate(-45deg); }
+    .brand-name { font-family: Georgia, serif; font-size: 19px; letter-spacing: 3px; }
+    .brand-tag { margin-top: 3px; color: var(--muted); font-size: 9px; letter-spacing: 2px; }
+    .top-note { color: #a7a89d; font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; }
+    .top-note span { color: var(--gold); }
+    .top-note a { color: var(--gold-light); text-decoration: none; border-bottom: 1px solid #d6ad6670; }
+    .top-note a:hover { border-color: var(--gold-light); }
+
+    .page-heading { padding: 27px 0 23px; text-align: center; }
+    .eyebrow { color: var(--gold); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; }
+    h1 { margin: 8px 0 5px; font: 400 clamp(27px, 4vw, 39px)/1.15 Georgia, serif; letter-spacing: 1px; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .game-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 302px;
+      gap: 27px;
+      align-items: start;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .battlefield { min-width: 0; }
+    .side-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      min-height: 42px;
+      padding: 0 2px 10px;
+    }
+    .commander { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .commander:last-child { flex-direction: row-reverse; text-align: right; }
+    .faction-mark { font-size: 21px; }
+    .commander-name { font: 15px Georgia, serif; }
+    .commander-side { margin-top: 3px; color: var(--muted); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; }
+    .turn-pill {
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      color: #c6c4b8;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .turn-pill.live { border-color: #d6ad665c; color: var(--gold-light); }
+
+    .board-frame {
+      position: relative;
+      padding: 8px;
+      border: 1px solid #77735566;
+      background: linear-gradient(135deg, #393b31, #171915 24%, #25271f 78%, #393b31);
+      box-shadow: 0 18px 48px #0008, inset 0 0 0 1px #ffffff08;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid #11130f;
+    }
+    .square {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .square.light { background: var(--square-light); }
+    .square.dark { background: var(--square-dark); }
+    .square::before {
+      position: absolute;
+      top: 3px;
+      left: 4px;
+      color: #161a13a3;
+      font: 10px Georgia, serif;
+      pointer-events: none;
+    }
+    .square[data-file="0"]::before { content: attr(data-rank); }
+    .square[data-rank="7"]::after {
+      position: absolute;
+      right: 5px;
+      bottom: 3px;
+      color: #161a13a3;
+      content: attr(data-file-label);
+      font: 10px Georgia, serif;
+      pointer-events: none;
+    }
+    .square:hover { filter: brightness(1.09); }
+    .square.selected { box-shadow: inset 0 0 0 4px #e4b85e; z-index: 1; }
+    .square.last-move { background-image: linear-gradient(#e9c26440, #e9c26440); }
+    .square.in-check { background-image: radial-gradient(circle, #bd4d3c99, #bd4d3c38 68%); }
+    .move-dot {
+      position: absolute;
+      width: 23%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #10130d52;
+      pointer-events: none;
+    }
+    .square:has(.piece) .move-dot { display: none; }
+    .capture-ring {
+      position: absolute;
+      inset: 5%;
+      border: 4px solid #bf5948a3;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .piece {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      width: 78%;
+      height: 82%;
+      place-items: center;
+      border: 1px solid #ffffff50;
+      border-radius: 5px 5px 9px 9px;
+      box-shadow: 0 4px 5px #0004, inset 0 1px #ffffff40;
+      font-size: clamp(19px, 4.2vw, 43px);
+      line-height: 1;
+      transition: transform 120ms ease;
+      pointer-events: none;
+      user-select: none;
+    }
+    .square:hover .piece { transform: translateY(-2px); }
+    .piece.white {
+      background: linear-gradient(150deg, #e5dfc9, #b9b29a);
+      color: #31372c;
+      text-shadow: 0 1px #fff8;
+    }
+    .piece.black {
+      border-color: #aeb39a70;
+      background: linear-gradient(150deg, #414940, #252b25);
+      color: #e1d3ac;
+      text-shadow: 0 2px 3px #000a;
+    }
+    .piece .role-mark {
+      position: absolute;
+      right: 3px;
+      bottom: 2px;
+      color: #22261cbd;
+      font: 700 8px "Segoe UI", sans-serif;
+    }
+    .piece.black .role-mark { color: #e0d9c5d1; }
+    .square:focus-visible { outline: 3px solid #e8c06e; outline-offset: -3px; z-index: 2; }
+
+    .board-caption {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 2px 0;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 1px;
+    }
+    .board-caption strong { color: #c1bda9; font-weight: 500; }
+    .mobile-actions { display: none; }
+
+    .war-room {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(150deg, #1d201b, #171915);
+    }
+    .panel-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--line);
+    }
+    .panel-title { color: #d8d2c1; font: 14px Georgia, serif; letter-spacing: .5px; }
+    .panel-label { color: var(--muted); font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase; }
+    .faction-controls { padding: 13px 15px 15px; }
+    .select-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .select-row + .select-row { margin-top: 11px; }
+    .roster { margin-top: 11px; color: var(--muted); font-size: 10px; line-height: 1.6; }
+    .roster strong { color: #cfc9b8; font-weight: 500; }
+    .turn-pill.thinking { animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .45; } }
+    .select-wrap label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    select {
+      width: 100%;
+      padding: 8px 7px;
+      border: 1px solid #42443a;
+      border-radius: 2px;
+      background: #131510;
+      color: var(--ink);
+      font-size: 11px;
+      cursor: pointer;
+    }
+    select:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; padding: 0 15px 14px; }
+    .action-button, .taunt-button, .claim-button {
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid #45463b;
+      border-radius: 2px;
+      background: #252820;
+      color: #dad6c9;
+      font-size: 10px;
+      cursor: pointer;
+      transition: border-color 120ms ease, background 120ms ease;
+    }
+    .action-button:hover, .taunt-button:hover, .claim-button:hover { border-color: #a48a56; background: #303226; }
+    .action-button.primary { border-color: #927541; background: #806639; color: #fff3d3; }
+    .action-button:disabled { opacity: .43; cursor: not-allowed; }
+
+    .moment {
+      min-height: 90px;
+      padding: 14px 15px 13px;
+      border-left: 2px solid var(--gold);
+      background: linear-gradient(110deg, #29271f, #1c1e19);
+    }
+    .moment-label { margin-bottom: 8px; color: var(--gold); font-size: 9px; letter-spacing: 1.8px; text-transform: uppercase; }
+    .moment-text { color: #e6e1d3; font: italic 14px/1.45 Georgia, serif; }
+    .moment-text.impact { animation: impact 480ms ease-out; }
+    @keyframes impact { 0% { transform: translateX(5px); opacity: .4; } 100% { transform: translateX(0); opacity: 1; } }
+
+    .captured-block { padding: 12px 15px 13px; }
+    .captured-line { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+    .captured-line + .captured-line { margin-top: 5px; }
+    .captured-label { width: 48px; color: var(--muted); font-size: 9px; letter-spacing: .8px; text-transform: uppercase; }
+    .captured-icons { min-width: 0; color: #d9d3c4; font-size: 16px; letter-spacing: 1px; overflow-wrap: anywhere; }
+    .empty-captures { color: #62665b; font-size: 11px; }
+
+    .move-list { max-height: 186px; overflow-y: auto; padding: 5px 12px 9px; scrollbar-color: #505145 transparent; scrollbar-width: thin; }
+    .move-row { display: grid; grid-template-columns: 29px 1fr 1fr; align-items: center; min-height: 27px; border-bottom: 1px solid #ffffff09; font: 12px Georgia, serif; }
+    .move-number { color: #777a6e; font-size: 10px; }
+    .move-san { color: #ded9cb; }
+    .move-san.recent { color: var(--gold-light); }
+    .empty-moves { padding: 12px 3px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .claim-button { display: none; width: calc(100% - 30px); margin: 0 15px 13px; border-color: #706443; color: #e4ce9c; }
+    .claim-button.available { display: block; }
+
+    .footer-note { padding-top: 19px; color: #676a60; font-size: 10px; text-align: center; letter-spacing: .7px; }
+    .promotion-overlay {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: #080a08c9;
+      backdrop-filter: blur(4px);
+    }
+    .promotion-overlay.open { display: grid; }
+    .promotion-card { width: min(390px, 100%); padding: 23px; border: 1px solid #766845; background: #1b1e19; box-shadow: 0 18px 70px #000a; text-align: center; }
+    .promotion-card h2 { margin: 0 0 6px; font: 23px Georgia, serif; }
+    .promotion-card p { margin: 0 0 17px; color: var(--muted); font-size: 12px; }
+    .promotion-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .promotion-choice { display: grid; gap: 7px; place-items: center; padding: 12px 4px; border: 1px solid var(--line); background: #24271f; cursor: pointer; }
+    .promotion-choice:hover { border-color: var(--gold); }
+    .promotion-choice span:first-child { font-size: 27px; }
+    .promotion-choice span:last-child { color: #c9c4b6; font-size: 10px; text-transform: capitalize; }
+
+    @media (max-width: 850px) {
+      .app-shell { padding-right: 20px; padding-left: 20px; }
+      .game-layout { grid-template-columns: minmax(0, 1fr) 270px; gap: 17px; }
+    }
+    @media (max-width: 680px) {
+      .app-shell { padding: 0 12px 22px; }
+      .topbar { height: 64px; }
+      .top-note { font-size: 8px; letter-spacing: 1px; }
+      .page-heading { padding: 22px 0 18px; }
+      .subtitle { font-size: 11px; }
+      .game-layout { display: flex; flex-direction: column; gap: 17px; align-items: stretch; }
+      .side-labels { min-height: 37px; padding-bottom: 8px; }
+      .commander-name { font-size: 13px; }
+      .turn-pill { padding: 5px 6px; font-size: 8px; }
+      .board-frame { padding: 5px; }
+      .square::before { top: 2px; left: 3px; font-size: 8px; }
+      .square[data-rank="7"]::after { right: 3px; bottom: 2px; font-size: 8px; }
+      .board-caption { font-size: 9px; }
+      .mobile-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-top: 12px; }
+      .mobile-actions .action-button { min-height: 35px; padding: 6px 4px; font-size: 9px; }
+      .war-room { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .factions-panel, .log-panel { grid-column: 1 / -1; }
+      .captured-panel, .moment { min-width: 0; }
+      .moment { min-height: 95px; padding: 11px; }
+      .moment-text { font-size: 12px; }
+      .captured-block { padding: 10px; }
+      .captured-label { width: 42px; font-size: 8px; }
+      .captured-icons { font-size: 13px; }
+      .panel-heading { padding: 11px 12px; }
+      .move-list { max-height: 155px; }
+      .footer-note { padding-top: 15px; font-size: 9px; }
+    }
+    @media (max-width: 370px) {
+      .app-shell { padding-right: 8px; padding-left: 8px; }
+      .brand-name { font-size: 16px; }
+      .top-note { font-size: 7px; }
+      .piece { font-size: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span>♜</span></div>
+        <div>
+          <div class="brand-name">WARBOARD</div>
+          <div class="brand-tag">A GAME OF GENERALS</div>
+        </div>
+      </div>
+      <div class="top-note"><span>64 squares</span> &nbsp;·&nbsp; <a href="battle3d.html">Play the 3D battle →</a></div>
+    </header>
+
+    <main>
+      <section class="page-heading" aria-labelledby="page-title">
+        <div class="eyebrow">The old game. A new battlefield.</div>
+        <h1 id="page-title">Choose your army.</h1>
+        <p class="subtitle">Same board. Same rules. A little more theater.</p>
+      </section>
+
+      <div class="game-layout">
+        <section class="battlefield" aria-label="Chess battlefield">
+          <div class="side-labels">
+            <div class="commander" id="white-commander"></div>
+            <div class="turn-pill live" id="turn-indicator" aria-live="polite">White to move</div>
+            <div class="commander" id="black-commander"></div>
+          </div>
+          <div class="board-frame">
+            <div class="board" id="board" role="grid" aria-label="Chess board"></div>
+          </div>
+          <div class="board-caption"><span><strong id="board-status">Battle is joined</strong></span><span>SELECT A UNIT TO ISSUE ORDERS</span></div>
+          <div class="mobile-actions" aria-label="Game controls">
+            <button class="action-button" id="undo-mobile" type="button">↶ &nbsp; Undo</button>
+            <button class="action-button" id="taunt-mobile" type="button">⚑ &nbsp; Taunt</button>
+            <button class="action-button primary" id="new-mobile" type="button">New battle</button>
+          </div>
+        </section>
+
+        <aside class="war-room" aria-label="War room">
+          <section class="panel factions-panel">
+            <div class="panel-heading">
+              <span class="panel-title">Choose your sides</span>
+              <span class="panel-label">Two armies</span>
+            </div>
+            <div class="faction-controls">
+              <div class="select-row">
+                <div class="select-wrap">
+                  <label for="white-faction">Ivory side</label>
+                  <select id="white-faction"></select>
+                </div>
+                <div class="select-wrap">
+                  <label for="black-faction">Onyx side</label>
+                  <select id="black-faction"></select>
+                </div>
+              </div>
+              <div class="select-row">
+                <div class="select-wrap">
+                  <label for="opponent">Opponent</label>
+                  <select id="opponent">
+                    <option value="human">Human (same device)</option>
+                    <option value="b">Computer plays Onyx</option>
+                    <option value="w">Computer plays Ivory</option>
+                  </select>
+                </div>
+                <div class="select-wrap">
+                  <label for="difficulty">Computer rank</label>
+                  <select id="difficulty">
+                    <option value="1">Recruit</option>
+                    <option value="2" selected>Veteran</option>
+                    <option value="3">Warlord</option>
+                    <option value="4">Grand Marshal (slow)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="roster" id="roster"></div>
+            </div>
+            <div class="actions">
+              <button class="action-button" id="undo" type="button" disabled>↶ &nbsp; Undo move</button>
+              <button class="action-button" id="flip" type="button">⇅ &nbsp; Flip board</button>
+              <button class="action-button" id="taunt" type="button">⚑ &nbsp; Taunt</button>
+              <button class="action-button primary" id="new-game" type="button">New battle</button>
+            </div>
+          </section>
+
+          <section class="moment" aria-live="polite" aria-atomic="true">
+            <div class="moment-label" id="moment-label">The opening</div>
+            <div class="moment-text" id="moment-text">The lines are drawn. Make the first move.</div>
+          </section>
+
+          <section class="panel captured-panel">
+            <div class="panel-heading">
+              <span class="panel-title">Taken from the field</span>
+              <span class="panel-label">Captured</span>
+            </div>
+            <div class="captured-block">
+              <div class="captured-line"><span class="captured-label" id="white-captured-label">Ivory</span><span class="captured-icons" id="white-captured"><span class="empty-captures">No losses</span></span></div>
+              <div class="captured-line"><span class="captured-label" id="black-captured-label">Onyx</span><span class="captured-icons" id="black-captured"><span class="empty-captures">No losses</span></span></div>
+            </div>
+          </section>
+
+          <section class="panel log-panel">
+            <div class="panel-heading">
+              <span class="panel-title">Field report</span>
+              <span class="panel-label">Moves</span>
+            </div>
+            <div class="move-list" id="move-list" aria-live="polite"><div class="empty-moves">The field is quiet. For now.</div></div>
+            <button class="claim-button" id="claim-draw" type="button">Claim a draw</button>
+          </section>
+        </aside>
+      </div>
+      <div class="footer-note">Chess rules remain in command &nbsp;·&nbsp; Theatrics are optional, the checkmate isn't</div>
+    </main>
+  </div>
+
+  <div class="promotion-overlay" id="promotion-overlay" role="dialog" aria-modal="true" aria-labelledby="promotion-title">
+    <div class="promotion-card">
+      <h2 id="promotion-title">A new champion</h2>
+      <p id="promotion-text">Your pawn has reached the far line. Choose its new rank.</p>
+      <div class="promotion-options" id="promotion-options"></div>
+    </div>
+  </div>
+
+  <script src="js/armies.js"></script>
+  <script src="js/engine.js"></script>
+  <script>
+    "use strict";
+
+    const ROLE_MARKS = { k: "K", q: "Q", r: "R", b: "B", n: "N", p: "P" };
+    const ARMY_OPTIONS = Object.entries(ARMIES).map(([id, army]) =>
+      `<option value="${id}">${army.name}</option>`
+    ).join("");
+
+    const boardEl = document.getElementById("board");
+    const history = [];
+    let position;
+    let selected = null;
+    let legalTargets = [];
+    let flipped = false;
+    let gameOver = false;
+    let pendingPromotion = null;
+    let lastMove = null;
+    let moveLog = [];
+    let positionCounts = new Map();
+    let armies = { w: "marines", b: "undead" };
+    let aiColor = null;
+    let aiDepth = 2;
+    let aiThinking = false;
+    let aiToken = 0;
+    const squares = [];
+
+    function armyName(color) {
+      return ARMIES[armies[color]].name;
+    }
+
+    function roleName(type) {
+      return ROLE_NAMES[type] || "piece";
+    }
+
+    function unitName(color, type) {
+      return ARMIES[armies[color]].units[type];
+    }
+
+    function sideName(color) {
+      return armies.w === armies.b ? (color === "w" ? "Ivory" : "Onyx") : armyName(color);
+    }
+
+    function updateMoment(label, text) {
+      document.getElementById("moment-label").textContent = label;
+      const element = document.getElementById("moment-text");
+      element.textContent = text;
+      element.classList.remove("impact");
+      void element.offsetWidth;
+      element.classList.add("impact");
+    }
+
+    function buildBoard() {
+      boardEl.replaceChildren();
+      squares.length = 0;
+      for (let visibleRow = 0; visibleRow < 8; visibleRow += 1) {
+        for (let visibleCol = 0; visibleCol < 8; visibleCol += 1) {
+          const row = flipped ? 7 - visibleRow : visibleRow;
+          const col = flipped ? 7 - visibleCol : visibleCol;
+          const square = document.createElement("button");
+          square.type = "button";
+          square.className = `square ${(row + col) % 2 === 0 ? "light" : "dark"}`;
+          square.dataset.row = String(row);
+          square.dataset.col = String(col);
+          square.dataset.file = String(col);
+          square.dataset.rank = String(8 - row);
+          square.dataset.fileLabel = FILES[col];
+          square.setAttribute("role", "gridcell");
+          square.setAttribute("aria-label", `${FILES[col]}${8 - row}`);
+          square.addEventListener("click", onSquareClick);
+          boardEl.appendChild(square);
+          squares.push(square);
+        }
+      }
+      render();
+    }
+
+    function boardSquare(row, col) {
+      return squares.find(square => Number(square.dataset.row) === row && Number(square.dataset.col) === col);
+    }
+
+    function render() {
+      for (const square of squares) {
+        const row = Number(square.dataset.row);
+        const col = Number(square.dataset.col);
+        square.replaceChildren();
+        const piece = pieceAt(position, row, col);
+        const isSelected = selected && selected.row === row && selected.col === col;
+        const target = legalTargets.find(move => move.toRow === row && move.toCol === col);
+        const inCheck = piece && piece.type === "k" && isInCheck(position, piece.color);
+        square.classList.toggle("selected", Boolean(isSelected));
+        square.classList.toggle("last-move", Boolean(lastMove &&
+          ((lastMove.fromRow === row && lastMove.fromCol === col) ||
+           (lastMove.toRow === row && lastMove.toCol === col))));
+        square.classList.toggle("in-check", Boolean(inCheck));
+        if (piece) {
+          const army = ARMIES[armies[piece.color]];
+          const sprite = document.createElement("span");
+          sprite.className = `piece ${piece.color === "w" ? "white" : "black"}`;
+          sprite.setAttribute("aria-hidden", "true");
+          sprite.title = `${army.name} ${army.units[piece.type]} (${roleName(piece.type)})`;
+          const icon = document.createElement("span");
+          icon.textContent = army.pieces[piece.type];
+          sprite.appendChild(icon);
+          const mark = document.createElement("span");
+          mark.className = "role-mark";
+          mark.textContent = ROLE_MARKS[piece.type];
+          sprite.appendChild(mark);
+          square.appendChild(sprite);
+        }
+        if (target) {
+          const marker = document.createElement("span");
+          marker.className = target.enPassant || piece ? "capture-ring" : "move-dot";
+          square.appendChild(marker);
+        }
+      }
+      renderHeader();
+      renderCaptured();
+      renderMoves();
+      renderStatus();
+      document.getElementById("undo").disabled = history.length === 0 || Boolean(aiThinking);
+      document.getElementById("undo-mobile").disabled = history.length === 0 || Boolean(aiThinking);
+      const canClaim = !gameOver && !aiThinking && position.turn !== aiColor &&
+        ((positionCounts.get(positionKey(position)) || 0) >= 3 || position.halfmove >= 100);
+      document.getElementById("claim-draw").classList.toggle("available", canClaim);
+    }
+
+    function renderHeader() {
+      for (const color of ["w", "b"]) {
+        const army = ARMIES[armies[color]];
+        const container = document.getElementById(`${color === "w" ? "white" : "black"}-commander`);
+        container.innerHTML = `<span class="faction-mark" aria-hidden="true">${army.mark}</span><div><div class="commander-name">${army.name}</div><div class="commander-side">${color === "w" ? "Ivory side" : "Onyx side"}</div></div>`;
+        document.getElementById(`${color === "w" ? "white" : "black"}-captured-label`).textContent =
+          color === "w" ? "Ivory" : "Onyx";
+      }
+      const turnEl = document.getElementById("turn-indicator");
+      turnEl.textContent = gameOver ? "Battle ended" : aiThinking ? `${sideName(position.turn)} is plotting…` : `${sideName(position.turn)} to move`;
+      turnEl.classList.toggle("live", !gameOver);
+      turnEl.classList.toggle("thinking", Boolean(aiThinking));
+      const roster = document.getElementById("roster");
+      roster.replaceChildren();
+      for (const color of ["w", "b"]) {
+        const army = ARMIES[armies[color]];
+        const line = document.createElement("div");
+        const label = document.createElement("strong");
+        label.textContent = `${color === "w" ? "Ivory" : "Onyx"}: `;
+        line.append(label, ["k", "q", "r", "b", "n", "p"].map(type =>
+          `${army.pieces[type]} ${army.units[type]}`).join(" · "));
+        roster.appendChild(line);
+      }
+    }
+
+    function renderCaptured() {
+      for (const color of ["w", "b"]) {
+        const captured = history.map(entry => entry.captured && entry.captured.color === color ? entry.captured : null).filter(Boolean);
+        const container = document.getElementById(`${color === "w" ? "white" : "black"}-captured`);
+        if (!captured.length) {
+          container.innerHTML = '<span class="empty-captures">No losses</span>';
+          continue;
+        }
+        container.textContent = "";
+        for (const piece of captured) {
+          const icon = document.createElement("span");
+          icon.textContent = ARMIES[armies[color]].pieces[piece.type];
+          icon.title = `${armyName(color)} ${unitName(color, piece.type)}`;
+          container.appendChild(icon);
+        }
+      }
+    }
+
+    function renderMoves() {
+      const list = document.getElementById("move-list");
+      list.replaceChildren();
+      if (!moveLog.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-moves";
+        empty.textContent = "The field is quiet. For now.";
+        list.appendChild(empty);
+        return;
+      }
+      for (let index = 0; index < moveLog.length; index += 2) {
+        const row = document.createElement("div");
+        row.className = "move-row";
+        const number = document.createElement("span");
+        number.className = "move-number";
+        number.textContent = `${Math.floor(index / 2) + 1}.`;
+        row.appendChild(number);
+        for (const entry of [moveLog[index], moveLog[index + 1]]) {
+          const cell = document.createElement("span");
+          cell.className = `move-san${entry === moveLog[moveLog.length - 1] ? " recent" : ""}`;
+          cell.textContent = entry ? entry.notation : "";
+          row.appendChild(cell);
+        }
+        list.appendChild(row);
+      }
+      list.scrollTop = list.scrollHeight;
+    }
+
+    function renderStatus() {
+      const status = document.getElementById("board-status");
+      if (gameOver) {
+        status.textContent = gameOver;
+      } else if (isInCheck(position, position.turn)) {
+        status.textContent = `${sideName(position.turn)} ${unitName(position.turn, "k")} in check`;
+      } else {
+        status.textContent = "Battle is joined";
+      }
+    }
+
+    function onSquareClick(event) {
+      if (gameOver || pendingPromotion || aiThinking || position.turn === aiColor) return;
+      const row = Number(event.currentTarget.dataset.row);
+      const col = Number(event.currentTarget.dataset.col);
+      const piece = pieceAt(position, row, col);
+      const targetMove = legalTargets.find(move => move.toRow === row && move.toCol === col);
+      if (selected && targetMove) {
+        if (pieceAt(position, selected.row, selected.col).type === "p" && (row === 0 || row === 7)) {
+          showPromotion(targetMove);
+        } else {
+          commitMove(targetMove);
+        }
+        return;
+      }
+      if (piece && piece.color === position.turn) {
+        selected = { row, col };
+        legalTargets = legalMoves(position, row, col);
+      } else {
+        selected = null;
+        legalTargets = [];
+      }
+      render();
+    }
+
+    function showPromotion(move) {
+      pendingPromotion = move;
+      const options = document.getElementById("promotion-options");
+      options.replaceChildren();
+      for (const type of ["q", "r", "b", "n"]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "promotion-choice";
+        const icon = document.createElement("span");
+        icon.textContent = ARMIES[armies[position.turn]].pieces[type];
+        const label = document.createElement("span");
+        label.textContent = unitName(position.turn, type);
+        button.title = ROLE_NAMES[type];
+        button.append(icon, label);
+        button.addEventListener("click", () => {
+          document.getElementById("promotion-overlay").classList.remove("open");
+          const chosenMove = pendingPromotion;
+          pendingPromotion = null;
+          commitMove(chosenMove, type);
+        });
+        options.appendChild(button);
+      }
+      document.getElementById("promotion-text").textContent =
+        `Your ${unitName(position.turn, "p")} has reached the far line. Choose its new rank.`;
+      document.getElementById("promotion-overlay").classList.add("open");
+    }
+
+    function commitMove(move, promotion = "q") {
+      const movingPiece = pieceAt(position, move.fromRow, move.fromCol);
+      const movingColor = movingPiece.color;
+      const pieceName = unitName(movingColor, movingPiece.type);
+      const origin = algebraic(move.fromRow, move.fromCol);
+      const destination = algebraic(move.toRow, move.toCol);
+      const snapshot = clonePosition(position);
+      const result = applyMove(position, move, promotion);
+      history.push({ position: snapshot, captured: result.captured, moveLogLength: moveLog.length, lastMove });
+      selected = null;
+      legalTargets = [];
+      lastMove = move;
+      const key = positionKey(position);
+      positionCounts.set(key, (positionCounts.get(key) || 0) + 1);
+      const check = isInCheck(position, position.turn);
+      const replies = allLegalMoves(position, position.turn);
+      const suffix = check ? (replies.length ? "+" : "#") : "";
+      const promoted = movingPiece.type === "p" && (move.toRow === 0 || move.toRow === 7);
+      const notation = moveNotation(snapshot, move, movingPiece, result.captured, promoted ? promotion : null, suffix);
+      moveLog.push({ notation, color: movingColor });
+      const enemyKing = `${sideName(position.turn)} ${unitName(position.turn, "k")}`;
+
+      if (!replies.length && check) {
+        gameOver = `${sideName(movingColor)} wins`;
+        updateMoment("Checkmate", `${sideName(movingColor)} claims the field. The ${enemyKing} has nowhere left to turn.`);
+      } else if (!replies.length) {
+        gameOver = "Draw by stalemate";
+        updateMoment("Stalemate", "The field falls silent. No king is taken; neither side can make a legal move.");
+      } else if (positionCounts.get(key) >= 5) {
+        gameOver = "Draw by fivefold repetition";
+        updateMoment("The same ground", "The same position has returned for the fifth time. The battle is drawn.");
+      } else if (position.halfmove >= 150) {
+        gameOver = "Draw by the seventy-five-move rule";
+        updateMoment("A long campaign", "Seventy-five moves have passed without a capture or pawn advance. The battle is drawn.");
+      } else if (hasInsufficientMaterial(position)) {
+        gameOver = "Draw by insufficient material";
+        updateMoment("No force to finish it", "Neither army has enough pieces left to force a checkmate. The battle is drawn.");
+      } else if (check) {
+        updateMoment("Check", `${sideName(movingColor)} ${pieceName} ${result.captured ? "strikes" : "moves to"} ${destination}. The ${enemyKing} is under threat.`);
+      } else if (promoted) {
+        updateMoment("A new champion", `A ${sideName(movingColor)} ${unitName(movingColor, "p")} rises to ${unitName(movingColor, promotion)} on ${destination}.`);
+      } else if (result.captured) {
+        updateMoment("A unit has fallen", `${sideName(movingColor)} ${pieceName} takes the ${sideName(result.captured.color)} ${unitName(result.captured.color, result.captured.type)} on ${destination}.`);
+      } else if (move.castle) {
+        updateMoment("The line holds", `${sideName(movingColor)} secures the ${unitName(movingColor, "k")} behind the ${unitName(movingColor, "r")}. The battle moves on.`);
+      } else {
+        updateMoment("Orders carried out", `${sideName(movingColor)} ${pieceName} advances from ${origin} to ${destination}.`);
+      }
+      render();
+      maybeAiMove();
+    }
+
+    function maybeAiMove() {
+      if (gameOver || aiThinking || position.turn !== aiColor) return;
+      aiThinking = true;
+      const token = ++aiToken;
+      render();
+      setTimeout(() => {
+        if (token !== aiToken) return;
+        const move = chooseAiMove(position, aiDepth, positionCounts);
+        aiThinking = false;
+        if (move) commitMove(move, "q");
+        else render();
+      }, 450);
+    }
+
+    function undoOnce() {
+      const previous = history.pop();
+      const currentKey = positionKey(position);
+      const count = positionCounts.get(currentKey) || 0;
+      if (count <= 1) positionCounts.delete(currentKey);
+      else positionCounts.set(currentKey, count - 1);
+      position = previous.position;
+      moveLog.length = previous.moveLogLength;
+      lastMove = previous.lastMove;
+    }
+
+    function undoMove() {
+      if (!history.length || pendingPromotion || aiThinking) return;
+      undoOnce();
+      // Against the computer, step back to the human's own turn.
+      if (position.turn === aiColor && history.length) undoOnce();
+      selected = null;
+      legalTargets = [];
+      gameOver = false;
+      updateMoment("Regroup", "The last order is recalled. Make another move.");
+      render();
+      maybeAiMove();
+    }
+
+    function drawTaunt() {
+      if (gameOver) return;
+      const color = position.turn;
+      const options = ARMIES[armies[color]].taunts;
+      const taunt = options[Math.floor(Math.random() * options.length)];
+      updateMoment("A message across the field", `${sideName(color)}: “${taunt}”`);
+    }
+
+    function startNewGame() {
+      armies.w = document.getElementById("white-faction").value;
+      armies.b = document.getElementById("black-faction").value;
+      aiToken += 1;
+      aiThinking = false;
+      position = initialPosition();
+      history.length = 0;
+      moveLog = [];
+      selected = null;
+      legalTargets = [];
+      lastMove = null;
+      gameOver = false;
+      pendingPromotion = null;
+      positionCounts = new Map([[positionKey(position), 1]]);
+      document.getElementById("promotion-overlay").classList.remove("open");
+      updateMoment("The opening", `${sideName("w")} faces ${sideName("b")}. The lines are drawn.`);
+      render();
+      maybeAiMove();
+    }
+
+    // Switching armies mid-battle only re-skins the units; the position is untouched.
+    function onArmyChange() {
+      armies.w = document.getElementById("white-faction").value;
+      armies.b = document.getElementById("black-faction").value;
+      render();
+    }
+
+    function onOpponentChange() {
+      const value = document.getElementById("opponent").value;
+      aiColor = value === "human" ? null : value;
+      aiDepth = Number(document.getElementById("difficulty").value);
+      if (aiColor && flipped !== (aiColor === "w")) {
+        flipped = aiColor === "w";
+        buildBoard();
+      }
+      if (aiThinking && position.turn !== aiColor) {
+        aiToken += 1;
+        aiThinking = false;
+      }
+      render();
+      maybeAiMove();
+    }
+
+    document.getElementById("white-faction").innerHTML = ARMY_OPTIONS;
+    document.getElementById("black-faction").innerHTML = ARMY_OPTIONS;
+    document.getElementById("white-faction").value = armies.w;
+    document.getElementById("black-faction").value = armies.b;
+    document.getElementById("white-faction").addEventListener("change", onArmyChange);
+    document.getElementById("black-faction").addEventListener("change", onArmyChange);
+    document.getElementById("opponent").addEventListener("change", onOpponentChange);
+    document.getElementById("difficulty").addEventListener("change", onOpponentChange);
+    document.getElementById("new-game").addEventListener("click", startNewGame);
+    document.getElementById("new-mobile").addEventListener("click", startNewGame);
+    document.getElementById("undo").addEventListener("click", undoMove);
+    document.getElementById("undo-mobile").addEventListener("click", undoMove);
+    document.getElementById("flip").addEventListener("click", () => { flipped = !flipped; buildBoard(); });
+    document.getElementById("taunt").addEventListener("click", drawTaunt);
+    document.getElementById("taunt-mobile").addEventListener("click", drawTaunt);
+    document.getElementById("claim-draw").addEventListener("click", () => {
+      if ((positionCounts.get(positionKey(position)) || 0) >= 3) {
+        gameOver = "Draw by threefold repetition";
+        updateMoment("Draw claimed", "The same position has appeared three times. The battle is drawn.");
+      } else if (position.halfmove >= 100) {
+        gameOver = "Draw by the fifty-move rule";
+        updateMoment("Draw claimed", "Fifty moves have passed without a capture or pawn advance. The battle is drawn.");
+      }
+      render();
+    });
+
+    position = initialPosition();
+    positionCounts.set(positionKey(position), 1);
+    buildBoard();
+  </script>
+</body>
+</html>

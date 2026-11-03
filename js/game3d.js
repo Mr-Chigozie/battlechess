@@ -1,0 +1,661 @@
+"use strict";
+
+// Game flow for the 3D battle: turns, AI, HUD, story campaign and skirmish setup.
+(() => {
+  const $ = id => document.getElementById(id);
+  const STORY_KEY = "chesswars.story.v1";
+  const SETTINGS_KEY = "chesswars.settings.v1";
+  const CHAPTER_ORDER = ["marines", "vikings", "spartans", "samurai", "knights", "undead", "asgardians", "machines"];
+  const CHAPTER_DEPTH = [1, 1, 2, 2, 2, 3, 3];
+  const RANKS = { 1: "Recruit", 2: "Veteran", 3: "Warlord" };
+  const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+  const STREAK_NAMES = [null, null, "Double Kill", "Triple Kill", "Rampage", "Massacre", "Unstoppable", "Godlike"];
+  const FURY = [[0.75, "Inferno"], [0.45, "Burning"], [0.2, "Clash"], [0, "Calm"]];
+
+  let position = initialPosition();
+  let history = [];
+  let moveLog = [];
+  let positionCounts = new Map();
+  let armies = { w: "knights", b: "undead" };
+  let aiColor = null;
+  let aiDepth = 2;
+  let gameOver = false;
+  let busy = false;
+  let aiThinking = false;
+  let token = 0;
+  let selected = null;
+  let targets = [];
+  let lastMove = null;
+  let paused = false;
+  let streak = { w: 0, b: 0 }; // consecutive turns on which each side captured
+  let lastFury = 0;
+  let furyNews = null;
+  let comboTimer = null;
+  let battle = null; // { mode: "story" | "skirmish", chapter, enemy, title, sub, setup }
+
+  // ---------------------------------------------------------------- storage
+  const load = (key, fallback) => {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch (error) { return fallback; }
+  };
+  const save = (key, value) => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) { /* progress just won't persist */ }
+  };
+  let story = load(STORY_KEY, null);
+  const settings = { cinematics: true, sound: true, blood: true, ...load(SETTINGS_KEY, {}) };
+
+  // ---------------------------------------------------------------- naming
+  const army = color => ARMIES[armies[color]];
+  const sideName = color => armies.w === armies.b ? (color === "w" ? "Ivory" : "Onyx") : army(color).name;
+  const unitName = (color, type) => army(color).units[type];
+  const pick = list => list[Math.floor(Math.random() * list.length)];
+
+  // ---------------------------------------------------------------- screens
+  function showScreen(id) {
+    for (const screen of document.querySelectorAll(".screen")) screen.classList.toggle("open", screen.id === id);
+    $("hud").classList.toggle("open", !id);
+  }
+
+  function showCard({ eyebrow = "", title, paragraphs = [], quote = null, buttons }) {
+    $("card-eyebrow").textContent = eyebrow;
+    $("card-title").textContent = title;
+    const body = $("card-body");
+    body.replaceChildren();
+    for (const text of paragraphs) {
+      const p = document.createElement("p");
+      p.textContent = text;
+      body.appendChild(p);
+    }
+    if (quote) {
+      const p = document.createElement("p");
+      p.className = "quote";
+      p.textContent = quote;
+      body.appendChild(p);
+    }
+    const row = $("card-buttons");
+    row.replaceChildren();
+    for (const { label, action, primary } of buttons) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `btn${primary ? " primary" : ""}`;
+      button.textContent = label;
+      button.addEventListener("click", action);
+      row.appendChild(button);
+    }
+    showScreen("card-screen");
+  }
+
+  function narrate(label, text) {
+    $("narr-label").textContent = label;
+    $("narr-text").textContent = text;
+  }
+
+  // ---------------------------------------------------------------- HUD
+  function updateHud() {
+    if (battle) {
+      $("hud-title").textContent = battle.title;
+      $("hud-sub").textContent = battle.sub;
+    }
+    const banner = $("turn-banner");
+    const inCheck = !gameOver && isInCheck(position, position.turn);
+    banner.textContent = gameOver ? gameOver
+      : aiThinking ? `${sideName(position.turn)} is plotting…`
+      : `${sideName(position.turn)} to move${inCheck ? " — check!" : ""}`;
+    banner.classList.toggle("thinking", aiThinking);
+    banner.classList.toggle("check", inCheck);
+    $("btn-undo").disabled = busy || aiThinking || !history.length;
+
+    for (const color of ["w", "b"]) {
+      $(`cap-${color}-label`).textContent = `${sideName(color)} losses`;
+      $(`cap-${color}`).textContent = history.filter(h => h.captured && h.captured.color === color)
+        .map(h => army(color).pieces[h.captured.type]).join(" ") || "—";
+    }
+    const log = $("move-log");
+    log.replaceChildren();
+    for (let i = 0; i < moveLog.length; i += 2) {
+      const row = document.createElement("div");
+      row.className = "row";
+      for (const text of [`${i / 2 + 1}.`, moveLog[i], moveLog[i + 1] || ""]) {
+        const cell = document.createElement("span");
+        cell.textContent = text;
+        if (text.endsWith(".")) cell.className = "n";
+        row.appendChild(cell);
+      }
+      log.appendChild(row);
+    }
+    log.scrollTop = log.scrollHeight;
+
+    const king = findKing(position, position.turn);
+    Stage.setMarkers({ selected, targets, lastMove, check: inCheck ? king : null });
+    updateFury();
+  }
+
+  // ---------------------------------------------------------------- combos & battle fury
+  // Fury climbs with material lost, recent bloodshed, checks and kill streaks; it drives the fire on the board.
+  function tension() {
+    const lost = history.reduce((sum, h) => sum + (h.captured ? VALUE[h.captured.type] : 0), 0);
+    const recent = history.slice(-6).filter(h => h.captured).length;
+    const check = isInCheck(position, position.turn) ? 0.2 : 0;
+    return Math.min(1, lost / 40 + recent * 0.07 + check + Math.max(streak.w, streak.b) * 0.06);
+  }
+
+  function updateFury() {
+    const fury = battle ? tension() : 0;
+    War.setTension(fury);
+    $("fury-fill").style.width = `${Math.round(fury * 100)}%`;
+    const label = $("fury-label");
+    label.textContent = FURY.find(([min]) => fury >= min)[1];
+    label.classList.toggle("hot", fury >= 0.45);
+    // Announced once the current move finishes, so the kill narration doesn't bury it.
+    if (fury >= 0.75 && lastFury < 0.75) {
+      FX.sfx("drums");
+      furyNews = ["Inferno", "The whole field is ablaze. Only one army will walk out of this fire."];
+    } else if (fury >= 0.45 && lastFury < 0.45) {
+      FX.sfx("drums");
+      furyNews = ["The board burns", "Fire spreads across the battlefield. This is war."];
+    }
+    lastFury = fury;
+  }
+
+  // Works out the combo for a capture. Must run before the move is pushed onto history.
+  function comboFor(mover, victim, victimSq, check) {
+    streak[mover.color] += 1;
+    const tags = [];
+    // Ordered by prestige: the first tag becomes the headline when there's no streak.
+    if (!history.some(h => h.captured)) tags.push("First Blood");
+    if (VALUE[victim.type] - VALUE[mover.type] >= 4) tags.push("Giant Slayer");
+    const prev = history[history.length - 1];
+    if (prev?.captured && lastMove && lastMove.toRow === victimSq.row && lastMove.toCol === victimSq.col) tags.push("Revenge");
+    if (check) tags.push("With check");
+    const count = streak[mover.color];
+    const title = count >= 2 ? STREAK_NAMES[Math.min(count, STREAK_NAMES.length - 1)] : tags.shift() || null;
+    if (!title) return null;
+    return { title, tags, level: count >= 2 ? count - 1 : 1, count };
+  }
+
+  function showCombo(combo) {
+    const el = $("combo");
+    $("combo-title").textContent = combo.title;
+    $("combo-tags").textContent = [combo.count >= 2 ? `${combo.count} kills in a row` : null, ...combo.tags].filter(Boolean).join("  ·  ");
+    el.className = `combo show level-${Math.min(combo.level, 4)}`;
+    FX.sfx("combo", combo.level);
+    clearTimeout(comboTimer);
+    comboTimer = setTimeout(() => el.classList.remove("show"), 2300);
+  }
+
+  // ---------------------------------------------------------------- battle lifecycle
+  function startBattle(setup) {
+    const { white, black, ai, depth, theme, title, sub, mode, chapter = null, enemy = null } = setup;
+    token += 1;
+    paused = false;
+    armies = { w: white, b: black };
+    aiColor = ai;
+    aiDepth = depth;
+    battle = { mode, chapter, enemy, title, sub, setup };
+    position = initialPosition();
+    history = [];
+    moveLog = [];
+    positionCounts = new Map([[positionKey(position), 1]]);
+    gameOver = false;
+    busy = false;
+    aiThinking = false;
+    selected = null;
+    targets = [];
+    lastMove = null;
+    streak = { w: 0, b: 0 };
+    lastFury = 0;
+    Stage.setTheme(theme);
+    Stage.syncAll(position, armies);
+    Stage.setView(aiColor === "w" ? "b" : "w", false);
+    battle.sub += ` · ${Terrain.name}`;
+    narrate("The opening", `${sideName("w")} faces ${sideName("b")} on ${Terrain.name}. Click one of your units to give orders. Drag to look around.`);
+    showScreen(null);
+    updateHud();
+    maybeAi();
+  }
+
+  function onSquare(sq) {
+    if (busy || gameOver || aiThinking || position.turn === aiColor) return;
+    const move = targets.find(m => m.toRow === sq.row && m.toCol === sq.col);
+    if (selected && move) {
+      const piece = position.board[selected.row][selected.col];
+      if (piece.type === "p" && (move.toRow === 0 || move.toRow === 7)) askPromotion(piece.color).then(type => execute(move, type));
+      else execute(move);
+      return;
+    }
+    const piece = position.board[sq.row][sq.col];
+    if (piece && piece.color === position.turn) {
+      selected = sq;
+      targets = legalMoves(position, sq.row, sq.col);
+      FX.sfx("select");
+      const unit = unitName(piece.color, piece.type);
+      narrate(`${sideName(piece.color)} ${unit}`, targets.length
+        ? `Moves like a ${ROLE_NAMES[piece.type]}. ${targets.length} order${targets.length === 1 ? "" : "s"} available.`
+        : `The ${unit} has nowhere to go.`);
+    } else {
+      selected = null;
+      targets = [];
+    }
+    updateHud();
+  }
+
+  function askPromotion(color) {
+    return new Promise(resolve => {
+      $("promo-text").textContent = `Your ${unitName(color, "p")} reached the far line. Choose what it becomes.`;
+      const row = $("promo-buttons");
+      row.replaceChildren();
+      for (const type of ["q", "r", "b", "n"]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `btn${type === "q" ? " primary" : ""}`;
+        button.textContent = `${army(color).pieces[type]} ${unitName(color, type)}`;
+        button.title = ROLE_NAMES[type];
+        button.addEventListener("click", () => { showScreen(null); resolve(type); });
+        row.appendChild(button);
+      }
+      showScreen("promo-screen");
+    });
+  }
+
+  async function execute(move, promotion = "q") {
+    const myToken = token;
+    busy = true;
+    selected = null;
+    targets = [];
+    const snapshot = clonePosition(position);
+    const mover = snapshot.board[move.fromRow][move.fromCol];
+    const victimSq = move.enPassant ? { row: move.fromRow, col: move.toCol }
+      : snapshot.board[move.toRow][move.toCol] ? { row: move.toRow, col: move.toCol } : null;
+    const victim = victimSq ? snapshot.board[victimSq.row][victimSq.col] : null;
+    const promoted = mover.type === "p" && (move.toRow === 0 || move.toRow === 7);
+
+    const savedStreak = { ...streak };
+    const result = applyMove(position, move, promotion);
+    const check = isInCheck(position, position.turn);
+    const combo = victim ? comboFor(mover, victim, victimSq, check) : null;
+    if (!victim) streak[mover.color] = 0;
+    history.push({ position: snapshot, captured: result.captured, moveLogLength: moveLog.length, lastMove, streak: savedStreak });
+    const key = positionKey(position);
+    positionCounts.set(key, (positionCounts.get(key) || 0) + 1);
+    const replies = allLegalMoves(position, position.turn);
+    moveLog.push(moveNotation(snapshot, move, mover, result.captured, promoted ? promotion : null, check ? (replies.length ? "+" : "#") : ""));
+    updateHud();
+
+    const style = Models.attackStyle(armies[mover.color], mover.type);
+    const killGround = victim ? Terrain.at(victimSq.row, victimSq.col) : null;
+    const caption = victim ? {
+      who: `${sideName(mover.color)} ${unitName(mover.color, mover.type)}  vs  ${sideName(victim.color)} ${unitName(victim.color, victim.type)}`,
+      text: `The ${unitName(mover.color, mover.type)} ${Stage.killVerb(style)} the ${unitName(victim.color, victim.type)}${killGround ? ` ${killGround.label}` : ""}!`,
+      onImpact: combo ? () => showCombo(combo) : null
+    } : null;
+    if (victim) narrate(combo ? combo.title : "Battle", caption.text);
+    try {
+      await Stage.playMove({
+        move, victimSq, caption, combo: combo ? combo.level : 0,
+        promote: promoted ? () => Models.buildUnit(armies[mover.color], promotion, mover.color) : null
+      });
+    } catch (error) {
+      console.error(error);
+      Stage.syncAll(position, armies);
+    }
+    if (myToken !== token) return;
+    lastMove = move;
+
+    const to = `${FILES[move.toCol]}${8 - move.toRow}`;
+    const enemyKing = `${sideName(position.turn)} ${unitName(position.turn, "k")}`;
+    if (!replies.length && check) {
+      gameOver = `${sideName(mover.color)} wins`;
+      narrate("Checkmate", `The ${enemyKing} is trapped. ${sideName(mover.color)} claims the board.`);
+      updateHud();
+      await Stage.playCheckmate(findKing(position, position.turn));
+      return finish(mover.color, "checkmate");
+    }
+    let draw = null;
+    if (!replies.length) draw = "Stalemate. Neither side can make a legal move.";
+    else if (positionCounts.get(key) >= 3) draw = "The same position has come up three times. The battle is a draw.";
+    else if (position.halfmove >= 100) draw = "Fifty moves with no capture or pawn move. The battle is a draw.";
+    else if (hasInsufficientMaterial(position)) draw = "Neither side has enough left to force checkmate.";
+    if (draw) {
+      gameOver = "Draw";
+      narrate("Draw", draw);
+      updateHud();
+      return finish(null, draw);
+    }
+
+    if (check) {
+      FX.sfx("check");
+      narrate("Check", `The ${enemyKing} is under attack!`);
+    } else if (promoted) {
+      narrate("A new champion", `The ${unitName(mover.color, "p")} rises as a ${unitName(mover.color, promotion)} on ${to}.`);
+    } else if (move.castle) {
+      narrate("The line holds", `The ${unitName(mover.color, "k")} retreats behind the ${unitName(mover.color, "r")}.`);
+    } else if (!victim) {
+      const ground = Terrain.at(move.toRow, move.toCol);
+      narrate("Orders carried out", `${sideName(mover.color)} ${unitName(mover.color, mover.type)} advances to ${to}${ground ? `, ${ground.label}` : ""}.`);
+    }
+    if (furyNews) {
+      narrate(...furyNews);
+      furyNews = null;
+    }
+    busy = false;
+    updateHud();
+    maybeAi();
+  }
+
+  function maybeAi() {
+    if (paused || gameOver || busy || aiThinking || position.turn !== aiColor) return;
+    aiThinking = true;
+    updateHud();
+    const myToken = token;
+    // Let the banner paint before the search blocks the main thread.
+    setTimeout(() => {
+      if (myToken !== token) return;
+      const move = chooseAiMove(position, aiDepth, positionCounts);
+      aiThinking = false;
+      if (move) execute(move, "q");
+      else updateHud();
+    }, 380);
+  }
+
+  function undo() {
+    if (busy || aiThinking || !history.length) return;
+    const step = () => {
+      const prev = history.pop();
+      const key = positionKey(position);
+      const count = positionCounts.get(key) || 0;
+      if (count <= 1) positionCounts.delete(key); else positionCounts.set(key, count - 1);
+      position = prev.position;
+      moveLog.length = prev.moveLogLength;
+      lastMove = prev.lastMove;
+      streak = prev.streak;
+    };
+    step();
+    if (position.turn === aiColor && history.length) step();
+    gameOver = false;
+    selected = null;
+    targets = [];
+    Stage.syncAll(position, armies);
+    narrate("Regroup", "The last order is recalled.");
+    updateHud();
+    maybeAi();
+  }
+
+  function finish(winner, reason) {
+    busy = false;
+    updateHud();
+    const human = aiColor ? (aiColor === "w" ? "b" : "w") : null;
+    const won = winner && (!human || winner === human);
+    FX.sfx(winner && won ? "fanfare" : "defeat");
+    setTimeout(() => {
+      if (battle.mode === "story") storyResult(winner === human, winner === null, reason);
+      else skirmishResult(winner, reason);
+    }, 1800);
+  }
+
+  function skirmishResult(winner, reason) {
+    showCard({
+      eyebrow: winner ? "Checkmate" : "Draw",
+      title: winner ? `${sideName(winner)} win the field` : "Neither army yields",
+      paragraphs: [winner ? `The ${sideName(winner === "w" ? "b" : "w")} ${unitName(winner === "w" ? "b" : "w", "k")} has fallen.` : reason],
+      buttons: [
+        { label: "View the board", action: () => showScreen(null) },
+        { label: "Main menu", action: () => showScreen("menu-screen") },
+        { label: "Rematch", primary: true, action: () => startBattle(battle.setup) }
+      ]
+    });
+  }
+
+  // ---------------------------------------------------------------- story campaign
+  const enemiesFor = id => CHAPTER_ORDER.filter(enemy => enemy !== id);
+
+  function storyResult(won, drawn, reason) {
+    const enemy = ARMIES[battle.enemy];
+    if (won) {
+      if (!story.done.includes(battle.enemy)) story.done.push(battle.enemy);
+      save(STORY_KEY, story);
+      const enemies = enemiesFor(story.army);
+      const next = enemies[battle.chapter + 1];
+      if (enemies.every(e => story.done.includes(e))) return finale();
+      showCard({
+        eyebrow: `Chapter ${battle.chapter + 1} · Victory`,
+        title: `${enemy.story.title}: won`,
+        paragraphs: [`The ${enemy.name} are broken.`],
+        quote: enemy.story.victory,
+        buttons: [
+          { label: "Campaign", action: openCampaign },
+          ...(next ? [{ label: "Next chapter", primary: true, action: () => chapterIntro(battle.chapter + 1) }] : [])
+        ]
+      });
+    } else {
+      showCard({
+        eyebrow: `Chapter ${battle.chapter + 1} · ${drawn ? "Stalemate" : "Defeat"}`,
+        title: drawn ? "The field is held by no one" : `Your ${ARMIES[story.army].units.k} has fallen`,
+        paragraphs: [drawn ? reason : `The ${enemy.name} hold the board for now. The board lets you try again.`],
+        buttons: [
+          { label: "Campaign", action: openCampaign },
+          { label: "Try again", primary: true, action: () => beginChapter(battle.chapter) }
+        ]
+      });
+    }
+  }
+
+  function finale() {
+    const mine = ARMIES[story.army];
+    showCard({
+      eyebrow: "Epilogue",
+      title: "The board lets you go",
+      paragraphs: [
+        `Seven armies have fallen. The squares go quiet, and the carved stones slowly let go of the ${mine.name}.`,
+        `Your ${mine.units.k} takes one last look at the board, then leads the army home through a gate of light. The others will be pulled back one day, and the game will start again.`
+      ],
+      quote: "You have mastered the board. Replay any chapter, or start over with a new army.",
+      buttons: [
+        { label: "Campaign", action: openCampaign },
+        { label: "Main menu", primary: true, action: () => showScreen("menu-screen") }
+      ]
+    });
+  }
+
+  function openArmySelect() {
+    const grid = $("army-grid");
+    grid.replaceChildren();
+    for (const [id, info] of Object.entries(ARMIES)) {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "army-card";
+      const icons = document.createElement("div");
+      icons.className = "icons";
+      icons.textContent = `${info.pieces.k}${info.pieces.n}${info.pieces.p}`;
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = info.name;
+      const units = document.createElement("div");
+      units.className = "units";
+      units.textContent = ["k", "q", "r", "b", "n", "p"].map(t => info.units[t]).join(" · ");
+      card.append(icons, name, units);
+      card.addEventListener("click", () => {
+        story = { army: id, done: [] };
+        save(STORY_KEY, story);
+        showCard({
+          eyebrow: "Prologue",
+          title: "The board wakes",
+          paragraphs: [
+            `The ${info.name} wake up on cold stone. There is no sky they know, only a vast board of light and dark squares and seven armies dragged here from other ages.`,
+            "Voices in the stone repeat the old law: move as the pieces move. Take what you can. Protect your king. Only the last army standing goes home."
+          ],
+          quote: `Your ${info.units.k} draws a weapon. "Then we fight."`,
+          buttons: [{ label: "To the campaign", primary: true, action: openCampaign }]
+        });
+      });
+      grid.appendChild(card);
+    }
+    showScreen("army-screen");
+  }
+
+  function openCampaign() {
+    if (!story) return openArmySelect();
+    const mine = ARMIES[story.army];
+    $("campaign-army").textContent = `${mine.mark} ${mine.name} · ${story.done.length} of 7 battles won`;
+    const list = $("chapters");
+    list.replaceChildren();
+    enemiesFor(story.army).forEach((id, index) => {
+      const enemy = ARMIES[id];
+      const done = story.done.includes(id);
+      const unlocked = index === 0 || story.done.includes(enemiesFor(story.army)[index - 1]) || done;
+      const row = document.createElement("div");
+      row.className = `chapter${done ? " done" : ""}${unlocked ? "" : " locked"}`;
+      const num = document.createElement("div");
+      num.className = "num";
+      num.textContent = done ? "✓" : String(index + 1);
+      const text = document.createElement("div");
+      const title = document.createElement("div");
+      title.className = "ch-title";
+      title.textContent = unlocked ? enemy.story.title : "Sealed";
+      const sub = document.createElement("div");
+      sub.className = "ch-sub";
+      sub.textContent = unlocked ? `vs ${enemy.name} · ${RANKS[CHAPTER_DEPTH[index]]}` : "Win the previous chapter to unlock";
+      text.append(title, sub);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `btn small${done ? "" : " primary"}`;
+      button.textContent = done ? "Replay" : "Fight";
+      button.disabled = !unlocked;
+      button.addEventListener("click", () => chapterIntro(index));
+      row.append(num, text, button);
+      list.appendChild(row);
+    });
+    showScreen("campaign-screen");
+  }
+
+  function chapterIntro(index) {
+    const id = enemiesFor(story.army)[index];
+    const enemy = ARMIES[id];
+    showCard({
+      eyebrow: `Chapter ${index + 1} of 7 · ${enemy.name}`,
+      title: enemy.story.title,
+      paragraphs: [enemy.story.intro, `Battlefield: ${Terrain.nameFor(id)}.`],
+      quote: `${enemy.units.k}: “${pick(enemy.taunts)}”`,
+      buttons: [
+        { label: "Campaign", action: openCampaign },
+        { label: "To battle", primary: true, action: () => beginChapter(index) }
+      ]
+    });
+  }
+
+  function beginChapter(index) {
+    const id = enemiesFor(story.army)[index];
+    startBattle({
+      white: story.army, black: id, ai: "b", depth: CHAPTER_DEPTH[index], theme: id, mode: "story", chapter: index, enemy: id,
+      title: `Chapter ${index + 1}: ${ARMIES[id].story.title}`,
+      sub: `${ARMIES[story.army].name} vs ${ARMIES[id].name} · ${RANKS[CHAPTER_DEPTH[index]]}`
+    });
+  }
+
+  // ---------------------------------------------------------------- skirmish
+  function openSkirmish() {
+    for (const [id, initial] of [["sk-white", "knights"], ["sk-black", "undead"]]) {
+      const select = $(id);
+      if (!select.options.length) {
+        for (const [key, info] of Object.entries(ARMIES)) select.add(new Option(`${info.mark} ${info.name}`, key));
+        select.value = initial;
+      }
+    }
+    showScreen("skirmish-screen");
+  }
+
+  function startSkirmish() {
+    const white = $("sk-white").value;
+    const black = $("sk-black").value;
+    const opponent = $("sk-opponent").value;
+    const depth = Number($("sk-depth").value);
+    startBattle({
+      white, black, ai: opponent === "human" ? null : opponent, depth, theme: black, mode: "skirmish",
+      title: "Skirmish",
+      sub: `${ARMIES[white].name} vs ${ARMIES[black].name}${opponent === "human" ? " · two players" : ` · ${RANKS[depth]}`}`
+    });
+  }
+
+  // ---------------------------------------------------------------- menu & wiring
+  function openPause() {
+    // A running animation finishes normally; only a queued AI search is cancelled and re-queued on resume.
+    paused = true;
+    if (aiThinking) {
+      token += 1;
+      aiThinking = false;
+    }
+    const inStory = battle?.mode === "story";
+    showCard({
+      eyebrow: "Paused",
+      title: battle?.title || "Chess Wars",
+      paragraphs: ["The armies hold their positions."],
+      buttons: [
+        { label: "Main menu", action: () => { token += 1; paused = false; battle = null; refreshMenu(); showScreen("menu-screen"); } },
+        ...(inStory ? [{ label: "Restart chapter", action: () => { paused = false; beginChapter(battle.chapter); } }] : []),
+        { label: "Resume", primary: true, action: () => { paused = false; showScreen(null); updateHud(); maybeAi(); } }
+      ]
+    });
+  }
+
+  function refreshMenu() {
+    $("menu-continue").hidden = !story;
+    if (story) $("menu-continue").textContent = `Continue campaign (${ARMIES[story.army].name}, ${story.done.length}/7)`;
+  }
+
+  function setToggle(id, on) {
+    $(id).setAttribute("aria-pressed", String(on));
+  }
+
+  $("menu-story").addEventListener("click", () => (story ? showCard({
+    eyebrow: "Story campaign",
+    title: "Start a new campaign?",
+    paragraphs: [`You already have a campaign with the ${ARMIES[story.army].name} (${story.done.length}/7). A new one starts over with a fresh army.`],
+    buttons: [
+      { label: "Continue existing", action: openCampaign },
+      { label: "New campaign", primary: true, action: openArmySelect }
+    ]
+  }) : openArmySelect()));
+  $("menu-continue").addEventListener("click", openCampaign);
+  $("menu-skirmish").addEventListener("click", openSkirmish);
+  $("sk-start").addEventListener("click", startSkirmish);
+  $("campaign-reset").addEventListener("click", openArmySelect);
+  for (const back of document.querySelectorAll("[data-back]")) back.addEventListener("click", () => { refreshMenu(); showScreen("menu-screen"); });
+  $("btn-undo").addEventListener("click", undo);
+  $("btn-view").addEventListener("click", () => Stage.toggleView());
+  $("btn-menu").addEventListener("click", openPause);
+  $("btn-taunt").addEventListener("click", () => {
+    if (!gameOver) narrate("A message across the field", `${sideName(position.turn)}: “${pick(army(position.turn).taunts)}”`);
+  });
+  $("btn-cine").addEventListener("click", () => {
+    settings.cinematics = !settings.cinematics;
+    Stage.cinematics = settings.cinematics;
+    setToggle("btn-cine", settings.cinematics);
+    save(SETTINGS_KEY, settings);
+  });
+  $("btn-blood").addEventListener("click", () => {
+    settings.blood = !settings.blood;
+    Stage.blood = settings.blood;
+    setToggle("btn-blood", settings.blood);
+    save(SETTINGS_KEY, settings);
+  });
+  $("btn-sound").addEventListener("click", () => {
+    settings.sound = !settings.sound;
+    FX.muted = !settings.sound;
+    setToggle("btn-sound", settings.sound);
+    save(SETTINGS_KEY, settings);
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && selected) { selected = null; targets = []; updateHud(); }
+  });
+
+  Stage.init($("stage"), onSquare);
+  Stage.cinematics = settings.cinematics;
+  Stage.blood = settings.blood;
+  FX.muted = !settings.sound;
+  setToggle("btn-cine", settings.cinematics);
+  setToggle("btn-blood", settings.blood);
+  setToggle("btn-sound", settings.sound);
+  Stage.setTheme("knights");
+  Stage.syncAll(position, armies);
+  refreshMenu();
+  $("loading").remove();
+  showScreen("menu-screen");
+})();
