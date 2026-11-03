@@ -30,6 +30,9 @@
   let streak = { w: 0, b: 0 }; // consecutive turns on which each side captured
   let lastFury = 0;
   let furyNews = null;
+  let online = null; // { gameId, myColor, opponent, game, recorded } during an online battle
+  let remoteMoves = [];
+  let lastTauntAt = 0;
   let comboTimer = null;
   let battle = null; // { mode: "story" | "skirmish", chapter, enemy, title, sub, setup }
 
@@ -97,12 +100,14 @@
     }
     const banner = $("turn-banner");
     const inCheck = !gameOver && isInCheck(position, position.turn);
+    const waiting = online && position.turn !== online.myColor;
     banner.textContent = gameOver ? gameOver
       : aiThinking ? `${sideName(position.turn)} is plotting…`
+      : online ? (waiting ? `${online.opponent} is thinking…` : `Your move${inCheck ? " — check!" : ""}`)
       : `${sideName(position.turn)} to move${inCheck ? " — check!" : ""}`;
-    banner.classList.toggle("thinking", aiThinking);
+    banner.classList.toggle("thinking", aiThinking || Boolean(waiting && !gameOver));
     banner.classList.toggle("check", inCheck);
-    $("btn-undo").disabled = busy || aiThinking || !history.length;
+    $("btn-undo").disabled = busy || aiThinking || !history.length || Boolean(online);
 
     for (const color of ["w", "b"]) {
       $(`cap-${color}-label`).textContent = `${sideName(color)} losses`;
@@ -184,8 +189,11 @@
 
   // ---------------------------------------------------------------- battle lifecycle
   function startBattle(setup) {
-    const { white, black, ai, depth, theme, title, sub, mode, chapter = null, enemy = null } = setup;
+    const { white, black, ai, depth, theme, title, sub, mode, chapter = null, enemy = null, moves = [] } = setup;
     token += 1;
+    online = setup.online ? { ...setup.online } : null;
+    remoteMoves = moves;
+    lastTauntAt = Date.now();
     paused = false;
     armies = { w: white, b: black };
     aiColor = ai;
@@ -204,10 +212,21 @@
     streak = { w: 0, b: 0 };
     lastFury = 0;
     Stage.setTheme(theme);
+    // Resuming an online battle: replay the moves so far without animation.
+    for (const m of moves) {
+      const legal = matchMove(m);
+      if (!legal) break;
+      record(legal, m.promotion || "q");
+      lastMove = legal;
+    }
     Stage.syncAll(position, armies);
-    Stage.setView(aiColor === "w" ? "b" : "w", false);
+    Stage.setView(online ? online.myColor : aiColor === "w" ? "b" : "w", false);
     battle.sub += ` · ${Terrain.name}`;
-    narrate("The opening", `${sideName("w")} faces ${sideName("b")} on ${Terrain.name}. Click one of your units to give orders. Drag to look around.`);
+    if (online) {
+      narrate("Online battle", `You command ${sideName(online.myColor)} as ${online.myColor === "w" ? "Ivory, moving first" : "Onyx"}, against ${online.opponent}.${moves.length ? " The battle resumes." : ""}`);
+    } else {
+      narrate("The opening", `${sideName("w")} faces ${sideName("b")} on ${Terrain.name}. Click one of your units to give orders. Drag to look around.`);
+    }
     showScreen(null);
     updateHud();
     maybeAi();
@@ -215,6 +234,7 @@
 
   function onSquare(sq) {
     if (busy || gameOver || aiThinking || position.turn === aiColor) return;
+    if (online && position.turn !== online.myColor) return;
     const move = targets.find(m => m.toRow === sq.row && m.toCol === sq.col);
     if (selected && move) {
       const piece = position.board[selected.row][selected.col];
@@ -256,11 +276,8 @@
     });
   }
 
-  async function execute(move, promotion = "q") {
-    const myToken = token;
-    busy = true;
-    selected = null;
-    targets = [];
+  // Applies a move to the game state (history, notation, streaks) without any animation.
+  function record(move, promotion) {
     const snapshot = clonePosition(position);
     const mover = snapshot.board[move.fromRow][move.fromCol];
     const victimSq = move.enPassant ? { row: move.fromRow, col: move.toCol }
@@ -278,6 +295,23 @@
     positionCounts.set(key, (positionCounts.get(key) || 0) + 1);
     const replies = allLegalMoves(position, position.turn);
     moveLog.push(moveNotation(snapshot, move, mover, result.captured, promoted ? promotion : null, check ? (replies.length ? "+" : "#") : ""));
+    return { mover, victimSq, victim, promoted, check, combo, replies, key };
+  }
+
+  // Find the engine's legal move matching a plain {fromRow, fromCol, toRow, toCol} (e.g. from the server).
+  const matchMove = m => legalMoves(position, m.fromRow, m.fromCol).find(x => x.toRow === m.toRow && x.toCol === m.toCol);
+
+  async function execute(move, promotion = "q", remote = false) {
+    const myToken = token;
+    busy = true;
+    selected = null;
+    targets = [];
+    const { mover, victimSq, victim, promoted, check, combo, replies, key } = record(move, promotion);
+    if (online && !remote) {
+      Online.sendMove(online.gameId, moveLog.length - 1, {
+        fromRow: move.fromRow, fromCol: move.fromCol, toRow: move.toRow, toCol: move.toCol, promotion: promoted ? promotion : null
+      });
+    }
     updateHud();
 
     const style = Models.attackStyle(armies[mover.color], mover.type);
@@ -339,6 +373,63 @@
     busy = false;
     updateHud();
     maybeAi();
+    pumpRemote();
+  }
+
+  // ---------------------------------------------------------------- online play
+  // Plays the opponent's next move from the server, one at a time, once the board is idle.
+  function pumpRemote() {
+    if (!online || busy || gameOver) return;
+    const next = remoteMoves[moveLog.length];
+    if (!next) return;
+    const legal = matchMove(next);
+    if (!legal) {
+      Online.toast("The boards disagree. Resyncing…");
+      Online.joinGame(online.gameId);
+      return;
+    }
+    execute(legal, next.promotion || "q", true);
+  }
+
+  function onGame(doc) {
+    if (!online || doc.id !== online.gameId) return;
+    online.game = doc;
+    remoteMoves = doc.moves;
+    pumpRemote();
+    if (doc.taunt && doc.taunt.by !== Online.uid && doc.taunt.at > lastTauntAt) {
+      lastTauntAt = doc.taunt.at;
+      narrate(`${online.opponent} says`, `“${doc.taunt.text}”`);
+      FX.sfx("select");
+    }
+    if (doc.status === "finished" && doc.reason === "resign" && !gameOver) {
+      const loser = doc.result === "w" ? "b" : "w";
+      gameOver = `${sideName(doc.result)} wins`;
+      narrate("Resignation", loser === online.myColor ? "You laid down your arms." : `${online.opponent} has resigned.`);
+      finish(doc.result, "resign");
+    }
+  }
+
+  function leaveOnline() {
+    token += 1;
+    Online.leaveGame();
+    online = null;
+    battle = null;
+    Online.open();
+  }
+
+  function onlineResult(outcome, reason) {
+    const why = reason === "resign" ? (outcome === "win" ? `${online.opponent} resigned.` : "You resigned.")
+      : reason === "checkmate" ? (outcome === "win" ? `You checkmated ${online.opponent}.` : `${online.opponent} checkmated you.`)
+      : reason;
+    showCard({
+      eyebrow: "Online battle",
+      title: outcome === "win" ? "Victory" : outcome === "loss" ? "Defeat" : "Draw",
+      paragraphs: [why, "The result has been added to your record."],
+      buttons: [
+        { label: "View the board", action: () => showScreen(null) },
+        { label: "War room", primary: true, action: leaveOnline }
+      ]
+    });
   }
 
   function maybeAi() {
@@ -357,7 +448,7 @@
   }
 
   function undo() {
-    if (busy || aiThinking || !history.length) return;
+    if (busy || aiThinking || !history.length || online) return;
     const step = () => {
       const prev = history.pop();
       const key = positionKey(position);
@@ -382,6 +473,17 @@
   function finish(winner, reason) {
     busy = false;
     updateHud();
+    if (battle.mode === "online") {
+      const outcome = winner === null ? "draw" : winner === online.myColor ? "win" : "loss";
+      if (!online.recorded) {
+        online.recorded = true;
+        Online.recordResult(outcome);
+        if (reason !== "resign") Online.finishGame(online.gameId, winner || "draw", reason === "checkmate" ? "checkmate" : "draw");
+      }
+      FX.sfx(outcome === "win" ? "fanfare" : "defeat");
+      setTimeout(() => { if (online) onlineResult(outcome, reason === "checkmate" || reason === "resign" ? reason : reason || "draw"); }, 1800);
+      return;
+    }
     const human = aiColor ? (aiColor === "w" ? "b" : "w") : null;
     const won = winner && (!human || winner === human);
     FX.sfx(winner && won ? "fanfare" : "defeat");
@@ -576,6 +678,7 @@
 
   // ---------------------------------------------------------------- menu & wiring
   function openPause() {
+    if (online) return openOnlineMenu();
     // A running animation finishes normally; only a queued AI search is cancelled and re-queued on resume.
     paused = true;
     if (aiThinking) {
@@ -591,6 +694,28 @@
         { label: "Main menu", action: () => { token += 1; paused = false; battle = null; refreshMenu(); showScreen("menu-screen"); } },
         ...(inStory ? [{ label: "Restart chapter", action: () => { paused = false; beginChapter(battle.chapter); } }] : []),
         { label: "Resume", primary: true, action: () => { paused = false; showScreen(null); updateHud(); maybeAi(); } }
+      ]
+    });
+  }
+
+  // Online battles can't be paused: the opponent's clock keeps running.
+  function openOnlineMenu() {
+    showCard({
+      eyebrow: "Online battle",
+      title: `vs ${online.opponent}`,
+      paragraphs: [gameOver ? "This battle is over." : "Leaving keeps the battle open. Resume it any time from the War Room."],
+      buttons: [
+        { label: "War room", action: leaveOnline },
+        ...(gameOver ? [] : [{ label: "Resign", action: () => showCard({
+          eyebrow: "Resign",
+          title: "Lay down your arms?",
+          paragraphs: [`${online.opponent} wins and the loss goes on your record.`],
+          buttons: [
+            { label: "Keep fighting", action: () => showScreen(null) },
+            { label: "Resign", primary: true, action: () => { showScreen(null); Online.resign(online.gameId, online.myColor).catch(() => Online.toast("Couldn't resign. Check your connection.")); } }
+          ]
+        }) }]),
+        { label: "Back to battle", primary: true, action: () => showScreen(null) }
       ]
     });
   }
@@ -622,7 +747,15 @@
   $("btn-view").addEventListener("click", () => Stage.toggleView());
   $("btn-menu").addEventListener("click", openPause);
   $("btn-taunt").addEventListener("click", () => {
-    if (!gameOver) narrate("A message across the field", `${sideName(position.turn)}: “${pick(army(position.turn).taunts)}”`);
+    if (gameOver) return;
+    if (online) {
+      // Online, your taunt crosses the board to your opponent.
+      const text = pick(army(online.myColor).taunts);
+      Online.sendTaunt(online.gameId, text);
+      narrate("You taunt your rival", `“${text}”`);
+      return;
+    }
+    narrate("A message across the field", `${sideName(position.turn)}: “${pick(army(position.turn).taunts)}”`);
   });
   $("btn-cine").addEventListener("click", () => {
     settings.cinematics = !settings.cinematics;
@@ -645,6 +778,22 @@
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && selected) { selected = null; targets = []; updateHud(); }
   });
+
+  Online.init({
+    showScreen, showCard, onGame,
+    // The challenger's opponent picks the battlefield: you fight on your rival's home ground.
+    startGame: (game, myColor) => startBattle({
+      white: game.whiteArmy, black: game.blackArmy, ai: null, depth: 0,
+      theme: myColor === "w" ? game.blackArmy : game.whiteArmy,
+      title: "Online battle", sub: `${game.whiteName} vs ${game.blackName}`, mode: "online",
+      online: { gameId: game.id, myColor, opponent: myColor === "w" ? game.blackName : game.whiteName, game },
+      moves: game.moves
+    }),
+    resync: () => { if (online) Online.joinGame(online.gameId); },
+    inGame: () => Boolean(online) && !gameOver,
+    currentGameId: () => (online && !gameOver ? online.gameId : null)
+  });
+  $("menu-online").addEventListener("click", Online.open);
 
   Stage.init($("stage"), onSquare);
   Stage.cinematics = settings.cinematics;

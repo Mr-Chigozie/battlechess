@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Security rules for Chess Wars online play. Paste into Firebase console → Firestore Database → Rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+
+    // Commander profiles: everyone signed in can see the list; you can only edit your own.
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && me() == uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 20;
+    }
+
+    // Challenges are visible to, and answerable by, only the two commanders involved.
+    match /challenges/{id} {
+      allow read: if signedIn() && (resource.data.from == me() || resource.data.to == me());
+      allow create: if signedIn() && request.resource.data.from == me() && request.resource.data.to != me();
+      allow update: if signedIn() && (resource.data.from == me() || resource.data.to == me())
+        && request.resource.data.from == resource.data.from && request.resource.data.to == resource.data.to;
+    }
+
+    // Games belong to their two players. Moves can only be appended, never rewritten,
+    // and the player list and armies are fixed once the game exists.
+    match /games/{id} {
+      allow read: if signedIn() && me() in resource.data.players;
+      allow create: if signedIn() && me() in request.resource.data.players
+        && request.resource.data.players.size() == 2 && request.resource.data.moves.size() == 0;
+      allow update: if signedIn() && me() in resource.data.players
+        && request.resource.data.players == resource.data.players
+        && request.resource.data.white == resource.data.white
+        && request.resource.data.black == resource.data.black
+        && request.resource.data.moves.size() >= resource.data.moves.size();
+    }
+  }
+}

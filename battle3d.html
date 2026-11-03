@@ -163,6 +163,46 @@
     .combo.level-3 .combo-title, .combo.level-4 .combo-title { color: #ffb0a0; text-shadow: 0 0 34px #ff1a00, 0 4px 0 #3a0c04; }
     .combo-tags { margin-top: 8px; color: #fff; font: 12px "Segoe UI", sans-serif; letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 2px 6px #000; }
 
+    /* ---- Online: auth & lobby ---- */
+    .tabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }
+    .tab { padding: 7px 16px; border: 1px solid #45473c; border-radius: 3px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; }
+    .tab.active { border-color: var(--gold); color: var(--gold-light); }
+    .auth-form { display: grid; gap: 12px; text-align: left; }
+    .auth-form.login .register-only { display: none; }
+    .field { display: grid; gap: 6px; color: var(--muted); font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; }
+    .field input, .field select, .search {
+      width: 100%; padding: 10px 9px; border: 1px solid #45473c; border-radius: 3px; background: #131510;
+      color: var(--ink); font: 14px "Segoe UI", sans-serif; letter-spacing: 0; text-transform: none;
+    }
+    .field input:focus, .search:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+    .form-error { min-height: 18px; margin: 0; color: #ff9a8a; font-size: 13px; }
+    .lobby-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 14px; margin: 20px 0; text-align: left; }
+    .lobby-col { display: grid; gap: 14px; align-content: start; }
+    .lobby-box { padding: 14px; border: 1px solid #3b3d33; border-radius: 4px; background: #1b1d18e6; }
+    .lobby-box h3 { margin: 0 0 10px; font: 16px Georgia, serif; color: #d8d2c1; }
+    .lobby-box .field { margin: 10px 0; }
+    .muted { color: var(--muted); font: 12px "Segoe UI", sans-serif; }
+    .me-card { font: 20px Georgia, serif; }
+    .me-card small { display: block; margin-top: 4px; color: var(--muted); font: 12px "Segoe UI", sans-serif; }
+    .list { display: grid; gap: 7px; max-height: 340px; overflow-y: auto; scrollbar-width: thin; }
+    .search { margin-bottom: 10px; }
+    .row-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #ffffff12; border-radius: 3px; background: #ffffff06; }
+    .row-item .who { min-width: 0; }
+    .row-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+    .row-item .meta { color: var(--muted); font-size: 11px; }
+    .row-actions { display: flex; gap: 5px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #55574d; }
+    .dot.online { background: #5fd07a; box-shadow: 0 0 6px #5fd07a; }
+    .dot.playing { background: #f0b04a; box-shadow: 0 0 6px #f0b04a; }
+    .empty { color: var(--muted); font-size: 12px; font-style: italic; }
+    .toast {
+      position: fixed; left: 50%; top: 18px; z-index: 40; transform: translate(-50%, -20px); max-width: calc(100% - 32px);
+      padding: 10px 16px; border: 1px solid #a07f45; border-radius: 4px; background: #1b1d18f2; color: var(--gold-light);
+      font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 250ms, transform 250ms;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 760px) { .lobby-grid { grid-template-columns: 1fr; } }
+
     #loading { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: #0d0f0c; color: var(--muted); font: italic 16px Georgia, serif; text-align: center; padding: 20px; }
 
     @media (max-width: 760px) {
@@ -193,6 +233,7 @@
         <button class="btn primary" id="menu-story" type="button">Story campaign</button>
         <button class="btn" id="menu-continue" type="button" hidden>Continue campaign</button>
         <button class="btn" id="menu-skirmish" type="button">Skirmish</button>
+        <button class="btn" id="menu-online" type="button">⚔ Online battle</button>
       </div>
       <div class="link-row">Prefer a flat board? <a href="index.html">Play the 2D version</a></div>
     </div>
@@ -254,6 +295,69 @@
     </div>
   </section>
 
+  <!-- Online: sign in / register -->
+  <section class="screen" id="auth-screen">
+    <div class="card">
+      <div class="eyebrow">Online battle</div>
+      <h2 id="auth-title">Report for duty</h2>
+      <div class="tabs" role="tablist">
+        <button class="tab active" id="auth-tab-login" type="button" role="tab">Sign in</button>
+        <button class="tab" id="auth-tab-register" type="button" role="tab">Register</button>
+      </div>
+      <form id="auth-form" class="auth-form" novalidate>
+        <label class="field register-only">Commander name
+          <input id="auth-name" maxlength="20" autocomplete="nickname" placeholder="How rivals will see you">
+        </label>
+        <label class="field">Email
+          <input id="auth-email" type="email" autocomplete="email" required>
+        </label>
+        <label class="field">Password
+          <input id="auth-pass" type="password" minlength="6" autocomplete="current-password" required>
+        </label>
+        <label class="field register-only">Your army
+          <select id="auth-army"></select>
+        </label>
+        <p class="form-error" id="auth-error" role="alert"></p>
+        <div class="card-buttons">
+          <button class="btn" type="button" data-back>Back</button>
+          <button class="btn primary" type="submit" id="auth-submit">Sign in</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Online: lobby -->
+  <section class="screen" id="lobby-screen">
+    <div class="screen-inner">
+      <div class="eyebrow">Online battle</div>
+      <h2 class="title" style="font-size: clamp(30px, 5vw, 48px)">War Room</h2>
+      <div class="lobby-grid">
+        <div class="lobby-col">
+          <div class="lobby-box">
+            <h3>Your commander</h3>
+            <div id="me-card" class="me-card"></div>
+            <label class="field">Army you lead online <select id="me-army"></select></label>
+            <button class="btn small" id="btn-logout" type="button">Sign out</button>
+          </div>
+          <div class="lobby-box">
+            <h3>Challenges</h3>
+            <div id="challenge-list" class="list"></div>
+          </div>
+          <div class="lobby-box">
+            <h3>Your battles</h3>
+            <div id="game-list" class="list"></div>
+          </div>
+        </div>
+        <div class="lobby-box">
+          <h3>Commanders <span class="muted" id="online-count"></span></h3>
+          <input id="user-search" class="search" placeholder="Search commanders…" autocomplete="off">
+          <div id="user-list" class="list"></div>
+        </div>
+      </div>
+      <div class="card-buttons"><button class="btn" type="button" data-back>Main menu</button></div>
+    </div>
+  </section>
+
   <!-- Story / result card -->
   <section class="screen" id="card-screen">
     <div class="card">
@@ -310,6 +414,7 @@
   <div class="letterbox bottom"></div>
   <div class="kill-caption" id="kill-caption"><span class="who" id="kill-who"></span><span id="kill-text"></span></div>
   <div class="flash" id="flash"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="combo" id="combo" aria-live="assertive"><div class="combo-title" id="combo-title"></div><div class="combo-tags" id="combo-tags"></div></div>
 
   <script type="importmap">
@@ -322,6 +427,11 @@
   </script>
   <script src="js/armies.js"></script>
   <script src="js/engine.js"></script>
+  <!-- Online play (accounts, player list, live matches) runs on Firebase; see js/firebase-config.js. -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
   <script type="module">
     // Three.js arrives as an ES module; the game files are classic scripts so the page also runs from file://.
     try {
@@ -329,7 +439,7 @@
       const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
       window.THREE = THREE;
       window.OrbitControls = OrbitControls;
-      for (const src of ["js/models3d.js", "js/fx3d.js", "js/terrain3d.js", "js/war3d.js", "js/stage3d.js", "js/game3d.js"]) {
+      for (const src of ["js/models3d.js", "js/fx3d.js", "js/terrain3d.js", "js/war3d.js", "js/stage3d.js", "js/online3d.js", "js/game3d.js"]) {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
           script.src = src;
