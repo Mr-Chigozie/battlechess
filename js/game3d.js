@@ -33,6 +33,7 @@
   let online = null; // { gameId, myColor, opponent, game, recorded } during an online battle
   let remoteMoves = [];
   let lastTauntAt = 0;
+  let queuedOrder = null; // a move given while the previous one was still animating
   let comboTimer = null;
   let battle = null; // { mode: "story" | "skirmish", chapter, enemy, title, sub, setup }
 
@@ -87,9 +88,15 @@
     showScreen("card-screen");
   }
 
+  // On phones the narration fades back after a few seconds so it doesn't sit on the board (see .dim).
+  let narrTimer = null;
   function narrate(label, text) {
     $("narr-label").textContent = label;
     $("narr-text").textContent = text;
+    const box = $("narr-text").parentElement;
+    box.classList.remove("dim");
+    clearTimeout(narrTimer);
+    narrTimer = setTimeout(() => box.classList.add("dim"), 5000);
   }
 
   // ---------------------------------------------------------------- HUD
@@ -191,6 +198,7 @@
   function startBattle(setup) {
     const { white, black, ai, depth, theme, title, sub, mode, chapter = null, enemy = null, moves = [] } = setup;
     token += 1;
+    queuedOrder = null;
     online = setup.online ? { ...setup.online } : null;
     remoteMoves = moves;
     lastTauntAt = Date.now();
@@ -225,21 +233,32 @@
     if (online) {
       narrate("Online battle", `You command ${sideName(online.myColor)} as ${online.myColor === "w" ? "Ivory, moving first" : "Onyx"}, against ${online.opponent}.${moves.length ? " The battle resumes." : ""}`);
     } else {
-      narrate("The opening", `${sideName("w")} faces ${sideName("b")} on ${Terrain.name}. Click one of your units to give orders. Drag to look around.`);
+      narrate("The opening", `${sideName("w")} faces ${sideName("b")} on ${Terrain.name}. ${Stage.touch ? "Tap a unit to give orders. Pinch or twist with two fingers to look around." : "Click one of your units to give orders. Drag to look around."}`);
     }
     showScreen(null);
     updateHud();
     maybeAi();
   }
 
+  // While the previous move is still animating, the next player can already pick a unit and give
+  // an order; it runs the moment the board is free (quick taps on phones would otherwise be lost).
   function onSquare(sq) {
-    if (busy || gameOver || aiThinking || position.turn === aiColor) return;
+    if (gameOver || aiThinking || position.turn === aiColor) return;
     if (online && position.turn !== online.myColor) return;
     const move = targets.find(m => m.toRow === sq.row && m.toCol === sq.col);
     if (selected && move) {
       const piece = position.board[selected.row][selected.col];
-      if (piece.type === "p" && (move.toRow === 0 || move.toRow === 7)) askPromotion(piece.color).then(type => execute(move, type));
-      else execute(move);
+      const order = () => {
+        if (piece.type === "p" && (move.toRow === 0 || move.toRow === 7)) askPromotion(piece.color).then(type => execute(move, type));
+        else execute(move);
+      };
+      if (busy) {
+        queuedOrder = order;
+        FX.sfx("select");
+        narrate("Orders given", `The ${unitName(piece.color, piece.type)} moves out as soon as the field is clear.`);
+      } else {
+        order();
+      }
       return;
     }
     const piece = position.board[sq.row][sq.col];
@@ -372,6 +391,12 @@
     }
     busy = false;
     updateHud();
+    if (queuedOrder) {
+      const order = queuedOrder;
+      queuedOrder = null;
+      order();
+      return;
+    }
     maybeAi();
     pumpRemote();
   }
@@ -449,6 +474,7 @@
 
   function undo() {
     if (busy || aiThinking || !history.length || online) return;
+    queuedOrder = null;
     const step = () => {
       const prev = history.pop();
       const key = positionKey(position);
@@ -472,6 +498,7 @@
 
   function finish(winner, reason) {
     busy = false;
+    queuedOrder = null;
     updateHud();
     if (battle.mode === "online") {
       const outcome = winner === null ? "draw" : winner === online.myColor ? "win" : "loss";
@@ -745,6 +772,22 @@
   for (const back of document.querySelectorAll("[data-back]")) back.addEventListener("click", () => { refreshMenu(); showScreen("menu-screen"); });
   $("btn-undo").addEventListener("click", undo);
   $("btn-view").addEventListener("click", () => Stage.toggleView());
+
+  // Phone HUD: the ⋯ menu holds the less-used buttons; the field report opens as a bottom sheet.
+  const setMore = open => {
+    $("hud").classList.toggle("more-open", open);
+    $("btn-more").setAttribute("aria-expanded", String(open));
+  };
+  $("btn-more").addEventListener("click", event => {
+    event.stopPropagation();
+    setMore(!$("hud").classList.contains("more-open"));
+  });
+  $("hud-extras").addEventListener("click", () => setMore(false));
+  document.addEventListener("pointerdown", event => {
+    if (!event.target.closest(".hud-buttons")) setMore(false);
+  });
+  $("btn-report").addEventListener("click", () => $("hud").classList.toggle("report-open"));
+  $("sheet-close").addEventListener("click", () => $("hud").classList.remove("report-open"));
   $("btn-menu").addEventListener("click", openPause);
   $("btn-taunt").addEventListener("click", () => {
     if (gameOver) return;

@@ -5,7 +5,9 @@
 const Stage = (() => {
   const V3 = THREE.Vector3;
   const SIDE_FACING = { w: Math.PI, b: 0 };
-  const VIEW = { w: new V3(0, 8.6, 8.4), b: new V3(0, 8.6, -8.4) };
+  // Phones and tablets: touch input, lighter rendering.
+  const coarse = window.matchMedia("(pointer: coarse)").matches;
+  let framedAspect = 0;
   let renderer, scene, camera, controls, raycaster, clock;
   let markerGroup, hoverMesh, ground, hemi, sun;
   const units = Array.from({ length: 8 }, () => Array(8).fill(null));
@@ -25,7 +27,7 @@ const Stage = (() => {
   function init(container, onClick) {
     clickHandler = onClick;
     renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, coarse ? 1.5 : 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -34,14 +36,14 @@ const Stage = (() => {
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 120);
-    camera.position.copy(VIEW.w);
     controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 0, 0.3);
     controls.enablePan = false;
     controls.enableDamping = true;
-    controls.minDistance = 5;
-    controls.maxDistance = 20;
+    controls.minDistance = 4;
     controls.maxPolarAngle = 1.38;
+    // On touch screens one finger only taps units; two fingers pinch to zoom and twist to turn.
+    if (coarse) controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE };
+    applyView("w");
     raycaster = new THREE.Raycaster();
     clock = new THREE.Clock();
     FX.init(scene);
@@ -51,7 +53,7 @@ const Stage = (() => {
     sun = new THREE.DirectionalLight(0xfff1dc, 2.4);
     sun.position.set(6, 12, 5);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
     Object.assign(sun.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 30 });
     sun.shadow.bias = -0.0005;
     scene.add(sun);
@@ -67,10 +69,24 @@ const Stage = (() => {
     hoverMesh.visible = false;
     scene.add(hoverMesh);
 
+    // A tap is a press and release that barely moved and wasn't part of a two-finger gesture.
     let down = null;
-    renderer.domElement.addEventListener("pointerdown", e => { down = { x: e.clientX, y: e.clientY }; });
+    const pressed = new Set();
+    let gesture = false;
+    renderer.domElement.addEventListener("pointerdown", e => {
+      pressed.add(e.pointerId);
+      if (pressed.size > 1) gesture = true;
+      down = { x: e.clientX, y: e.clientY };
+    });
+    const release = e => {
+      pressed.delete(e.pointerId);
+      const wasGesture = gesture;
+      if (!pressed.size) gesture = false;
+      return wasGesture;
+    };
+    renderer.domElement.addEventListener("pointercancel", release);
     renderer.domElement.addEventListener("pointerup", e => {
-      if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6 || cine.active) return;
+      if (release(e) || !down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > (coarse ? 14 : 6) || cine.active) return;
       const sq = pick(e);
       if (sq) clickHandler(sq);
     });
@@ -85,6 +101,8 @@ const Stage = (() => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      // Re-frame on rotation, but not when a mobile URL bar merely slides in or out.
+      if (!cine.active && Math.abs(camera.aspect - framedAspect) > 0.15) applyView(viewColor);
     });
     renderer.setAnimationLoop(loop);
   }
@@ -286,15 +304,40 @@ const Stage = (() => {
   }
 
   // ---------------------------------------------------------------- camera
-  async function setView(color, animate = true) {
+  // Camera spot that fits the whole board on screen for the current aspect ratio:
+  // wide screens get the classic three-quarter view, phones in portrait a steeper, more top-down one.
+  function viewFor(color) {
+    const aspect = window.innerWidth / window.innerHeight;
+    const portrait = aspect < 0.8;
+    const elevation = portrait ? 1.2 : aspect < 1.25 ? 0.98 : 0.8;
+    const halfV = THREE.MathUtils.degToRad(camera.fov / 2);
+    const halfH = Math.atan(Math.tan(halfV) * aspect);
+    // Portrait is width-bound, so let the frame's outer rim touch the screen edges to keep squares big.
+    const fitWidth = (portrait ? 4.85 : 5.2) / Math.tan(halfH);
+    // Depth fit leaves room for the HUD above and the narration bar below the board.
+    const fitDepth = (4.9 * Math.sin(elevation) + 1.2) / Math.tan(halfV);
+    const distance = Math.max(fitWidth, fitDepth, 11);
+    const side = color === "w" ? 1 : -1;
+    const target = new V3(0, 0, 0.3 * side);
+    return { target, position: target.clone().add(new V3(0, Math.sin(elevation) * distance, Math.cos(elevation) * distance * side)), distance };
+  }
+
+  function applyView(color) {
     viewColor = color;
-    const to = VIEW[color].clone();
-    const target = new V3(0, 0, color === "w" ? 0.3 : -0.3);
-    if (!animate) {
-      camera.position.copy(to);
-      controls.target.copy(target);
-      return;
-    }
+    const view = viewFor(color);
+    camera.position.copy(view.position);
+    controls.target.copy(view.target);
+    controls.maxDistance = view.distance * 1.5;
+    framedAspect = window.innerWidth / window.innerHeight;
+  }
+
+  async function setView(color, animate = true) {
+    if (!animate) return applyView(color);
+    viewColor = color;
+    const view = viewFor(color);
+    const to = view.position;
+    const target = view.target;
+    controls.maxDistance = view.distance * 1.5;
     const from = camera.position.clone();
     const fromTarget = controls.target.clone();
     // Swing around the board rather than through it.
@@ -343,7 +386,11 @@ const Stage = (() => {
     const dir = V.clone().sub(A).setY(0).normalize();
     const bystanders = units.flat().filter(Boolean).map(u => u.position.clone().setY(u.userData.height * 0.55));
     const subjects = [A.clone().setY(0.5), V.clone().setY(0.5)];
-    const distance = Math.max(2.8, A.distanceTo(V) * 0.75 + 2);
+    // Portrait screens are narrow, so film over the attacker's shoulder (the duel runs up the screen)
+    // instead of side-on (where it would run across it and fall off the edges).
+    const portrait = window.innerWidth / window.innerHeight < 0.9;
+    const distance = portrait ? Math.max(3.2, A.distanceTo(V) * 0.5 + 3) : Math.max(2.8, A.distanceTo(V) * 0.75 + 2);
+    const heights = portrait ? [1.9, 2.6] : [1.3, 2.1];
     const current = camera.position.clone().sub(mid).setY(0).normalize();
     const blocked = (from, to) => {
       const seg = to.clone().sub(from);
@@ -360,10 +407,11 @@ const Stage = (() => {
     for (let i = 0; i < 16; i += 1) {
       const angle = (i / 16) * Math.PI * 2;
       const flat = new V3(Math.cos(angle), 0, Math.sin(angle));
-      for (const height of [1.3, 2.1]) {
+      for (const height of heights) {
         const pos = mid.clone().addScaledVector(flat, distance).setY(height);
         const occluders = subjects.reduce((n, s) => n + blocked(pos, s), 0);
-        const score = occluders * 10 + Math.abs(flat.dot(dir)) * 3 + (1 - flat.dot(current)) * 0.8 + (height > 2 ? 1.5 : 0);
+        const framing = portrait ? (1 + flat.dot(dir)) * 3 : Math.abs(flat.dot(dir)) * 3;
+        const score = occluders * 10 + framing + (1 - flat.dot(current)) * 0.8 + (height === heights[1] ? 1.5 : 0);
         if (score < bestScore) {
           bestScore = score;
           best = pos;
@@ -687,6 +735,7 @@ const Stage = (() => {
     init, setTheme, syncAll, setMarkers, setView, toggleView, playMove, playCheckmate, killVerb,
     set cinematics(value) { cinematics = value; },
     get cinematics() { return cinematics; },
+    get touch() { return coarse; },
     set blood(value) { blood = value; }
   };
 })();

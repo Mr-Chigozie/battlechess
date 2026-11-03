@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#10120f">
   <title>Chess Wars — Battle</title>
   <style>
@@ -19,6 +19,8 @@
     * { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; overflow: hidden; background: #0d0f0c; color: var(--ink); font-family: "Segoe UI", "Trebuchet MS", sans-serif; }
     button, select { font: inherit; color: inherit; }
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    body { overscroll-behavior: none; }
     #stage { position: fixed; inset: 0; }
     #stage canvas { display: block; touch-action: none; }
 
@@ -104,9 +106,13 @@
     .turn-banner.thinking { animation: pulse 1s ease-in-out infinite; }
     .turn-banner.check { border-color: var(--danger); color: #ffb3a8; }
     @keyframes pulse { 50% { opacity: .45; } }
-    .hud-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+    .hud-buttons { display: flex; flex-wrap: wrap; flex-shrink: 0; justify-content: flex-end; gap: 6px; max-width: 62vw; }
     .hud-buttons .btn { min-height: 32px; padding: 5px 10px; font-size: 11px; background: #15171399; backdrop-filter: blur(4px); }
     .hud-buttons .btn[aria-pressed="false"] { opacity: .55; }
+    .hud-buttons .ic { margin-right: 4px; }
+    .hud-top > div:first-child { min-width: 0; }
+    .hud-extras { display: contents; }
+    #btn-more, #btn-report, .sheet-close { display: none; }
 
     .side-panel {
       position: absolute; right: 16px; top: 74px; width: 220px;
@@ -201,18 +207,80 @@
       font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 250ms, transform 250ms;
     }
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
-    @media (max-width: 760px) { .lobby-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) {
+      .lobby-grid { grid-template-columns: 1fr; margin: 14px 0; }
+      .row-item { gap: 8px; padding: 8px; }
+      .row-item .btn.small { min-height: 38px; }
+    }
 
     #loading { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: #0d0f0c; color: var(--muted); font: italic 16px Georgia, serif; text-align: center; padding: 20px; }
 
+    /* ---- Phones: menus ---- */
     @media (max-width: 760px) {
-      .army-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .screen { place-items: start center; padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom)); }
+      .screen-inner, .card { margin: auto 0; }
+      .card { padding: 22px 18px; }
+      .card h2 { font-size: 25px; }
+      .card p, .lede { font-size: 15px; }
+      .army-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .army-card { padding: 12px 8px; }
+      .army-card .units { font-size: 10px; }
       .form-grid { grid-template-columns: 1fr; }
-      .hud-top { flex-wrap: wrap; padding: 10px; }
-      .turn-wrap { order: 3; width: 100%; }
-      .turn-banner { width: 100%; text-align: center; }
+      .chapter { grid-template-columns: 32px 1fr auto; gap: 10px; padding: 10px; }
+      /* 16px stops iOS Safari zooming into a field when it's focused. */
+      .field input, .field select, .search, .form-grid select { font-size: 16px; }
+    }
+
+    /* ---- Phones: in-battle HUD (portrait, and landscape via max-height) ---- */
+    @media (max-width: 760px), (max-height: 500px) {
+      .hud-top {
+        display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 10px;
+        padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 18px max(10px, env(safe-area-inset-left));
+      }
+      .hud-title { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .hud-sub { display: none; }
+      .hud-buttons { position: relative; flex-wrap: nowrap; gap: 5px; max-width: none; }
+      .hud-buttons .btn { min-width: 40px; min-height: 40px; padding: 0 9px; font-size: 17px; }
+      .hud-buttons .lbl { display: none; }
+      .hud-buttons .ic { margin: 0; }
+      #btn-more { display: inline-flex; align-items: center; justify-content: center; }
+      .hud-extras {
+        position: absolute; top: calc(100% + 6px); right: 0; z-index: 6; display: none; flex-direction: column; gap: 4px;
+        min-width: 200px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: #15171af2; box-shadow: 0 12px 30px #000a;
+      }
+      #hud.more-open .hud-extras { display: flex; }
+      .hud-extras .btn, .hud-extras #btn-report { display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; font-size: 15px; text-align: left; }
+      .hud-extras .lbl { display: inline; }
+      .turn-wrap { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; justify-content: center; gap: 8px; }
+      .turn-banner { padding: 6px 12px; font-size: 11px; }
+      .fury { width: 64px; }
+      .fury-label { font-size: 8px; letter-spacing: 1px; }
+
+      /* The field report becomes a bottom sheet, opened from the ⋯ menu. */
       .side-panel { display: none; }
-      .narration { bottom: 12px; font-size: 13px; }
+      #hud.report-open .side-panel {
+        position: fixed; top: auto; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); left: 8px; z-index: 7;
+        display: block; width: auto; max-height: 50vh; overflow-y: auto; background: #15171af5;
+      }
+      #hud.report-open .narration { display: none; }
+      .sheet-close { position: absolute; top: 2px; right: 4px; display: block; width: 40px; height: 40px; border: 0; background: none; color: var(--muted); font-size: 16px; }
+
+      .narration {
+        bottom: max(10px, env(safe-area-inset-bottom)); width: calc(100% - 20px); padding: 7px 12px;
+        font-size: 13px; line-height: 1.35; transition: opacity 400ms;
+      }
+      .narration #narr-text { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+      .narration.dim { opacity: .45; }
+      .combo-title { font-size: clamp(28px, 9vw, 76px); letter-spacing: 1px; }
+      .combo-tags { font-size: 10px; letter-spacing: 2px; }
+      .kill-caption .who { font-size: 9px; letter-spacing: 2px; }
+    }
+    /* Landscape phones: one slim row so the board keeps the height. */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .hud-top { grid-template-columns: minmax(0, 22vw) 1fr auto; padding-bottom: 8px; }
+      .turn-wrap { grid-row: 1; grid-column: 2; }
+      .narration { left: max(10px, env(safe-area-inset-left)); width: min(460px, 55%); transform: none; text-align: left; }
+      body.cinematic .letterbox { height: 8vh; }
     }
     @media (prefers-reduced-motion: reduce) {
       .turn-banner.thinking { animation: none; }
@@ -391,16 +459,22 @@
         <div class="fury-label" id="fury-label">Calm</div>
       </div>
       <div class="hud-buttons">
-        <button class="btn" id="btn-undo" type="button">↶ Undo</button>
-        <button class="btn" id="btn-view" type="button">⟳ View</button>
-        <button class="btn" id="btn-taunt" type="button">⚑ Taunt</button>
-        <button class="btn" id="btn-cine" type="button" aria-pressed="true">🎬 Cinematics</button>
-        <button class="btn" id="btn-blood" type="button" aria-pressed="true">🩸 Blood</button>
-        <button class="btn" id="btn-sound" type="button" aria-pressed="true">🔊 Sound</button>
-        <button class="btn" id="btn-menu" type="button">☰ Menu</button>
+        <button class="btn" id="btn-undo" type="button" aria-label="Undo"><span class="ic">↶</span><span class="lbl">Undo</span></button>
+        <button class="btn" id="btn-view" type="button" aria-label="Turn the view"><span class="ic">⟳</span><span class="lbl">View</span></button>
+        <!-- On phones these collapse into the ⋯ menu. -->
+        <div class="hud-extras" id="hud-extras">
+          <button class="btn" id="btn-taunt" type="button"><span class="ic">⚑</span><span class="lbl">Taunt</span></button>
+          <button class="btn" id="btn-report" type="button"><span class="ic">📜</span><span class="lbl">Field report</span></button>
+          <button class="btn" id="btn-cine" type="button" aria-pressed="true"><span class="ic">🎬</span><span class="lbl">Cinematics</span></button>
+          <button class="btn" id="btn-blood" type="button" aria-pressed="true"><span class="ic">🩸</span><span class="lbl">Blood</span></button>
+          <button class="btn" id="btn-sound" type="button" aria-pressed="true"><span class="ic">🔊</span><span class="lbl">Sound</span></button>
+        </div>
+        <button class="btn" id="btn-more" type="button" aria-label="More options" aria-expanded="false"><span class="ic">⋯</span></button>
+        <button class="btn" id="btn-menu" type="button" aria-label="Menu"><span class="ic">☰</span><span class="lbl">Menu</span></button>
       </div>
     </div>
-    <aside class="side-panel">
+    <aside class="side-panel" id="side-panel">
+      <button class="sheet-close" id="sheet-close" type="button" aria-label="Close field report">✕</button>
       <h3>Fallen</h3>
       <div class="captured"><small id="cap-w-label">Ivory losses</small><span id="cap-w"></span></div>
       <div class="captured"><small id="cap-b-label">Onyx losses</small><span id="cap-b"></span></div>
