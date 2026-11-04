@@ -14,6 +14,7 @@ const Stage = (() => {
   const tiles = [];
   const scenery = [];
   let clickHandler = () => {};
+  let hoverHandler = () => {};
   let viewColor = "w";
   let cinematics = true;
   let blood = true;
@@ -24,8 +25,9 @@ const Stage = (() => {
   const unitAt = sq => units[sq.row][sq.col];
 
   // ---------------------------------------------------------------- setup
-  function init(container, onClick) {
+  function init(container, onClick, onHover = () => {}) {
     clickHandler = onClick;
+    hoverHandler = onHover;
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, coarse ? 1.5 : 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -73,30 +75,52 @@ const Stage = (() => {
     let down = null;
     const pressed = new Set();
     let gesture = false;
+    // Unit info: mouse hover on desktop, press-and-hold on touch screens.
+    let holdTimer = 0;
+    let held = false;
+    const cancelHold = () => { clearTimeout(holdTimer); holdTimer = 0; };
+    const showInfo = (sq, e) => hoverHandler(sq, e ? e.clientX : 0, e ? e.clientY : 0);
     renderer.domElement.addEventListener("pointerdown", e => {
       pressed.add(e.pointerId);
-      if (pressed.size > 1) gesture = true;
+      if (pressed.size > 1) { gesture = true; cancelHold(); showInfo(null); }
       down = { x: e.clientX, y: e.clientY };
+      held = false;
+      if (e.pointerType !== "mouse" && pressed.size === 1 && !cine.active) {
+        const point = { clientX: e.clientX, clientY: e.clientY };
+        holdTimer = setTimeout(() => {
+          holdTimer = 0;
+          const sq = pickUnit(point);
+          if (sq) { held = true; showInfo(sq, point); }
+        }, 450);
+      }
     });
     const release = e => {
       pressed.delete(e.pointerId);
+      cancelHold();
       const wasGesture = gesture;
       if (!pressed.size) gesture = false;
       return wasGesture;
     };
-    renderer.domElement.addEventListener("pointercancel", release);
+    renderer.domElement.addEventListener("pointercancel", e => { release(e); if (held) { held = false; showInfo(null); } });
     renderer.domElement.addEventListener("pointerup", e => {
-      if (release(e) || !down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > (coarse ? 14 : 6) || cine.active) return;
+      const wasGesture = release(e);
+      if (held) { held = false; showInfo(null); return; }  // a hold reads the unit, it doesn't give an order
+      if (wasGesture || !down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > (coarse ? 14 : 6) || cine.active) return;
       const sq = pick(e);
       if (sq) clickHandler(sq);
     });
     renderer.domElement.addEventListener("pointermove", e => {
-      if (cine.active) { hoverMesh.visible = false; return; }
+      if (holdTimer && down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 14) cancelHold();
+      if (e.pointerType !== "mouse") return;
+      if (cine.active) { hoverMesh.visible = false; showInfo(null); return; }
       const sq = pickTile(e);
       hoverMesh.visible = Boolean(sq);
       if (sq) hoverMesh.position.copy(squareToWorld(sq.row, sq.col)).setY(0.012);
-      renderer.domElement.style.cursor = sq ? "pointer" : "grab";
+      const unitSq = pressed.size ? null : pickUnit(e);  // no tooltip while dragging the camera
+      showInfo(unitSq, e);
+      renderer.domElement.style.cursor = sq || unitSq ? "pointer" : "grab";
     });
+    renderer.domElement.addEventListener("pointerleave", () => { hoverMesh.visible = false; if (!held) showInfo(null); });
     window.addEventListener("resize", () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -252,16 +276,21 @@ const Stage = (() => {
     return hit ? hit.object.userData.square : null;
   }
 
-  function pick(event) {
+  // The square of the unit under the pointer, or null when the pointer is not on a unit.
+  function pickUnit(event) {
     setRay(event);
     const all = units.flat().filter(Boolean);
     const hit = raycaster.intersectObjects(all, true)[0];
     if (hit) {
       let obj = hit.object;
       while (obj && !obj.userData.square) obj = obj.parent;
-      if (obj) return obj.userData.square;
+      if (obj) return { ...obj.userData.square };
     }
-    return pickTile(event);
+    return null;
+  }
+
+  function pick(event) {
+    return pickUnit(event) || pickTile(event);
   }
 
   function setRay(event) {
@@ -366,6 +395,7 @@ const Stage = (() => {
   async function enterCinematic(A, V) {
     cine.saved = { position: camera.position.clone(), target: controls.target.clone() };
     cine.active = true;
+    hoverHandler(null, 0, 0);
     controls.enabled = false;
     cine.target.copy(controls.target);
     document.body.classList.add("cinematic");

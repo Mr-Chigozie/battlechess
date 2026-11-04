@@ -216,6 +216,20 @@
       font-size: 13px; opacity: 0; pointer-events: none; transition: opacity 250ms, transform 250ms;
     }
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .unit-tip {
+      position: fixed; left: 0; top: 0; z-index: 35; width: max-content; max-width: min(260px, calc(100vw - 24px));
+      padding: 10px 12px; border: 1px solid #a07f4588; border-left: 3px solid var(--tip-accent, var(--gold)); border-radius: 4px;
+      background: #15171af2; box-shadow: 0 6px 20px #0009; pointer-events: none;
+      opacity: 0; transform: translateY(4px); transition: opacity 120ms, transform 120ms;
+    }
+    .unit-tip.show { opacity: 1; transform: none; }
+    .unit-tip .tip-head { display: flex; align-items: center; gap: 8px; }
+    .unit-tip .tip-icon { font-size: 22px; line-height: 1; }
+    .unit-tip .tip-name { color: var(--gold-light); font: 16px Georgia, serif; }
+    .unit-tip .tip-army { color: var(--muted); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+    .unit-tip .tip-lines { margin: 7px 0 0; padding: 0; list-style: none; font-size: 12px; line-height: 1.55; }
+    .unit-tip .tip-lines .warn { color: #ff8a7a; }
+    .unit-tip .tip-lines .good { color: #8fd99f; }
     @media (max-width: 760px) {
       .lobby-grid { grid-template-columns: 1fr; margin: 14px 0; }
       .row-item { gap: 8px; padding: 8px; }
@@ -507,6 +521,7 @@
   <div class="kill-caption" id="kill-caption"><span class="who" id="kill-who"></span><span id="kill-text"></span></div>
   <div class="flash" id="flash"></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="unit-tip" id="unit-tip" aria-hidden="true"></div>
   <div class="combo" id="combo" aria-live="assertive"><div class="combo-title" id="combo-title"></div><div class="combo-tags" id="combo-tags"></div></div>
 
   <script type="importmap">

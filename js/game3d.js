@@ -56,6 +56,7 @@
   // ---------------------------------------------------------------- screens
   function showScreen(id) {
     for (const screen of document.querySelectorAll(".screen")) screen.classList.toggle("open", screen.id === id);
+    $("unit-tip").classList.remove("show");
     $("hud").classList.toggle("open", !id);
   }
 
@@ -233,7 +234,7 @@
     if (online) {
       narrate("Online battle", `You command ${sideName(online.myColor)} as ${online.myColor === "w" ? "Ivory, moving first" : "Onyx"}, against ${online.opponent}.${moves.length ? " The battle resumes." : ""}`);
     } else {
-      narrate("The opening", `${sideName("w")} faces ${sideName("b")} on ${Terrain.name}. ${Stage.touch ? "Tap a unit to give orders. Pinch or twist with two fingers to look around." : "Click one of your units to give orders. Drag to look around."}`);
+      narrate("The opening", `${sideName("w")} faces ${sideName("b")} on ${Terrain.name}. ${Stage.touch ? "Tap a unit to give orders, hold it to read it. Pinch or twist with two fingers to look around." : "Click one of your units to give orders. Hover any unit to read it. Drag to look around."}`);
     }
     showScreen(null);
     updateHud();
@@ -838,7 +839,63 @@
   });
   $("menu-online").addEventListener("click", Online.open);
 
-  Stage.init($("stage"), onSquare);
+  // ---------------------------------------------------------------- unit tooltip
+  const ROLE_VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+  const ROLE_LABEL = { k: "King", q: "Queen", r: "Rook", b: "Bishop", n: "Knight", p: "Pawn" };
+  let tipKey = "";
+
+  function unitTip(sq, x, y) {
+    const tip = $("unit-tip");
+    const piece = sq && position.board[sq.row][sq.col];
+    if (!piece) {
+      tip.classList.remove("show");
+      tipKey = "";
+      return;
+    }
+    // Rebuild the card only when the unit or the position changed; otherwise just follow the pointer.
+    const key = `${sq.row}${sq.col}|${history.length}`;
+    if (key !== tipKey) {
+      tipKey = key;
+      const info = army(piece.color);
+      const enemy = piece.color === "w" ? "b" : "w";
+      const side = piece.color === "w" ? "Ivory" : "Onyx";
+      const lines = [];
+      const worth = ROLE_VALUE[piece.type] ? ` · worth ${ROLE_VALUE[piece.type]}` : "";
+      lines.push(`${ROLE_LABEL[piece.type]} · ${algebraic(sq.row, sq.col)}${worth}`);
+      const ground = Terrain.at(sq.row, sq.col);
+      if (ground) lines.push(`Standing ${ground.label}`);
+      const threatened = isSquareAttacked(position, sq.row, sq.col, enemy);
+      const guarded = piece.type !== "k" && isSquareAttacked(position, sq.row, sq.col, piece.color);
+      if (piece.type === "k" && threatened) lines.push(`<span class="warn">In check!</span>`);
+      else if (threatened) lines.push(`<span class="warn">Under threat</span>${guarded ? " · guarded" : " · unguarded"}`);
+      else if (guarded) lines.push(`<span class="good">Guarded</span>`);
+      const mine = piece.color === position.turn && piece.color !== aiColor && (!online || piece.color === online.myColor);
+      if (mine && !gameOver) {
+        const count = legalMoves(position, sq.row, sq.col).length;
+        lines.push(count ? `${count} move${count === 1 ? "" : "s"} available` : "No moves available");
+      }
+      tip.style.setProperty("--tip-accent", `#${info.look.accent.toString(16).padStart(6, "0")}`);
+      tip.innerHTML = `
+        <div class="tip-head">
+          <span class="tip-icon">${info.pieces[piece.type]}</span>
+          <div><div class="tip-name">${info.units[piece.type]}</div><div class="tip-army">${info.name} · ${side}</div></div>
+        </div>
+        <ul class="tip-lines">${lines.map(line => `<li>${line}</li>`).join("")}</ul>`;
+    }
+    tip.classList.add("show");
+    // Beside the mouse; above the finger on touch screens so the hand doesn't cover it.
+    const w = tip.offsetWidth, h = tip.offsetHeight, pad = 12;
+    let left = Stage.touch ? x - w / 2 : x + 16;
+    let top = Stage.touch ? y - h - 28 : y + 18;
+    if (!Stage.touch && left + w > innerWidth - pad) left = x - w - 16;
+    if (top + h > innerHeight - pad) top = y - h - 12;
+    left = Math.max(pad, Math.min(left, innerWidth - w - pad));
+    top = Math.max(pad, top);
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+  }
+
+  Stage.init($("stage"), onSquare, unitTip);
   Stage.cinematics = settings.cinematics;
   Stage.blood = settings.blood;
   FX.muted = !settings.sound;

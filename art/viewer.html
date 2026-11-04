@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chess Wars · Unit Review</title>
+<style>
+  :root { --bg: #121722; --panel: rgba(16, 20, 30, 0.82); --line: rgba(255, 255, 255, 0.12); --text: #e9e4d8; --dim: #9a9fae; --gold: #e0b84f; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  canvas { display: block; touch-action: none; }
+  header { position: fixed; top: 0; left: 0; right: 0; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: linear-gradient(var(--panel), transparent); }
+  header h1 { font-size: 16px; margin: 0 8px 0 0; letter-spacing: 0.04em; color: var(--gold); }
+  .chips, .clips { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; min-height: 40px; }
+  button.on { background: var(--gold); color: #1b1608; border-color: var(--gold); font-weight: 600; }
+  footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 8px; align-items: center; background: linear-gradient(transparent, var(--panel)); }
+  #info { color: var(--dim); font-size: 13px; text-align: center; }
+  #info b { color: var(--text); }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--dim); pointer-events: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>UNIT REVIEW</h1>
+  <div class="chips" id="units"></div>
+</header>
+<footer>
+  <div class="clips" id="clips"></div>
+  <div id="info"></div>
+</footer>
+<div id="loading">Loading units…</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+// Add new units here as the generator makes them.
+const UNITS = [
+  { id: "knights-pawn", file: "export/Knights_Pawn.glb", name: "Squire", army: "Order of Knights", side: "Ivory" },
+  { id: "undead-pawn", file: "export/Undead_Pawn.glb", name: "Skeleton", army: "Army of the Dead", side: "Onyx" },
+];
+const CLIPS = ["Idle", "Walk", "Attack", "Death"];
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x121722);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.6;
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 1.2;
+controls.maxDistance = 12;
+controls.maxPolarAngle = Math.PI * 0.49;
+
+scene.add(new THREE.HemisphereLight(0xcfd8ff, 0x3b3228, 1.1));
+const sun = new THREE.DirectionalLight(0xfff1dc, 2.6);
+sun.position.set(-3, 6, 4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4 });
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0x9fc4ff, 1.4);
+rim.position.set(2, 3, -5);
+scene.add(rim);
+
+// a patch of chessboard, same square size as the game (1.2)
+for (let i = -3; i < 3; i++) for (let j = -2; j < 2; j++) {
+  const sq = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.2),
+    new THREE.MeshStandardMaterial({ color: (i + j) % 2 === 0 ? 0x9c8a68 : 0x3b3228, roughness: 0.8 }));
+  sq.rotation.x = -Math.PI / 2;
+  sq.position.set(i * 1.2 + 0.6, 0, j * 1.2 + 0.6);
+  sq.receiveShadow = true;
+  scene.add(sq);
+}
+
+const loader = new GLTFLoader();
+const loaded = new Map();   // id -> { root, mixer, actions }
+let selection = "all";
+let clip = "Idle";
+
+async function load(unit) {
+  const gltf = await loader.loadAsync(unit.file);
+  const root = gltf.scene;
+  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  const mixer = new THREE.AnimationMixer(root);
+  const actions = {};
+  for (const name of CLIPS) {
+    const c = gltf.animations.find(a => a.name.endsWith(name));
+    if (c) actions[name] = mixer.clipAction(c);
+  }
+  scene.add(root);
+  return { root, mixer, actions };
+}
+
+function play(name) {
+  clip = name;
+  for (const { actions } of loaded.values()) {
+    const next = actions[name];
+    if (!next) continue;
+    for (const a of Object.values(actions)) if (a !== next) a.fadeOut(0.2);
+    const once = name === "Attack" || name === "Death";
+    next.reset().setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+    next.clampWhenFinished = name === "Death";
+    next.fadeIn(0.2).play();
+  }
+  renderButtons();
+}
+
+// After an attack finishes, settle back into idle.
+function hookAttackReturn(entry) {
+  entry.mixer.addEventListener("finished", e => {
+    if (e.action === entry.actions.Attack && clip === "Attack") play("Idle");
+  });
+}
+
+function layout() {
+  const shown = UNITS.filter(u => selection === "all" || u.id === selection);
+  shown.forEach((u, i) => {
+    const e = loaded.get(u.id);
+    e.root.visible = true;
+    e.root.position.set((i - (shown.length - 1) / 2) * 1.2, 0, 0);
+  });
+  for (const u of UNITS) if (!shown.includes(u)) loaded.get(u.id).root.visible = false;
+  const wide = shown.length > 1;
+  const portrait = innerWidth < innerHeight;
+  const dist = (wide ? 5.2 : 3.6) * (portrait ? 1.45 : 1);
+  controls.target.set(0, 1.05, 0);
+  camera.position.set(dist * 0.35, 1.6, dist);
+  controls.update();
+  const u = shown.length === 1 ? shown[0] : null;
+  document.getElementById("info").innerHTML = u
+    ? `<b>${u.name}</b> · ${u.army} · ${u.side} side — drag to rotate, pinch or scroll to zoom`
+    : "Drag to rotate · pinch or scroll to zoom · tap a unit name to inspect it alone";
+}
+
+function renderButtons() {
+  const units = document.getElementById("units");
+  units.innerHTML = "";
+  for (const [id, label] of [["all", "Side by side"], ...UNITS.map(u => [u.id, u.name])]) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.className = selection === id ? "on" : "";
+    b.onclick = () => { selection = id; layout(); play(clip === "Death" ? "Idle" : clip); };
+    units.append(b);
+  }
+  const clips = document.getElementById("clips");
+  clips.innerHTML = "";
+  for (const name of CLIPS) {
+    const b = document.createElement("button");
+    b.textContent = name;
+    b.className = clip === name ? "on" : "";
+    b.onclick = () => play(name);
+    clips.append(b);
+  }
+}
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+try {
+  const entries = await Promise.all(UNITS.map(load));
+  UNITS.forEach((u, i) => { loaded.set(u.id, entries[i]); hookAttackReturn(entries[i]); });
+  document.getElementById("loading").remove();
+  layout();
+  play("Idle");
+} catch (err) {
+  document.getElementById("loading").textContent = "Could not load units: " + err.message;
+}
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 1 / 20);
+  for (const e of loaded.values()) e.mixer.update(dt);
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
