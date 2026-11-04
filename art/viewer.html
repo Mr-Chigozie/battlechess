@@ -46,9 +46,10 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 // Add new units here as the generator makes them.
 const UNITS = [
   { id: "knights-pawn", file: "export/Knights_Pawn.glb", name: "Squire", army: "Order of Knights", side: "Ivory" },
+  { id: "mafia-pawn", file: "export/Mafia_Pawn.glb", name: "Soldier", army: "The Mafia", side: "Ivory" },
   { id: "undead-pawn", file: "export/Undead_Pawn.glb", name: "Skeleton", army: "Army of the Dead", side: "Onyx" },
 ];
-const CLIPS = ["Idle", "Walk", "Attack", "Death"];
+const CLIPS = ["Idle", "Walk", "Attack", "Shoot", "Death"];
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -116,7 +117,7 @@ function play(name) {
     const next = actions[name];
     if (!next) continue;
     for (const a of Object.values(actions)) if (a !== next) a.fadeOut(0.2);
-    const once = name === "Attack" || name === "Death";
+    const once = name !== "Idle" && name !== "Walk";
     next.reset().setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
     next.clampWhenFinished = name === "Death";
     next.fadeIn(0.2).play();
@@ -127,7 +128,7 @@ function play(name) {
 // After an attack finishes, settle back into idle.
 function hookAttackReturn(entry) {
   entry.mixer.addEventListener("finished", e => {
-    if (e.action === entry.actions.Attack && clip === "Attack") play("Idle");
+    if (e.action === entry.actions[clip] && (clip === "Attack" || clip === "Shoot")) play("Idle");
   });
 }
 
@@ -141,7 +142,7 @@ function layout() {
   for (const u of UNITS) if (!shown.includes(u)) loaded.get(u.id).root.visible = false;
   const wide = shown.length > 1;
   const portrait = innerWidth < innerHeight;
-  const dist = (wide ? 5.2 : 3.6) * (portrait ? 1.45 : 1);
+  const dist = (wide ? 3.4 + shown.length * 1.0 : 3.6) * (portrait ? (wide ? 1.9 : 1.45) : 1);
   controls.target.set(0, 1.05, 0);
   camera.position.set(dist * 0.35, 1.6, dist);
   controls.update();
