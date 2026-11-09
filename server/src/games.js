@@ -278,9 +278,11 @@ async function challenge(user, { to, clock }) {
   }
   const { n } = await db.one("SELECT COUNT(*) AS n FROM challenges WHERE from_id = ? AND status = 'pending'", [user.id]);
   if (n >= MAX_PENDING_CHALLENGES) throw new UserError("too-many", "You have too many challenges waiting. Cancel some first.");
-  await db.query("INSERT INTO challenges (from_id, to_id, clock_type) VALUES (?, ?, ?)", [user.id, target.id, checkClock(clock)]);
+  const saved = await db.query("INSERT INTO challenges (from_id, to_id, clock_type) VALUES (?, ?, ?)", [user.id, target.id, checkClock(clock)]);
   track(user.id, "challenge_sent", { to: target.id, clock: checkClock(clock) });
-  hub.emitToUser(target.id, "challenge:incoming", { fromName: user.name });
+  const fresh = await db.one("SELECT army FROM users WHERE id = ?", [user.id]);
+  hub.emitToUser(target.id, "challenge:incoming",
+    { id: saved.insertId, fromId: user.id, fromName: user.name, fromArmy: fresh ? fresh.army : user.army, clock: checkClock(clock) });
   hub.pushLobby(user.id);
   hub.pushLobby(target.id);
   return { ok: true };

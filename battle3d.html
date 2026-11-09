@@ -200,6 +200,9 @@
     .fine-print a { color: var(--gold-light); }
     .invite-row { display: flex; gap: 6px; align-items: center; }
     .invite-row select { flex: 1; }
+    .search-row { margin-bottom: 10px; }
+    .search-row .search { flex: 1; min-width: 0; margin: 0; }
+    .search-row .btn { white-space: nowrap; }
     .guest-note { margin: 8px 0 0; color: var(--gold-light); font-size: 12px; }
     .clocks { display: flex; gap: 6px; font: 12px "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
     .clocks[hidden] { display: none; }
@@ -247,6 +250,9 @@
     .unit-tip .tip-lines .good { color: #8fd99f; }
     @media (max-width: 760px) {
       .lobby-grid { grid-template-columns: 1fr; margin: 14px 0; }
+      /* Phones: one column, with who's online near the top */
+      .lobby-col { display: contents; }
+      .box-me { order: 1; } .box-challenges { order: 2; } .box-users { order: 3; } .box-invite { order: 4; } .box-battles { order: 5; }
       .row-item { gap: 8px; padding: 8px; }
       .row-item .btn.small { min-height: 38px; }
     }
@@ -455,7 +461,7 @@
       <h2 class="title" style="font-size: clamp(30px, 5vw, 48px)">War Room</h2>
       <div class="lobby-grid">
         <div class="lobby-col">
-          <div class="lobby-box">
+          <div class="lobby-box box-me">
             <h3>Your commander</h3>
             <div id="me-card" class="me-card"></div>
             <label class="field">Army you lead online <select id="me-army"></select></label>
@@ -466,7 +472,7 @@
               <button class="link-btn" id="btn-delete" type="button">Delete account</button>
             </div>
           </div>
-          <div class="lobby-box">
+          <div class="lobby-box box-invite">
             <h3>Invite a friend</h3>
             <p class="muted" style="margin: 0 0 10px">Send a link on WhatsApp or anywhere. Your friend can play straight away, no sign-up needed.</p>
             <div class="invite-row">
@@ -478,18 +484,21 @@
             </div>
             <div id="invite-list" class="list" style="margin-top: 10px"></div>
           </div>
-          <div class="lobby-box">
+          <div class="lobby-box box-challenges">
             <h3>Challenges</h3>
             <div id="challenge-list" class="list"></div>
           </div>
-          <div class="lobby-box">
+          <div class="lobby-box box-battles">
             <h3>Your battles</h3>
             <div id="game-list" class="list"></div>
           </div>
         </div>
-        <div class="lobby-box">
+        <div class="lobby-box box-users">
           <h3>Commanders <span class="muted" id="online-count"></span></h3>
-          <input id="user-search" class="search" placeholder="Search commanders…" autocomplete="off">
+          <div class="invite-row search-row">
+            <input id="user-search" class="search" placeholder="Search commanders…" autocomplete="off">
+            <button class="btn small" id="btn-online-only" type="button">Online now</button>
+          </div>
           <div id="user-list" class="list"></div>
         </div>
       </div>

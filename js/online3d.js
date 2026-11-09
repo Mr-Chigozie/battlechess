@@ -14,6 +14,7 @@ const Online = (() => {
   let me = null;            // { id, name, army, guest, wins, losses, draws }
   let socket = null;
   let lobbyData = null;
+  let onlineOnly = false;  // War Room: show only commanders who are online right now
   let mode = "login";
   let toastTimer = null;
   let pendingInvite = null; // invite code from the link this page was opened with
@@ -105,9 +106,22 @@ const Online = (() => {
         toast("A new battle is waiting for you in the War Room.");
       }
     });
-    socket.on("challenge:incoming", ({ fromName }) => {
-      toast(`⚔ ${fromName} challenges you! Open the War Room to answer.`);
+    socket.on("challenge:incoming", c => {
       FX.sfx("drums");
+      // In a menu: answer on the spot. Mid-battle (or already looking at a card): just a toast, nothing interrupted.
+      const screen = document.querySelector(".screen.open");
+      if (!c.id || !screen || screen.id === "card-screen") return toast(`⚔ ${c.fromName} challenges you! Open the War Room to answer.`);
+      const back = () => (screen.id === "lobby-screen" ? openLobby() : hooks.showScreen(screen.id));
+      hooks.showCard({
+        eyebrow: "Challenge",
+        title: `${c.fromName} challenges you!`,
+        paragraphs: [`${armyLabel(c.fromArmy)} wants to battle you, and they lead as Ivory.`, clockLabel(c.clock)],
+        buttons: [
+          { label: "Decline", action: async () => { await answer(c.id, "decline"); back(); } },
+          { label: "Later", action: back },
+          { label: "Accept", primary: true, action: async () => { if (!(await answer(c.id, "accept"))) back(); } }
+        ]
+      });
     });
     socket.on("challenge:declined", ({ byName }) => toast(`${byName} declined your challenge.`));
   }
@@ -138,6 +152,7 @@ const Online = (() => {
     $("btn-delete").addEventListener("click", () => openAuth("delete"));
     $("me-army").addEventListener("change", changeArmy);
     $("user-search").addEventListener("input", renderLobby);
+    $("btn-online-only").addEventListener("click", () => { onlineOnly = !onlineOnly; renderLobby(); });
     $("btn-invite").addEventListener("click", createInvite);
     $("acct-login").addEventListener("click", () => openAuth("login"));
     $("acct-register").addEventListener("click", () => openAuth("register"));
@@ -531,9 +546,12 @@ const Online = (() => {
     if (!gameList.children.length) gameList.appendChild(empty("No battles yet."));
 
     const filter = $("user-search").value.trim().toLowerCase();
-    const others = lobbyData.users.filter(u => !filter || u.name.toLowerCase().includes(filter))
-      .sort((a, b) => Number(b.online) - Number(a.online) || b.lastSeen - a.lastSeen);
-    $("online-count").textContent = `(${lobbyData.users.filter(u => u.online).length} online)`;
+    const onlineNow = lobbyData.users.filter(u => u.online).length;
+    const others = lobbyData.users.filter(u => (!filter || u.name.toLowerCase().includes(filter)) && (!onlineOnly || u.online))
+      .sort((a, b) => Number(b.online) - Number(a.online) || Number(a.playing) - Number(b.playing) || b.lastSeen - a.lastSeen);
+    $("online-count").textContent = `(${onlineNow} online)`;
+    $("btn-online-only").textContent = onlineOnly ? "Everyone" : `Online now (${onlineNow})`;
+    $("btn-online-only").classList.toggle("primary", onlineOnly);
     const userList = $("user-list");
     userList.replaceChildren();
     for (const u of others) {
@@ -546,7 +564,8 @@ const Online = (() => {
           { label: "⋯", action: () => userMenu(u) }
         ]));
     }
-    if (!others.length) userList.appendChild(empty(filter ? "No commanders match that name." : "No other commanders yet. Invite a friend with a link!"));
+    if (!others.length) userList.appendChild(empty(filter ? "No commanders match that name."
+      : onlineOnly ? "Nobody else is online right now. Invite a friend with a link!" : "No other commanders yet. Invite a friend with a link!"));
   }
 
   async function challenge(target) {
@@ -556,8 +575,9 @@ const Online = (() => {
 
   async function answer(id, action) {
     const r = await emit("challenge:answer", { id, action });
-    if (r.error) return toast(r.message);
+    if (r.error) { toast(r.message); return false; }
     if (r.gameId) joinGame(r.gameId);
+    return Boolean(r.gameId);
   }
 
   function userMenu(u) {
