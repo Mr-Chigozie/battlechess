@@ -201,6 +201,7 @@
     token += 1;
     queuedOrder = null;
     online = setup.online ? { ...setup.online } : null;
+    if (!online) $("clocks").hidden = true;
     remoteMoves = moves;
     lastTauntAt = Date.now();
     paused = false;
@@ -243,10 +244,13 @@
 
   // While the previous move is still animating, the next player can already pick a unit and give
   // an order; it runs the moment the board is free (quick taps on phones would otherwise be lost).
-  function onSquare(sq) {
+  function onSquare(clicked, ground = null) {
     if (gameOver || aiThinking || position.turn === aiColor) return;
     if (online && position.turn !== online.myColor) return;
-    const move = targets.find(m => m.toRow === sq.row && m.toCol === sq.col);
+    const at = s => s && targets.find(m => m.toRow === s.row && m.toCol === s.col);
+    // A unit standing in front of a highlighted square doesn't swallow the order meant for that square.
+    const sq = selected && !at(clicked) && at(ground) ? ground : clicked;
+    const move = at(sq);
     if (selected && move) {
       const piece = position.board[selected.row][selected.col];
       const order = () => {
@@ -427,11 +431,34 @@
       narrate(`${online.opponent} says`, `“${doc.taunt.text}”`);
       FX.sfx("select");
     }
-    if (doc.status === "finished" && doc.reason === "resign" && !gameOver) {
-      const loser = doc.result === "w" ? "b" : "w";
-      gameOver = `${sideName(doc.result)} wins`;
-      narrate("Resignation", loser === online.myColor ? "You laid down your arms." : `${online.opponent} has resigned.`);
-      finish(doc.result, "resign");
+    // Draw offers from the rival.
+    if (doc.status === "active" && doc.drawOffer && doc.drawOffer !== online.myColor && online.seenOffer !== doc.moves.length) {
+      online.seenOffer = doc.moves.length;
+      narrate("Parley", `${online.opponent} offers a draw.`);
+      showCard({
+        eyebrow: "Draw offer",
+        title: `${online.opponent} offers a draw`,
+        paragraphs: ["Accept and the battle ends level. Decline and fight on."],
+        buttons: [
+          { label: "Decline", action: () => { showScreen(null); Online.draw(online.gameId, "decline"); } },
+          { label: "Accept draw", primary: true, action: () => { showScreen(null); Online.draw(online.gameId, "accept"); } }
+        ]
+      });
+    }
+    // Endings the server decides that aren't on the board: resignation, time, agreement, a battle called off.
+    // (Checkmate and the drawn positions are found by replaying the final move here.)
+    const offBoard = { resign: true, timeout: true, agreement: true, aborted: true };
+    if (doc.status === "finished" && offBoard[doc.reason] && !gameOver) {
+      gameOver = doc.reason === "aborted" ? "Called off" : doc.result === "draw" ? "Draw" : `${sideName(doc.result)} wins`;
+      const mine = doc.result === online.myColor;
+      const news = {
+        resign: ["Resignation", mine ? `${online.opponent} has resigned.` : "You laid down your arms."],
+        timeout: ["Out of time", mine ? `${online.opponent} ran out of time.` : "Your time ran out."],
+        agreement: ["Parley", "Both commanders agree to a draw."],
+        aborted: ["Called off", "The opening move never came, so the battle was called off. No result is recorded."]
+      }[doc.reason];
+      narrate(...news);
+      finish(doc.result === "draw" || doc.reason === "aborted" ? null : doc.result, doc.reason);
     }
   }
 
@@ -444,18 +471,35 @@
   }
 
   function onlineResult(outcome, reason) {
-    const why = reason === "resign" ? (outcome === "win" ? `${online.opponent} resigned.` : "You resigned.")
-      : reason === "checkmate" ? (outcome === "win" ? `You checkmated ${online.opponent}.` : `${online.opponent} checkmated you.`)
-      : reason;
+    const won = outcome === "win";
+    const why = {
+      resign: won ? `${online.opponent} resigned.` : "You resigned.",
+      checkmate: won ? `You checkmated ${online.opponent}.` : `${online.opponent} checkmated you.`,
+      timeout: won ? `${online.opponent} ran out of time.` : "Your time ran out.",
+      agreement: "You agreed a draw.",
+      aborted: "The first move never came, so the battle was called off."
+    }[reason] || reason;
+    const recorded = reason === "aborted" ? "Nothing goes on either record." : "The result has been added to your record.";
+    const guest = Online.guest && reason !== "aborted";
     showCard({
       eyebrow: "Online battle",
-      title: outcome === "win" ? "Victory" : outcome === "loss" ? "Defeat" : "Draw",
-      paragraphs: [why, "The result has been added to your record."],
+      title: reason === "aborted" ? "Called off" : won ? "Victory" : outcome === "loss" ? "Defeat" : "Draw",
+      paragraphs: [why, guest ? "You're playing as a guest. Create an account to keep this result and challenge anyone, from any device." : recorded],
       buttons: [
         { label: "View the board", action: () => showScreen(null) },
-        { label: "War room", primary: true, action: leaveOnline }
+        guest
+          ? { label: "Create account", primary: true, action: () => { leaveBattle(); Online.openUpgrade(); } }
+          : { label: "War room", primary: true, action: leaveOnline }
       ]
     });
+  }
+
+  // Leave the battle screen without opening the War Room (used before the guest sign-up form).
+  function leaveBattle() {
+    token += 1;
+    Online.leaveGame();
+    online = null;
+    battle = null;
   }
 
   function maybeAi() {
@@ -502,14 +546,10 @@
     queuedOrder = null;
     updateHud();
     if (battle.mode === "online") {
+      // The server has already recorded the result; this only tells the player.
       const outcome = winner === null ? "draw" : winner === online.myColor ? "win" : "loss";
-      if (!online.recorded) {
-        online.recorded = true;
-        Online.recordResult(outcome);
-        if (reason !== "resign") Online.finishGame(online.gameId, winner || "draw", reason === "checkmate" ? "checkmate" : "draw");
-      }
       FX.sfx(outcome === "win" ? "fanfare" : "defeat");
-      setTimeout(() => { if (online) onlineResult(outcome, reason === "checkmate" || reason === "resign" ? reason : reason || "draw"); }, 1800);
+      setTimeout(() => { if (online) onlineResult(outcome, reason || "draw"); }, 1800);
       return;
     }
     const human = aiColor ? (aiColor === "w" ? "b" : "w") : null;
@@ -734,6 +774,11 @@
       paragraphs: [gameOver ? "This battle is over." : "Leaving keeps the battle open. Resume it any time from the War Room."],
       buttons: [
         { label: "War room", action: leaveOnline },
+        { label: "Report player", action: () => {
+          const rivalId = online.myColor === "w" ? online.game.black : online.game.white;
+          Online.reportUser(rivalId, online.opponent, online.gameId, () => showScreen(null));
+        } },
+        ...(gameOver ? [] : [{ label: "Offer draw", action: () => { showScreen(null); Online.draw(online.gameId, "offer"); } }]),
         ...(gameOver ? [] : [{ label: "Resign", action: () => showCard({
           eyebrow: "Resign",
           title: "Lay down your arms?",
@@ -835,6 +880,7 @@
     }),
     resync: () => { if (online) Online.joinGame(online.gameId); },
     inGame: () => Boolean(online) && !gameOver,
+    touch: () => Stage.touch,
     currentGameId: () => (online && !gameOver ? online.gameId : null)
   });
   $("menu-online").addEventListener("click", Online.open);

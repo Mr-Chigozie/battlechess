@@ -230,7 +230,8 @@ PALETTES = {
     "Knights": {
         "Armor": (0xB7C3D0, 0.55, 0.35), "Dark": (0x4A505A, 0.5, 0.45), "Cloth": (0x7A1F24, 0.0, 0.8),
         "Accent": (0xD8342C, 0.0, 0.6), "Trim": (0xD9B44A, 0.8, 0.3), "Leather": (0x4A3324, 0.0, 0.8),
-        "Steel": (0xE4E9EF, 0.7, 0.25),
+        "Steel": (0xE4E9EF, 0.7, 0.25), "Skin": (0xE0B394, 0.0, 0.6), "Hair": (0x6B4A30, 0.0, 0.8),
+        "Ermine": (0xF4F1EA, 0.0, 0.9),
     },
     "Mafia": {
         "Suit": (0x2E2F36, 0.0, 0.7), "Stripe": (0x8C8E99, 0.0, 0.6), "Lapel": (0x1C1D22, 0.0, 0.6),
@@ -240,8 +241,9 @@ PALETTES = {
     },
     "Undead": {
         "Bone": (0xE8E2CC, 0.0, 0.75), "Armor": (0x7D7A62, 0.6, 0.65), "Dark": (0x0B0D0B, 0.0, 0.9),
-        "Cloth": (0x2F3A2C, 0.0, 0.9), "Accent": (0x7DFF9A, 0.0, 0.5), "Glow": (0x7DFF9A, 0.0, 0.5, 3.0),
+        "Cloth": (0x2F3A2C, 0.0, 0.9), "Accent": (0x7DFF9A, 0.0, 0.5), "Glow": (0x2EF06A, 0.0, 0.5, 2.2),
         "Leather": (0x3A3026, 0.0, 0.85), "Steel": (0x8F978C, 0.8, 0.45), "Trim": (0x8A6A3A, 0.8, 0.5),
+        "Royal": (0x3B2350, 0.0, 0.85), "Gold": (0xB8963A, 0.9, 0.35),
     },
 }
 
@@ -251,53 +253,94 @@ def plinth(k):
     k.cyl("Team", "root", Matrix.Translation((0, 0, 0.052)), 0.43, 0.41, 0.056, seg=28, bevel=0.008)
 
 
-# ---------------------------------------------------------------- Knights: Squire (pawn)
-def knight_pawn(k):
-    plinth(k)
+# ---------------------------------------------------------------- shared shapes
+def cape(k, slot, top_w, bottom_w, top_z, bottom_z, back=0.17, tilt=8, jagged=0):
+    """A cloak hanging from the shoulders behind the body (bound to the chest)."""
+    hw, bw = top_w / 2, bottom_w / 2
+    pts = [(-hw, top_z), (hw, top_z), (bw, bottom_z)]
+    if jagged:
+        for i in range(1, jagged * 2):
+            u = bw - (2 * bw) * i / (jagged * 2)
+            pts.append((u, bottom_z + (0.09 if i % 2 else 0.0)))
+    pts.append((-bw, bottom_z))
+    M = T(0, back, top_z) @ R(x=tilt) @ Matrix.Translation((0, 0, -top_z))
+    k.prism(slot, "chest", M, pts, 0.03)
+
+
+def sword(k, slot_blade="Steel", slot_hilt="Trim", slot_grip="Leather", length=0.85, width=0.065, glow=None):
+    """A sword in the right hand, pointing forward and up."""
+    h = Vector(mid("hand.R", dy=-0.02))
+    d = Vector((0, -1, 0.55)).normalized()
+    P = lambda t: tuple(h + d * t)
+    M, L = along(P(-0.08), P(0.08)); k.cyl(slot_grip, "hand.R", M, 0.022, 0.022, L, seg=6)
+    k.sphere(slot_hilt, "hand.R", T(*P(-0.11)), (0.035, 0.035, 0.035), seg=8)
+    M, L = along(P(0.09), P(0.11)); k.box(slot_hilt, "hand.R", M, (width * 3.7, 0.045, L + 0.02))
+    M, L = along(P(0.11), P(length)); k.box(slot_blade, "hand.R", M, (width, 0.016, L))
+    if glow:
+        M, L = along(P(0.16), P(length - 0.06)); k.box(glow, "hand.R", M, (width * 0.28, 0.022, L))
+    M, L = along(P(length), P(length + 0.1)); k.cyl(slot_blade, "hand.R", M, width * 0.54, 0.0, L, seg=4)
+
+
+def crown(k, slot, gem, z=1.885, r=0.148, points=5, tall=0.1, jag=0.0, gem_glow=None):
+    k.cyl(slot, "head", T(0, 0.0, z), r, r, 0.07, seg=12, bevel=0.006)
+    for i in range(points):
+        a = math.pi / 2 + 2 * math.pi * i / points  # first point at the front
+        h = tall * (1 + (jag if i % 2 else -jag * 0.5))
+        k.cyl(slot, "head", T(r * 0.93 * math.cos(a), -r * 0.93 * math.sin(a), z + 0.035 + h / 2), 0.036, 0.0, h, seg=5)
+    k.sphere(gem_glow or gem, "head", T(0, -r - 0.004, z), (0.024, 0.014, 0.024), seg=8)
+
+
+# ---------------------------------------------------------------- Knights
+def knight_legs(k, knee="Armor"):
     for s in (1, -1):
         x = "L" if s > 0 else "R"
         k.box("Armor", f"thigh.{x}", T(0.12 * s, 0, 0.78), (0.16, 0.17, 0.36), bevel=0.03)
-        k.sphere("Armor", f"shin.{x}", T(0.12 * s, -0.05, 0.56), (0.075, 0.075, 0.07), seg=8)
+        k.sphere(knee, f"shin.{x}", T(0.12 * s, -0.05, 0.56), (0.075, 0.075, 0.07), seg=8)
         M, L = along((0.12 * s, 0.02, 0.12), (0.12 * s, 0.0, 0.53))
         k.cyl("Armor", f"shin.{x}", M, 0.065, 0.08, L, seg=8, bevel=0.01)
         k.box("Dark", f"foot.{x}", T(0.12 * s, -0.04, 0.055), (0.12, 0.26, 0.11), bevel=0.03)
-    # waist
-    k.cyl("Cloth", "hips", T(0, 0, 0.80), 0.27, 0.2, 0.36, seg=8)
+
+
+def knight_torso(k):
     k.cyl("Leather", "hips", T(0, 0, 0.99), 0.215, 0.215, 0.07, seg=10)
     k.box("Trim", "hips", T(0, -0.215, 0.99), (0.08, 0.03, 0.07), bevel=0.01)
-    # torso and tabard with cross
     k.box("Armor", "spine", T(0, 0, 1.12), (0.34, 0.24, 0.22), bevel=0.05)
     k.box("Armor", "chest", T(0, 0, 1.36), (0.44, 0.28, 0.30), bevel=0.07)
     k.box("Cloth", "chest", T(0, -0.145, 1.18), (0.30, 0.03, 0.52), bevel=0.01)
     k.box("Cloth", "chest", T(0, 0.145, 1.18), (0.30, 0.03, 0.52), bevel=0.01)
     k.box("Trim", "chest", T(0, -0.165, 1.22), (0.055, 0.02, 0.32))
     k.box("Trim", "chest", T(0, -0.165, 1.30), (0.20, 0.02, 0.055))
-    k.cyl("Armor", "chest", T(0, 0, 1.53), 0.13, 0.11, 0.09, seg=10)
-    # arms
+
+
+def knight_arms(k, pauldron=(0.13, 0.13, 0.10), trim=False):
     for s in (1, -1):
         x = "L" if s > 0 else "R"
-        k.sphere("Armor", f"upper_arm.{x}", T(0.23 * s, 0, 1.46), (0.13, 0.13, 0.10), seg=10, smooth=False)
+        k.sphere("Armor", f"upper_arm.{x}", T(0.23 * s, 0, 1.46), pauldron, seg=10, smooth=False)
+        if trim:
+            k.cyl("Trim", f"upper_arm.{x}", T(0.23 * s, 0, 1.43), pauldron[0] + 0.006, pauldron[0] + 0.006, 0.025, seg=10)
         M, L = along(*B[f"upper_arm.{x}"])
         k.cyl("Armor", f"upper_arm.{x}", M, 0.055, 0.06, L, seg=8)
         k.sphere("Armor", f"forearm.{x}", T(0.30 * s, 0, 1.17), (0.06, 0.06, 0.06), seg=8)
         M, L = along(*B[f"forearm.{x}"])
         k.cyl("Armor", f"forearm.{x}", M, 0.07, 0.055, L, seg=8, bevel=0.01)
         k.box("Dark", f"hand.{x}", T(*mid(f"hand.{x}")), (0.09, 0.10, 0.11), bevel=0.02)
+
+
+def knight_pawn(k):
+    """Squire: great helm, tabard, arming sword and kite shield."""
+    plinth(k)
+    knight_legs(k)
+    k.cyl("Cloth", "hips", T(0, 0, 0.80), 0.27, 0.2, 0.36, seg=8)
+    knight_torso(k)
+    k.cyl("Armor", "chest", T(0, 0, 1.53), 0.13, 0.11, 0.09, seg=10)
+    knight_arms(k)
     # great helm with visor cross and crest
     k.cyl("Armor", "head", T(0, 0, 1.76), 0.155, 0.15, 0.30, seg=12, bevel=0.01)
     k.cyl("Armor", "head", T(0, 0, 1.935), 0.15, 0.08, 0.07, seg=12)
     k.box("Dark", "head", T(0, -0.145, 1.78), (0.25, 0.04, 0.035))
     k.box("Trim", "head", T(0, -0.155, 1.71), (0.035, 0.03, 0.18))
     k.box("Accent", "head", T(0, 0.02, 2.0), (0.035, 0.28, 0.12), bevel=0.015)
-    # arming sword, right hand
-    h = Vector(mid("hand.R", dy=-0.02))
-    d = Vector((0, -1, 0.55)).normalized()
-    P = lambda t: tuple(h + d * t)
-    M, L = along(P(-0.08), P(0.08)); k.cyl("Leather", "hand.R", M, 0.022, 0.022, L, seg=6)
-    k.sphere("Trim", "hand.R", T(*P(-0.11)), (0.035, 0.035, 0.035), seg=8)
-    M, L = along(P(0.09), P(0.11)); k.box("Trim", "hand.R", M, (0.24, 0.045, L + 0.02))
-    M, L = along(P(0.11), P(0.85)); k.box("Steel", "hand.R", M, (0.065, 0.016, L))
-    M, L = along(P(0.85), P(0.95)); k.cyl("Steel", "hand.R", M, 0.035, 0.0, L, seg=4)
+    sword(k)
     # kite shield, left forearm
     kite = [(0, 0.28), (0.19, 0.22), (0.2, 0.02), (0.0, -0.36), (-0.2, 0.02), (-0.19, 0.22)]
     SM = T(0.44, -0.07, 1.02) @ R(z=37) @ R(x=-8)
@@ -307,9 +350,39 @@ def knight_pawn(k):
     k.box("Trim", "forearm.L", SM @ Matrix.Translation((0, -0.032, 0.1)), (0.3, 0.012, 0.045))
 
 
-# ---------------------------------------------------------------- Undead: Skeleton (pawn)
-def undead_pawn(k):
+def knight_king(k):
+    """King: bareheaded and bearded under a gold crown, royal surcoat, ermine-collared cape, longsword."""
     plinth(k)
+    knight_legs(k)
+    # long royal surcoat to the knees, gold hem
+    k.cyl("Cloth", "hips", T(0, 0, 0.78), 0.29, 0.21, 0.4, seg=10)
+    k.cyl("Trim", "hips", T(0, 0, 0.595), 0.295, 0.295, 0.03, seg=10)
+    knight_torso(k)
+    k.box("Trim", "chest", T(0, -0.162, 0.97), (0.3, 0.02, 0.03))  # surcoat belt line
+    # ermine collar with black tail spots, and a long cape
+    k.cyl("Ermine", "chest", T(0, 0.01, 1.52), 0.24, 0.17, 0.1, seg=14, bevel=0.02)
+    for i in range(7):
+        a = math.radians(-30 - i * 20)
+        k.box("Dark", "chest", T(0.235 * math.cos(a), 0.235 * math.sin(a), 1.51) @ R(z=math.degrees(a)), (0.02, 0.012, 0.035))
+    cape(k, "Cloth", 0.5, 0.82, 1.5, 0.22, tilt=9)
+    knight_arms(k, pauldron=(0.14, 0.14, 0.11), trim=True)
+    # face, beard, hair and crown
+    M, L = along((0, 0, 1.5), (0, 0, 1.62)); k.cyl("Skin", "neck", M, 0.06, 0.06, L, seg=8)
+    k.sphere("Skin", "head", T(0, 0.0, 1.75), (0.12, 0.13, 0.14), seg=12)
+    k.sphere("Hair", "head", T(0, 0.03, 1.79), (0.128, 0.13, 0.12), seg=12)
+    for s in (1, -1):
+        k.box("Dark", "head", T(0.045 * s, -0.122, 1.755), (0.03, 0.02, 0.018))
+        k.box("Hair", "head", T(0.048 * s, -0.125, 1.785) @ R(y=-10 * s), (0.05, 0.02, 0.015))
+    k.box("Skin", "head", T(0, -0.135, 1.72), (0.035, 0.03, 0.05), bevel=0.01)
+    k.box("Hair", "head", T(0, -0.085, 1.645), (0.2, 0.1, 0.12), bevel=0.04)          # beard
+    k.cyl("Hair", "head", T(0, -0.1, 1.57) @ R(x=200), 0.07, 0.0, 0.1, seg=6)        # beard point
+    k.box("Hair", "head", T(0, -0.133, 1.69), (0.12, 0.025, 0.025), bevel=0.008)     # moustache
+    crown(k, "Trim", "Accent", z=1.875, r=0.14, tall=0.09)
+    sword(k, length=1.0, width=0.07)
+
+
+# ---------------------------------------------------------------- Undead
+def undead_legs(k):
     for s in (1, -1):
         x = "L" if s > 0 else "R"
         M, L = along((0.11 * s, 0, 0.94), (0.12 * s, 0, 0.6)); k.cyl("Bone", f"thigh.{x}", M, 0.032, 0.036, L, seg=6)
@@ -317,14 +390,10 @@ def undead_pawn(k):
         M, L = along((0.12 * s, 0.0, 0.52), (0.12 * s, 0.02, 0.12)); k.cyl("Bone", f"shin.{x}", M, 0.028, 0.026, L, seg=6)
         k.sphere("Bone", f"foot.{x}", T(0.12 * s, 0.02, 0.095), (0.036, 0.036, 0.036), seg=8)
         k.box("Bone", f"foot.{x}", T(0.12 * s, -0.05, 0.035), (0.09, 0.2, 0.06), bevel=0.015)
-    # pelvis, rope belt, rags
+
+
+def undead_torso(k):
     k.box("Bone", "hips", T(0, 0, 0.97), (0.26, 0.14, 0.11), bevel=0.04)
-    k.cyl("Leather", "hips", T(0, 0, 1.0), 0.16, 0.16, 0.035, seg=8)
-    k.box("Cloth", "hips", T(0, -0.09, 0.84) @ R(x=8), (0.17, 0.015, 0.26))
-    k.box("Cloth", "hips", T(0.02, 0.09, 0.82) @ R(x=-8), (0.2, 0.015, 0.3))
-    for px, pz in ((-0.05, 0.69), (0.045, 0.7)):
-        k.cyl("Cloth", "hips", T(px, -0.105, pz) @ R(x=180), 0.035, 0.0, 0.08, seg=4)
-    # spine and ribcage
     M, L = along((0, 0.04, 1.0), (0, 0.045, 1.3)); k.cyl("Bone", "spine", M, 0.028, 0.028, L, seg=6)
     for z in (1.06, 1.14, 1.22):
         k.cyl("Bone", "spine", T(0, 0.04, z), 0.042, 0.042, 0.022, seg=8)
@@ -333,11 +402,9 @@ def undead_pawn(k):
         k.torus("Bone", "chest", T(0, 0, z) @ S(1, 0.75, 1), rad, 0.017)
     k.box("Bone", "chest", T(0, -0.112, 1.36), (0.04, 0.02, 0.2), bevel=0.008)
     M, L = along((-0.2, -0.02, 1.48), (0.2, -0.02, 1.48)); k.cyl("Bone", "chest", M, 0.02, 0.02, L, seg=6)
-    k.box("Cloth", "chest", T(0, -0.15, 1.32) @ R(y=40), (0.06, 0.02, 0.5))
-    # rusty pauldron on one shoulder
-    k.sphere("Armor", "upper_arm.L", T(0.22, 0, 1.47), (0.12, 0.12, 0.09), seg=10, smooth=False)
-    k.cyl("Armor", "upper_arm.L", T(0.25, 0, 1.57) @ R(y=20), 0.035, 0.0, 0.12, seg=6)
-    # arms
+
+
+def undead_arms(k):
     for s in (1, -1):
         x = "L" if s > 0 else "R"
         k.sphere("Bone", f"upper_arm.{x}", T(0.21 * s, 0, 1.45), (0.04, 0.04, 0.04), seg=8)
@@ -351,7 +418,9 @@ def undead_pawn(k):
         tx, ty, tz = B[f"hand.{x}"][1]
         for oy in (-0.02, 0.0, 0.02):
             k.cyl("Bone", f"hand.{x}", T(tx, ty + oy, tz - 0.01) @ R(x=180), 0.012, 0.0, 0.08, seg=4)
-    # neck and skull with glowing eyes
+
+
+def undead_skull(k):
     M, L = along((0, 0.01, 1.5), (0, 0.01, 1.63)); k.cyl("Bone", "neck", M, 0.03, 0.03, L, seg=6)
     k.sphere("Bone", "head", T(0, 0.015, 1.8), (0.14, 0.16, 0.14), seg=12)
     k.box("Bone", "head", T(0, -0.075, 1.70), (0.17, 0.13, 0.10), bevel=0.03)
@@ -361,6 +430,29 @@ def undead_pawn(k):
         k.sphere("Glow", "head", T(0.055 * s, -0.14, 1.765), (0.021, 0.021, 0.021), seg=8)
     k.box("Dark", "head", T(0, -0.135, 1.71), (0.03, 0.03, 0.035))
     k.box("Dark", "head", T(0, -0.14, 1.662), (0.12, 0.012, 0.008))
+
+
+def spiked_pauldron(k, s, spikes=1):
+    x = "L" if s > 0 else "R"
+    k.sphere("Armor", f"upper_arm.{x}", T(0.22 * s, 0, 1.47), (0.12, 0.12, 0.09), seg=10, smooth=False)
+    for i in range(spikes):
+        k.cyl("Armor", f"upper_arm.{x}", T((0.25 - 0.05 * i) * s, 0.03 * i, 1.57 - 0.02 * i) @ R(y=20 * s + 15 * i * s), 0.035, 0.0, 0.12 - 0.02 * i, seg=6)
+
+
+def undead_pawn(k):
+    """Skeleton: rusted skullcap, rags, one pauldron, scythe."""
+    plinth(k)
+    undead_legs(k)
+    undead_torso(k)
+    k.cyl("Leather", "hips", T(0, 0, 1.0), 0.16, 0.16, 0.035, seg=8)
+    k.box("Cloth", "hips", T(0, -0.09, 0.84) @ R(x=8), (0.17, 0.015, 0.26))
+    k.box("Cloth", "hips", T(0.02, 0.09, 0.82) @ R(x=-8), (0.2, 0.015, 0.3))
+    for px, pz in ((-0.05, 0.69), (0.045, 0.7)):
+        k.cyl("Cloth", "hips", T(px, -0.105, pz) @ R(x=180), 0.035, 0.0, 0.08, seg=4)
+    k.box("Cloth", "chest", T(0, -0.15, 1.32) @ R(y=40), (0.06, 0.02, 0.5))
+    spiked_pauldron(k, 1)
+    undead_arms(k)
+    undead_skull(k)
     # rusted skullcap with nose guard and a dented crest spike
     k.cyl("Armor", "head", T(0, 0.015, 1.89), 0.158, 0.11, 0.12, seg=10, bevel=0.01)
     k.cyl("Trim", "head", T(0, 0.015, 1.84), 0.162, 0.162, 0.025, seg=10)
@@ -373,6 +465,36 @@ def undead_pawn(k):
     blade = [(-0.03, 0.06), (0.15, 0.09), (0.32, 0.06), (0.47, -0.02), (0.58, -0.14), (0.64, -0.3),
              (0.52, -0.16), (0.38, -0.06), (0.2, -0.02), (-0.03, -0.04)]
     k.prism("Steel", "hand.R", T(hx, hy - 0.066, 1.95) @ R(z=-90), blade, 0.02)
+
+
+def undead_king(k):
+    """Bone King: tall jagged crown with a soul gem, tattered royal robe and cloak, rune greatsword, soulfire in hand."""
+    plinth(k)
+    undead_legs(k)
+    undead_torso(k)
+    # tattered royal robe from the waist to the knees
+    k.cyl("Royal", "hips", T(0, 0, 0.79), 0.28, 0.19, 0.42, seg=10)
+    k.cyl("Gold", "hips", T(0, 0, 0.995), 0.2, 0.2, 0.04, seg=10)
+    for i in range(10):
+        a = 2 * math.pi * (i + 0.5) / 10
+        k.cyl("Royal", "hips", T(0.255 * math.cos(a), 0.255 * math.sin(a), 0.55) @ R(x=180), 0.05, 0.0, 0.1 + 0.05 * (i % 2), seg=4)
+    # rusted breastplate rim over the ribs, gold chain of office
+    k.torus("Gold", "chest", T(0, -0.01, 1.4) @ S(1, 0.78, 1) @ R(x=-20), 0.16, 0.014, 18, 5)
+    k.sphere("Glow", "chest", T(0, -0.135, 1.3), (0.028, 0.018, 0.035), seg=8)
+    # cloak with jagged hem and a fan of collar spikes
+    cape(k, "Cloth", 0.52, 0.85, 1.5, 0.2, tilt=9, jagged=4)
+    for i, a in enumerate((-50, -25, 0, 25, 50)):
+        k.cyl("Armor", "chest", T(0.16 * math.sin(math.radians(a)), 0.13, 1.62) @ R(x=-15, y=a * 0.8), 0.03, 0.0, 0.2 - 0.04 * abs(i - 2), seg=5)
+    spiked_pauldron(k, 1, spikes=2)
+    spiked_pauldron(k, -1, spikes=2)
+    undead_arms(k)
+    undead_skull(k)
+    crown(k, "Gold", "Glow", z=1.9, r=0.16, points=7, tall=0.16, jag=0.45)
+    # rune greatsword with a soul-green fuller
+    sword(k, slot_blade="Steel", slot_hilt="Gold", slot_grip="Leather", length=1.05, width=0.08, glow="Glow")
+    # soulfire burning in the left palm
+    lx, ly, lz = mid("hand.L")
+    k.sphere("Glow", "hand.L", T(lx, ly - 0.05, lz - 0.02), (0.05, 0.05, 0.05), seg=8)
 
 
 # ---------------------------------------------------------------- Mafia: Soldier (pawn)
@@ -623,10 +745,17 @@ def stage(engine):
     sc.render.image_settings.file_format = "PNG"
 
 
-def render_sheet(arms, acts):
+def show_only(arms, all_arms):
+    for a in all_arms:
+        hidden = a not in arms
+        for o in (a, *a.children):
+            o.hide_render = hidden
+            o.hide_viewport = hidden
+
+
+def render_sheet(arms, acts, tag, shots):
     import numpy as np
     sc = bpy.context.scene
-    shots = [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Shoot", 10), ("Death", 46)]
     size = 600
     sc.render.resolution_x = sc.render.resolution_y = size
     tiles = []
@@ -651,7 +780,7 @@ def render_sheet(arms, acts):
         sheet[(rows - 1 - r) * size:(rows - r) * size, c * size:(c + 1) * size] = t
     out = bpy.data.images.new("sheet", cols * size, rows * size, alpha=True)
     out.pixels.foreach_set(sheet.ravel())
-    out.filepath_raw = os.path.join(PREVIEW, "pawns_poses.png")
+    out.filepath_raw = os.path.join(PREVIEW, f"{tag}_poses.png")
     out.file_format = "PNG"
     out.save()
     # hero shot
@@ -659,7 +788,7 @@ def render_sheet(arms, acts):
         set_action(a, acts["Idle"])
     sc.frame_set(0)
     sc.render.resolution_x, sc.render.resolution_y = 1200, 900
-    sc.render.filepath = os.path.join(PREVIEW, "pawns_hero.png")
+    sc.render.filepath = os.path.join(PREVIEW, f"{tag}_hero.png")
     bpy.ops.render.render(write_still=True)
 
 
@@ -667,21 +796,35 @@ def main():
     os.makedirs(EXPORT, exist_ok=True)
     os.makedirs(PREVIEW, exist_ok=True)
     clear()
-    roster = [  # (army, team, builder, name, x on the preview board)
-        ("Knights", "Ivory", knight_pawn, "Knights_Pawn", -1.2),
-        ("Mafia", "Ivory", mafia_pawn, "Mafia_Pawn", 0.0),
-        ("Undead", "Onyx", undead_pawn, "Undead_Pawn", 1.2),
-    ]
-    arms = [unit(army, team, build, name, x) for army, team, build, name, x in roster]
-    acts = make_clips(arms[0])
-    for arm in arms:
+    # Preview groups: units of a group stand side by side; groups are rendered separately.
+    groups = {
+        "pawns": [("Knights", "Ivory", knight_pawn, "Knights_Pawn", -1.2),
+                  ("Mafia", "Ivory", mafia_pawn, "Mafia_Pawn", 0.0),
+                  ("Undead", "Onyx", undead_pawn, "Undead_Pawn", 1.2)],
+        "kings": [("Knights", "Ivory", knight_king, "Knights_King", -0.65),
+                  ("Undead", "Onyx", undead_king, "Undead_King", 0.65)],
+    }
+    built = {g: [unit(*spec) for spec in specs] for g, specs in groups.items()}
+    every = [a for arms in built.values() for a in arms]
+    acts = make_clips(every[0])
+    for arm in every:
         set_action(arm, acts["Idle"])
         export_fbx(arm, os.path.join(EXPORT, arm.name + ".fbx"))
     if "--render" in ARGS:
         engine = ARGS[ARGS.index("--engine") + 1] if "--engine" in ARGS else "eevee"
+        only = ARGS[ARGS.index("--group") + 1] if "--group" in ARGS else None
         stage(engine)
-        render_sheet(arms, acts)
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(EXPORT, "pawns.blend"))
+        shots = {
+            "pawns": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Shoot", 10), ("Death", 46)],
+            "kings": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Death", 20), ("Death", 46)],
+        }
+        for g, arms in built.items():
+            if only and g != only:
+                continue
+            show_only(arms, every)
+            render_sheet(arms, acts, g, shots[g])
+        show_only(every, every)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(EXPORT, "units.blend"))
     print("CHESSWARS DONE")
 
 

@@ -191,6 +191,21 @@
     }
     .field input:focus, .search:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
     .form-error { min-height: 18px; margin: 0; color: #ff9a8a; font-size: 13px; }
+    .form-error.ok { color: #8fd99f; }
+    .field[hidden], .tabs[hidden], .tab[hidden] { display: none; }
+    .invite-note { margin: 0 0 14px; padding: 10px 12px; border: 1px solid #a07f4588; border-radius: 4px; background: #2a2414; color: var(--gold-light); font-size: 14px; text-align: left; }
+    .invite-note small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .link-btn { padding: 0; border: 0; background: none; color: var(--gold-light); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+    .fine-print { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .fine-print a { color: var(--gold-light); }
+    .invite-row { display: flex; gap: 6px; align-items: center; }
+    .invite-row select { flex: 1; }
+    .guest-note { margin: 8px 0 0; color: var(--gold-light); font-size: 12px; }
+    .clocks { display: flex; gap: 6px; font: 12px "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
+    .clocks[hidden] { display: none; }
+    .clock { padding: 2px 8px; border: 1px solid var(--line); border-radius: 3px; background: #15171399; color: var(--muted); white-space: nowrap; }
+    .clock.active { border-color: var(--gold); color: var(--gold-light); }
+    .clock.low { border-color: var(--danger); color: #ff9a8a; }
     .lobby-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 14px; margin: 20px 0; text-align: left; }
     .lobby-col { display: grid; gap: 14px; align-content: start; }
     .lobby-box { padding: 14px; border: 1px solid #3b3d33; border-radius: 4px; background: #1b1d18e6; }
@@ -400,23 +415,30 @@
     <div class="card">
       <div class="eyebrow">Online battle</div>
       <h2 id="auth-title">Report for duty</h2>
-      <div class="tabs" role="tablist">
+      <p class="invite-note" id="auth-invite" hidden></p>
+      <div class="tabs" id="auth-tabs" role="tablist">
+        <button class="tab" id="auth-tab-guest" type="button" role="tab" hidden>Play as guest</button>
         <button class="tab active" id="auth-tab-login" type="button" role="tab">Sign in</button>
         <button class="tab" id="auth-tab-register" type="button" role="tab">Register</button>
       </div>
       <form id="auth-form" class="auth-form" novalidate>
-        <label class="field register-only">Commander name
+        <label class="field" id="f-name">Commander name
           <input id="auth-name" maxlength="20" autocomplete="nickname" placeholder="How rivals will see you">
         </label>
-        <label class="field">Email
+        <label class="field" id="f-email">Email
           <input id="auth-email" type="email" autocomplete="email" required>
         </label>
-        <label class="field">Password
-          <input id="auth-pass" type="password" minlength="6" autocomplete="current-password" required>
+        <label class="field" id="f-pass">Password
+          <input id="auth-pass" type="password" minlength="8" autocomplete="current-password" required>
         </label>
-        <label class="field register-only">Your army
+        <label class="field" id="f-code" hidden>Beta invite code
+          <input id="auth-code" autocomplete="off" placeholder="Only needed during the closed beta">
+        </label>
+        <label class="field" id="f-army">Your army
           <select id="auth-army"></select>
         </label>
+        <p class="fine-print" id="auth-terms">By playing you agree to the <a href="terms.html" target="_blank" rel="noopener">Terms</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+        <button class="link-btn" id="auth-forgot" type="button">Forgot your password?</button>
         <p class="form-error" id="auth-error" role="alert"></p>
         <div class="card-buttons">
           <button class="btn" type="button" data-back>Back</button>
@@ -437,7 +459,24 @@
             <h3>Your commander</h3>
             <div id="me-card" class="me-card"></div>
             <label class="field">Army you lead online <select id="me-army"></select></label>
-            <button class="btn small" id="btn-logout" type="button">Sign out</button>
+            <p class="guest-note" id="guest-note" hidden>You're playing as a guest. Create an account to keep your record and play from any device.</p>
+            <div class="card-buttons" style="justify-content: flex-start; margin-top: 8px">
+              <button class="btn small primary" id="btn-upgrade" type="button" hidden>Create account</button>
+              <button class="btn small" id="btn-logout" type="button">Sign out</button>
+              <button class="link-btn" id="btn-delete" type="button">Delete account</button>
+            </div>
+          </div>
+          <div class="lobby-box">
+            <h3>Invite a friend</h3>
+            <p class="muted" style="margin: 0 0 10px">Send a link on WhatsApp or anywhere. Your friend can play straight away, no sign-up needed.</p>
+            <div class="invite-row">
+              <select id="clock-select" class="search" style="margin: 0" aria-label="Time control">
+                <option value="live">Live · 10 min + 5 s</option>
+                <option value="daily">Daily · 1 move a day</option>
+              </select>
+              <button class="btn small primary" id="btn-invite" type="button">Create link</button>
+            </div>
+            <div id="invite-list" class="list" style="margin-top: 10px"></div>
           </div>
           <div class="lobby-box">
             <h3>Challenges</h3>
@@ -489,6 +528,7 @@
         <div class="turn-banner" id="turn-banner" aria-live="polite"></div>
         <div class="fury" title="Battle fury: rises with kills, checks and combos"><div class="fury-fill" id="fury-fill"></div></div>
         <div class="fury-label" id="fury-label">Calm</div>
+        <div class="clocks" id="clocks" hidden><span class="clock" id="clock-me"></span><span class="clock" id="clock-rival"></span></div>
       </div>
       <div class="hud-buttons">
         <button class="btn" id="btn-undo" type="button" aria-label="Undo"><span class="ic">↶</span><span class="lbl">Undo</span></button>
@@ -534,11 +574,9 @@
   </script>
   <script src="js/armies.js"></script>
   <script src="js/engine.js"></script>
-  <!-- Online play (accounts, player list, live matches) runs on Firebase; see js/firebase-config.js. -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
+  <!-- Online play (accounts, War Room, invite links, live battles) talks to the Chess Wars server in server/. -->
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
+  <script src="js/server-config.js"></script>
   <script type="module">
     // Three.js arrives as an ES module; the game files are classic scripts so the page also runs from file://.
     try {

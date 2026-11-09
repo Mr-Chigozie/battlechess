@@ -1,1 +1,3 @@
 *.blend1
+server/node_modules/
+server/.env

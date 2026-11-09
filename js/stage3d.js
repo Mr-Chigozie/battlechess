@@ -106,8 +106,10 @@ const Stage = (() => {
       const wasGesture = release(e);
       if (held) { held = false; showInfo(null); return; }  // a hold reads the unit, it doesn't give an order
       if (wasGesture || !down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > (coarse ? 14 : 6) || cine.active) return;
+      // Report both what was hit (a unit standing in front wins) and the ground square under the pointer,
+      // so a click on a target square partly hidden behind another unit can still give the order.
       const sq = pick(e);
-      if (sq) clickHandler(sq);
+      if (sq) clickHandler(sq, pickTile(e));
     });
     renderer.domElement.addEventListener("pointermove", e => {
       if (holdTimer && down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 14) cancelHold();

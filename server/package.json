@@ -1,0 +1,28 @@
+{
+  "name": "chess-wars-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chess Wars online server: accounts, invite links and server-refereed battles (Node + MySQL)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "migrate": "node -e \"require('./src/db').migrate().then(() => require('./src/db').close())\"",
+    "test": "node --test --test-concurrency=1 test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "mysql2": "^3.11.5",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}

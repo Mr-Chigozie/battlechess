@@ -11,17 +11,15 @@ No build step. Open `index.html` or `battle3d.html` in a browser. The 3D version
 
 ## Online battles
 
-The 3D version has an **Online battle** mode. Players register a commander (name, email, password, army), see who else is online in the War Room, challenge each other, and play live. The challenger plays Ivory and moves first. Players can leave a battle and resume it later, taunt their opponent across the board, and resign. Wins, losses and draws are kept on each profile.
+The 3D version has an **Online battle** mode, played against the Chess Wars server in [`server/`](server/README.md) (Node + MySQL).
 
-Online play runs on [Firebase](https://firebase.google.com) (free Spark plan), so the site can stay on GitHub Pages. To switch it on:
+- **Accounts**: register a commander, or play as a **guest** straight from an invite link and keep the record later by creating an account.
+- **Invite links**: create a link in the War Room and send it on WhatsApp. It shows a preview card, and your friend can play in the browser with no sign-up.
+- **War Room**: see who's online, challenge them, and resume battles in progress.
+- **Refereed battles**: the server checks every move with the same rules file, runs the clocks (live 10 min + 5 s, or one move a day), and decides every result. Resign, offer a draw, and battle cries (preset only, no free chat). Block or report players.
+- **Launch numbers**: sign-ups, invites opened and accepted, battles finished, day-1 and day-7 retention, at `/api/admin/stats`.
 
-1. Create a project at the [Firebase console](https://console.firebase.google.com).
-2. **Authentication** → Get started → enable **Email/Password**.
-3. **Firestore Database** → Create database. Then paste [`firestore.rules`](firestore.rules) into its **Rules** tab and publish.
-4. **Authentication → Settings → Authorized domains**: add your Pages domain (e.g. `mr-chigozie.github.io`).
-5. **Project settings → Your apps → Web app** (`</>`): copy the config object into [`js/firebase-config.js`](js/firebase-config.js) in place of `null`.
-
-Until that's done, everything else works and the Online button explains what's missing.
+The game page finds the server through [`js/server-config.js`](js/server-config.js). On `localhost` it uses a local server; on the live site online play stays off ("coming soon") until `LIVE_SERVER` is set to the hosted server's address. Hosting steps are in [`server/README.md`](server/README.md). [Privacy](privacy.html) and [Terms](terms.html) are beta drafts.
 
 | File | What it holds |
 |---|---|
@@ -33,6 +31,7 @@ Until that's done, everything else works and the Online button explains what's m
 | `js/terrain3d.js` | battlefield terrain and weather |
 | `js/war3d.js` | battle fury: fire, embers, burning sky |
 | `js/game3d.js` | game flow, combos, story campaign |
-| `js/online3d.js` | accounts, War Room, challenges, live move sync |
-| `js/firebase-config.js` | your Firebase project config (online play) |
-| `firestore.rules` | database security rules for online play |
+| `js/online3d.js` | accounts, guests, War Room, invite links, live battles |
+| `js/server-config.js` | where the online server is |
+| `server/` | the online server (Node + MySQL) |
+| `art/` | character generator (Blender) and the unit review page |

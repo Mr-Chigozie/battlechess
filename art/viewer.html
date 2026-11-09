@@ -45,10 +45,13 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 // Add new units here as the generator makes them.
 const UNITS = [
-  { id: "knights-pawn", file: "export/Knights_Pawn.glb", name: "Squire", army: "Order of Knights", side: "Ivory" },
-  { id: "mafia-pawn", file: "export/Mafia_Pawn.glb", name: "Soldier", army: "The Mafia", side: "Ivory" },
-  { id: "undead-pawn", file: "export/Undead_Pawn.glb", name: "Skeleton", army: "Army of the Dead", side: "Onyx" },
+  { id: "knights-pawn", group: "Pawns", file: "export/Knights_Pawn.glb", name: "Squire", army: "Order of Knights", side: "Ivory" },
+  { id: "mafia-pawn", group: "Pawns", file: "export/Mafia_Pawn.glb", name: "Soldier", army: "The Mafia", side: "Ivory" },
+  { id: "undead-pawn", group: "Pawns", file: "export/Undead_Pawn.glb", name: "Skeleton", army: "Army of the Dead", side: "Onyx" },
+  { id: "knights-king", group: "Kings", file: "export/Knights_King.glb", name: "King", army: "Order of Knights", side: "Ivory" },
+  { id: "undead-king", group: "Kings", file: "export/Undead_King.glb", name: "Bone King", army: "Army of the Dead", side: "Onyx" },
 ];
+const GROUPS = [...new Set(UNITS.map(u => u.group))];
 const CLIPS = ["Idle", "Walk", "Attack", "Shoot", "Death"];
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -94,7 +97,7 @@ for (let i = -3; i < 3; i++) for (let j = -2; j < 2; j++) {
 
 const loader = new GLTFLoader();
 const loaded = new Map();   // id -> { root, mixer, actions }
-let selection = "all";
+let selection = "group:" + GROUPS[GROUPS.length - 1];  // newest group first
 let clip = "Idle";
 
 async function load(unit) {
@@ -133,7 +136,7 @@ function hookAttackReturn(entry) {
 }
 
 function layout() {
-  const shown = UNITS.filter(u => selection === "all" || u.id === selection);
+  const shown = UNITS.filter(u => selection === "group:" + u.group || u.id === selection);
   shown.forEach((u, i) => {
     const e = loaded.get(u.id);
     e.root.visible = true;
@@ -155,7 +158,10 @@ function layout() {
 function renderButtons() {
   const units = document.getElementById("units");
   units.innerHTML = "";
-  for (const [id, label] of [["all", "Side by side"], ...UNITS.map(u => [u.id, u.name])]) {
+  const group = selection.startsWith("group:") ? selection.slice(6) : UNITS.find(u => u.id === selection).group;
+  const chips = [...GROUPS.map(g => ["group:" + g, `All ${g.toLowerCase()}`]),
+    ...UNITS.filter(u => u.group === group).map(u => [u.id, u.name])];
+  for (const [id, label] of chips) {
     const b = document.createElement("button");
     b.textContent = label;
     b.className = selection === id ? "on" : "";
