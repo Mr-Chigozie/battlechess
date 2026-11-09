@@ -21,11 +21,11 @@ services:
         value: production
       - key: NODE_VERSION
         value: "22"
-      - key: DATABASE_URL        # Aiven → your MySQL service → Service URI
+      - key: DATABASE_URL        # TiDB Cloud → cluster → Connect → connection string, ending in /chesswars
         sync: false
       - key: DB_SSL
         value: "true"
-      - key: DB_SSL_CA           # Aiven → your MySQL service → CA certificate (paste the whole text)
+      - key: DB_SSL_CA           # only for hosts with their own CA (e.g. Aiven); leave empty for TiDB Cloud
         sync: false
       - key: GAME_URL
         value: https://mr-chigozie.github.io/battlechess/battle3d.html

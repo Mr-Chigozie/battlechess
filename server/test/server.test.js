@@ -20,7 +20,8 @@ const sockets = [];
 async function resetDatabase() {
   const conn = await require("mysql2/promise").createConnection({
     host: process.env.DB_HOST || "127.0.0.1", port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME, multipleStatements: true
+    user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME, multipleStatements: true,
+    ...(require("../src/config").dbSsl ? { ssl: require("../src/config").dbSsl } : {})  // hosted test databases
   });
   const [tables] = await conn.query("SELECT table_name AS t FROM information_schema.tables WHERE table_schema = ?", [process.env.DB_NAME]);
   await conn.query("SET FOREIGN_KEY_CHECKS = 0");
@@ -241,8 +242,9 @@ test("challenges: send, see in the War Room, accept, resign; taunts; draw by agr
 
 test("clocks: no first move calls the battle off; running out of time loses", async () => {
   const saved = { first: games.FIRST_MOVE_MS.live, initial: games.CLOCKS.live.initialMs, inc: games.CLOCKS.live.incMs };
-  games.FIRST_MOVE_MS.live = 600;
-  games.CLOCKS.live.initialMs = 1500;
+  const k = Number(process.env.TEST_SLOW || 1);  // stretch the timings for a far-away database (e.g. TEST_SLOW=5)
+  games.FIRST_MOVE_MS.live = 600 * k;
+  games.CLOCKS.live.initialMs = 1500 * k;
   games.CLOCKS.live.incMs = 0;
   try {
     const a = await member("Swift");
@@ -261,13 +263,13 @@ test("clocks: no first move calls the battle off; running out of time loses", as
     };
 
     const g1 = await startGame();
-    const aborted = await pa.next("game", s => s.id === g1 && s.status === "finished", 4000);
+    const aborted = await pa.next("game", s => s.id === g1 && s.status === "finished", 4000 * k);
     assert.equal(aborted.reason, "aborted");
     assert.equal(aborted.result, null);
 
     const g2 = await startGame();
     await playMoves(pa, pb, g2, ["e2-e4", "e7-e5"]);  // the clocks start now; White to move, and waits
-    const flagged = await pb.next("game", s => s.id === g2 && s.status === "finished", 5000);
+    const flagged = await pb.next("game", s => s.id === g2 && s.status === "finished", 5000 * k);
     assert.equal(flagged.reason, "timeout");
     assert.equal(flagged.result, "b");
     const slow = (await api("GET", "/api/me", null, b.token)).data.user;

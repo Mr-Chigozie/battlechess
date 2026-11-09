@@ -25,15 +25,20 @@ so every move is checked on the server and results can't be faked.
 
 Tests (need MySQL and a `chesswars_test` database the same user can use): `npm test`.
 
-## Deploy (Railway, the simplest option)
+## Deploy (free: Render + TiDB Cloud)
 
-1. New project → **Deploy from GitHub repo** → this repo. Set the service's **root directory** to the repo root
-   and the **start command** to `node server/src/index.js` (the server reads `js/engine.js` and `js/armies.js`).
-2. Add a **MySQL** database to the project; copy its connection URL into `DATABASE_URL`.
-3. Set the other variables from `.env.example` (`NODE_ENV=production`, `PUBLIC_URL`, `GAME_URL`, `CLIENT_ORIGINS`,
-   `ADMIN_KEY`, and `REGISTRATION_CODE` for a closed beta).
-4. Give the service a public domain (ideally your own, e.g. `api.chesswars.ng`).
-5. In `js/server-config.js` set `LIVE_SERVER` to that address and push. The live site switches online play on.
+1. **Database:** on tidbcloud.com create a free Starter (serverless) cluster in Frankfurt (eu-central-1). In the
+   SQL Editor run `CREATE DATABASE chesswars;`. Under **Connect**, generate a password and copy the connection
+   string, changing the database at the end to `/chesswars`.
+2. **Server:** on render.com, **New → Blueprint** → this repo. `render.yaml` sets everything up; paste the
+   connection string into `DATABASE_URL` (leave `DB_SSL_CA` empty), and set `REGISTRATION_CODE` for a closed beta.
+   Tables are created on first start. Check `https://<server>/api/health` returns `{"ok":true,"db":true}`.
+3. In `js/server-config.js` set `LIVE_SERVER` to the Render address and push. The live site switches online play on.
+4. Free Render servers sleep after 15 idle minutes; a free UptimeRobot monitor on `/api/health` every 5 minutes
+   keeps it awake.
+
+Other MySQL hosts work too: Aiven (set `DB_SSL_CA` to its CA certificate), Railway, or any MySQL 8 with `DATABASE_URL`.
+Tests against a remote database: set `DB_HOST/DB_PORT/DB_USER/DB_PASSWORD`, `DB_SSL=true` and `TEST_SLOW=5`.
 
 Notes: it's built for **one server instance** (clocks and live battles are held in memory). That is plenty for the
 beta; scaling out later means moving that state to Redis. Turn on the host's daily database backups.
