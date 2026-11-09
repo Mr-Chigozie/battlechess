@@ -151,6 +151,10 @@
 
     /* ---- Battle fury meter ---- */
     .turn-wrap { display: grid; justify-items: center; gap: 5px; }
+    .territory { margin-bottom: 12px; }
+    .terr-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #ffffff14; margin: 4px 0; }
+    .terr-bar span { display: block; height: 100%; transition: width 600ms ease; }
+    .territory small { color: var(--muted); font-size: 11px; }
     .fury { width: 170px; height: 5px; border-radius: 3px; background: #ffffff1a; overflow: hidden; }
     .fury-fill { width: 0; height: 100%; background: linear-gradient(90deg, #d6ad66, #ff7a2a, #ff2a10); transition: width 600ms ease; }
     .fury-label { color: var(--muted); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; }
@@ -559,6 +563,11 @@
       <h3>Fallen</h3>
       <div class="captured"><small id="cap-w-label">Ivory losses</small><span id="cap-w"></span></div>
       <div class="captured"><small id="cap-b-label">Onyx losses</small><span id="cap-b"></span></div>
+      <h3>Territory</h3>
+      <div class="territory" title="Squares each army has taken and held. Just for show: the rules of chess don't change.">
+        <div class="terr-bar"><span id="terr-w"></span><span id="terr-b"></span></div>
+        <small id="terr-label"></small>
+      </div>
       <h3>Field report</h3>
       <div class="move-log" id="move-log"></div>
     </aside>
@@ -593,7 +602,7 @@
       const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
       window.THREE = THREE;
       window.OrbitControls = OrbitControls;
-      for (const src of ["js/models3d.js", "js/fx3d.js", "js/terrain3d.js", "js/war3d.js", "js/stage3d.js", "js/online3d.js", "js/game3d.js"]) {
+      for (const src of ["js/models3d.js", "js/fx3d.js", "js/terrain3d.js", "js/war3d.js", "js/fort3d.js", "js/stage3d.js", "js/online3d.js", "js/game3d.js"]) {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
           script.src = src;
