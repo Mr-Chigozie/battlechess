@@ -1,0 +1,41 @@
+# Render blueprint for the Chess Wars online server (render.com → New → Blueprint → this repo).
+# The game itself stays on GitHub Pages; this runs server/ (Node), which reads js/engine.js and js/armies.js.
+services:
+  - type: web
+    name: chesswars-server
+    runtime: node
+    plan: free
+    region: frankfurt            # closest Render region to West Africa
+    buildCommand: cd server && npm ci --omit=dev
+    startCommand: node server/src/index.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    buildFilter:                 # only redeploy when the server or the shared rules change
+      paths:
+        - server/**
+        - js/engine.js
+        - js/armies.js
+        - render.yaml
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL        # Aiven → your MySQL service → Service URI
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: DB_SSL_CA           # Aiven → your MySQL service → CA certificate (paste the whole text)
+        sync: false
+      - key: GAME_URL
+        value: https://mr-chigozie.github.io/battlechess/battle3d.html
+      - key: CLIENT_ORIGINS
+        value: https://mr-chigozie.github.io
+      - key: ADMIN_KEY           # generated for you; read it in Render → Environment
+        generateValue: true
+      - key: REGISTRATION_CODE   # closed beta code; leave empty to let anyone register
+        sync: false
+      - key: RESEND_API_KEY      # optional, for password-reset emails
+        sync: false
+      - key: MAIL_FROM
+        value: Chess Wars <onboarding@resend.dev>

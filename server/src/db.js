@@ -5,7 +5,8 @@ const path = require("path");
 const mysql = require("mysql2/promise");
 const config = require("./config");
 
-const options = { waitForConnections: true, connectionLimit: 10, timezone: "Z", supportBigNumbers: true, bigNumberStrings: false };
+const base = { timezone: "Z", supportBigNumbers: true, bigNumberStrings: false, ...(config.dbSsl ? { ssl: config.dbSsl } : {}) };
+const options = { ...base, waitForConnections: true, connectionLimit: config.dbPoolSize, enableKeepAlive: true };
 let pool = null;
 
 function getPool() {
@@ -43,8 +44,8 @@ async function tx(fn) {
 // Applies every migrations/NNN_*.sql file that hasn't run yet, in order.
 async function migrate(log = console.log) {
   const conn = config.db.uri
-    ? await mysql.createConnection({ uri: config.db.uri, multipleStatements: true })
-    : await mysql.createConnection({ ...config.db, multipleStatements: true });
+    ? await mysql.createConnection({ uri: config.db.uri, ...base, multipleStatements: true })
+    : await mysql.createConnection({ ...config.db, ...base, multipleStatements: true });
   try {
     await conn.query("CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(100) PRIMARY KEY, applied_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3))");
     const [done] = await conn.query("SELECT version FROM schema_migrations");

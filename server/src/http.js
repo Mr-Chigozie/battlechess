@@ -68,7 +68,15 @@ function build() {
     return fn(req, user, res);
   });
 
-  app.get("/api/health", (req, res) => res.json({ ok: true }));
+  // Used by the host and the uptime monitor (which also keeps a free server awake).
+  app.get("/api/health", async (req, res) => {
+    try {
+      await require("./db").query("SELECT 1");
+      res.json({ ok: true, db: true });
+    } catch (error) {
+      res.status(503).json({ ok: false, db: false });
+    }
+  });
 
   // ---- accounts
   app.post("/api/auth/register", authLimit, wrap(req => accounts.register(req.body)));
