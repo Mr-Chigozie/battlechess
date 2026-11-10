@@ -309,6 +309,7 @@ const Stage = (() => {
     FX.update(dt);
     Terrain.update(dt, time);
     War.update(dt, time);
+    Fort.update(time);
     idle(time);
     if (cine.active) camera.lookAt(cine.target);
     else controls.update();
