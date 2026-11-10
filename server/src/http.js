@@ -24,6 +24,8 @@ const isBot = ua => /bot|crawl|spider|facebookexternalhit|whatsapp|telegram|slac
 function page(title, body, meta = "") {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>${meta}
+<link rel="icon" href="${esc(new URL("favicon.svg", config.gameUrl).href)}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="${esc(new URL("apple-touch-icon.png", config.gameUrl).href)}">
 <style>
   body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0d0f0c; color: #ece7d8; font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
   .card { width: min(420px, calc(100% - 32px)); padding: 26px; border: 1px solid #3b3d33; border-radius: 6px; background: #1b1d18; text-align: center; }
