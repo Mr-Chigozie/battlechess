@@ -112,7 +112,9 @@ const FX = (() => {
   }
 
   // Breaks a unit into its meshes and flings them outward, like a stone piece smashed apart.
-  function shatter(unit, impactDir = new THREE.Vector3(), force = 1) {
+  // Breaks a unit into its parts. `spread` and `up` scale how far they fly (low values: a heap on the spot);
+  // `life` is how long the pieces lie there.
+  function shatter(unit, impactDir = new THREE.Vector3(), force = 1, { spread = 1, up = 1, life = 2.4 } = {}) {
     unit.updateMatrixWorld(true);
     const center = new THREE.Vector3();
     new THREE.Box3().setFromObject(unit).getCenter(center);
@@ -123,11 +125,11 @@ const FX = (() => {
       src.matrixWorld.decompose(mesh.position, mesh.quaternion, mesh.scale);
       mesh.castShadow = true;
       const out = mesh.position.clone().sub(center).setY(0).normalize();
-      const vel = out.multiplyScalar(1 + Math.random() * 2.2)
+      const vel = out.multiplyScalar((1 + Math.random() * 2.2) * spread)
         .addScaledVector(impactDir, 2.4 * force * (0.5 + Math.random()))
-        .add(new THREE.Vector3(0, 2 + Math.random() * 3 * force, 0));
-      const spin = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(14);
-      addBit(mesh, { vel, gravity: 9.8, spin, floor: 0.04, life: 2.4 + Math.random() * 0.6, fade: 0.8 });
+        .add(new THREE.Vector3(0, (2 + Math.random() * 3 * force) * up, 0));
+      const spin = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(14 * Math.max(0.3, spread));
+      addBit(mesh, { vel, gravity: 9.8, spin, floor: 0.04, life: life + Math.random() * 0.6, fade: 0.8 });
     }
     unit.parent?.remove(unit);
     dust(center.clone().setY(0.1), 18);
@@ -244,6 +246,13 @@ const FX = (() => {
 
   // Bullet time: slows every tween and particle for a stretch of real time.
   let slowTimer = null;
+  // Hit-stop: everything holds still for a split second on contact, which makes a blow feel heavy.
+  // Any slow motion that should follow it (combos) is passed in, so the two don't fight over the speed.
+  function hitstop(realSeconds = 0.09, then = null) {
+    slowmo(0.02, realSeconds);
+    if (then) setTimeout(() => slowmo(then.factor, then.seconds), realSeconds * 1000 + 5);
+  }
+
   function slowmo(factor, realSeconds) {
     speed = factor;
     clearTimeout(slowTimer);
@@ -341,7 +350,7 @@ const FX = (() => {
 
   return {
     init, update, tween, wait, lerp, ease, burst, dust, shockwave, shatter, projectile, beam, lightning,
-    splatter, ember, spawn, slowmo, glowMat, flashScreen, shake, sfx,
+    splatter, ember, spawn, slowmo, hitstop, glowMat, flashScreen, shake, sfx,
     get shakeAmp() { return shakeAmp; },
     get muted() { return muted; },
     set muted(value) { muted = value; },

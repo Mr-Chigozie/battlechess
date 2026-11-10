@@ -534,11 +534,14 @@ const Stage = (() => {
   }
 
   // `combo` is the attacker's kill streak level (0 = a single kill); higher levels hit harder and slower.
+  // The moment of contact: sparks, a split-second freeze, the victim flashes white and reels, then dies
+  // in its own army's way. Returns once the blow has landed; the death plays on in `dying`.
+  let dying = Promise.resolve();
   async function impact(attacker, victim, dir, style, onImpact, victimSq, combo = 0) {
     const color = ARMIES[attacker.userData.army].look.magic;
     const hitPoint = center(victim);
+    FX.hitstop(0.09 + combo * 0.03, combo > 0 ? { factor: 0.28, seconds: 0.6 + combo * 0.25 } : null);
     if (combo > 0) {
-      FX.slowmo(0.28, 0.6 + combo * 0.25);
       FX.burst(hitPoint, 0xffffff, 20 + combo * 10, 4, 1.2, 0.8);
       FX.shockwave(victim.position, color);
     }
@@ -549,17 +552,169 @@ const Stage = (() => {
     FX.shake((style === "slam" || style === "lightning" ? 0.4 : 0.18) + combo * 0.08);
     if (["spell", "beam", "lightning", "slam"].includes(style) || combo > 1) FX.flashScreen(0.3);
     if (style === "slam") FX.shockwave(victim.position, color);
+    flashWhite(victim);
+    punchIn(0.12 + combo * 0.03);
     onImpact?.();
-    await nudge(victim, dir, 0.12, 0.07);
     const fallen = victim.position.clone();
-    FX.shatter(victim, dir, (style === "slam" || style === "charge" ? 1.4 : 1) + combo * 0.2);
     const spill = Terrain.fall(victimSq, fallen, ARMIES[victim.userData.army].look.blood);
     if (blood) {
       FX.burst(hitPoint, spill.color, 16, 2.4, 0.9, 0.6);
       FX.splatter(fallen, spill.color, spill.amount * (1 + combo * 0.25));
     }
     War.ignite(victimSq);
+    // Reel from the blow: knocked back a step and rocked off balance.
+    const rig = victim.userData.rig;
+    const lean = rig.actor.rotation.x;
+    await Promise.all([
+      nudge(victim, dir, 0.16 + (style === "slam" || style === "charge" ? 0.12 : 0), 0.16),
+      FX.tween(0.16, t => { rig.actor.rotation.x = lean - 0.3 * t; }, FX.ease.out)
+    ]);
+    dying = die(victim, dir, combo);
   }
+
+  // As the attacker closes in, the victim braces: shield or arm up, weight back.
+  function brace(victim) {
+    const rig = victim.userData.rig;
+    if (rig.armL) armTo(rig, -1.5, 0.25, FX.ease.out, "armL");
+    if (rig.head) FX.tween(0.25, t => { rig.actor.rotation.x = -0.12 * t; }, FX.ease.out);
+  }
+
+  // The victim lights up white for a moment (its own materials, so its comrades don't flash too).
+  function flashWhite(unit) {
+    const mats = [];
+    unit.traverse(obj => {
+      if (!obj.isMesh || !obj.material.emissive) return;
+      obj.material = obj.material.clone();
+      mats.push({ m: obj.material, base: obj.material.emissive.clone(), k: obj.material.emissiveIntensity });
+    });
+    const white = new THREE.Color(0xffffff);
+    for (const { m } of mats) { m.emissive.copy(white); m.emissiveIntensity = 1.4; }
+    FX.tween(0.3, t => {
+      for (const { m, base, k } of mats) { m.emissive.copy(white).lerp(base, t); m.emissiveIntensity = 1.4 + (k - 1.4) * t; }
+    });
+  }
+
+  // A quick zoom in on the hit and back out.
+  function punchIn(amount) {
+    const base = 42;
+    camera.fov = base * (1 - amount);
+    camera.updateProjectionMatrix();
+    FX.tween(0.45, t => { camera.fov = base * (1 - amount * (1 - t)); camera.updateProjectionMatrix(); }, FX.ease.out);
+  }
+
+  // ---------------------------------------------------------------- deaths
+  // Each army falls its own way. Units without a body to topple (towers, tanks, gunships) are wrecked instead.
+  const DEATHS = { undead: "crumble", knights: "kneel", machines: "explode", samurai: "slash", asgardians: "ascend", vikings: "knockback", spartans: "knockback", marines: "knockback" };
+
+  function die(victim, dir, combo) {
+    let kind = DEATHS[victim.userData.army] || "knockback";
+    if (!victim.userData.rig.head && ["kneel", "slash", "knockback"].includes(kind)) kind = "wreck";
+    return DIE[kind](victim, dir, combo).catch(error => { console.error(error); victim.parent?.remove(victim); });
+  }
+
+  // Lie there a moment, then sink into the ground in a puff of dust.
+  async function sinkAway(unit, pause = 0.45) {
+    await FX.wait(pause);
+    FX.dust(unit.position.clone().setY(0.1), 8);
+    const y = unit.position.y;
+    await FX.tween(0.6, t => { unit.position.y = y - 0.9 * t; }, FX.ease.in);
+    unit.parent?.remove(unit);
+  }
+
+  const DIE = {
+    // Undead: the bones lose what held them together and drop in a heap; a green soul slips away.
+    async crumble(victim, dir) {
+      await FX.wait(0.12);
+      const spot = center(victim);
+      FX.sfx("crack");
+      FX.shatter(victim, dir, 0.25, { spread: 0.22, up: 0.35, life: 3 });
+      const soul = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), FX.glowMat(0x63ff8a, 0.85));
+      soul.position.copy(spot);
+      FX.spawn(soul, { vel: new V3(0, 0.9, 0), grow: 0.6, life: 1.6, fade: 1.1 });
+      for (let i = 0; i < 3; i += 1) { FX.ember(spot.clone().add(new V3(0, i * 0.15, 0)), 0x63ff8a, 1.2); await FX.wait(0.1); }
+    },
+    // Knights: drop to the knees, then topple forward.
+    async kneel(victim) {
+      const actor = victim.userData.rig.actor;
+      const y = actor.position.y, x = actor.rotation.x;
+      await FX.tween(0.3, t => { actor.position.y = y - 0.12 * t; actor.rotation.x = x + (0.35 - x) * t; }, FX.ease.out);
+      await FX.wait(0.18);
+      await FX.tween(0.45, t => { actor.rotation.x = 0.35 + 1.15 * t; }, FX.ease.in);
+      FX.sfx("hit");
+      FX.dust(victim.position.clone().setY(0.1), 10);
+      FX.shake(0.08);
+      await sinkAway(victim);
+    },
+    // Vikings, Spartans, Marines: knocked clean off their feet, flat on their back.
+    async knockback(victim, dir) {
+      const actor = victim.userData.rig.actor;
+      const from = victim.position.clone();
+      const x = actor.rotation.x;
+      await FX.tween(0.45, t => {
+        victim.position.copy(from).addScaledVector(dir, 0.38 * t);
+        victim.position.y = Math.sin(Math.PI * t) * 0.18;
+        actor.rotation.x = x + (-1.5 - x) * t;
+      }, FX.ease.out);
+      FX.sfx("hit");
+      FX.dust(victim.position.clone().setY(0.1), 12);
+      FX.shake(0.1);
+      await sinkAway(victim);
+    },
+    // Samurai: the cut, a heartbeat of stillness, then petals and the fall.
+    async slash(victim) {
+      const actor = victim.userData.rig.actor;
+      const cut = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.018, 0.018), FX.glowMat(0xffffff, 1));
+      cut.position.copy(center(victim)).add(new V3(0, 0.05, 0));
+      cut.rotation.set(0, victim.rotation.y, 0.6);
+      FX.spawn(cut, { life: 0.5, fade: 0.4, grow: 0.3 });
+      FX.sfx("whoosh");
+      await FX.wait(0.4);
+      FX.burst(center(victim), 0xffb7c5, 26, 1.8, 1, 1.1);
+      const x = actor.rotation.x;
+      await FX.tween(0.5, t => { actor.rotation.x = x + (1.5 - x) * t; }, FX.ease.in);
+      FX.dust(victim.position.clone().setY(0.1), 8);
+      await sinkAway(victim);
+    },
+    // Asgardians: they don't fall, they rise, dissolving into light.
+    async ascend(victim) {
+      const from = victim.position.clone();
+      const color = ARMIES[victim.userData.army].look.magic;
+      FX.sfx("spell");
+      const ray = FX.beam(from.clone().setY(8), from.clone().setY(0.05), color, 1.2);
+      const lift = FX.tween(0.9, t => {
+        victim.position.copy(from).setY(0.7 * t);
+        victim.scale.setScalar(Math.max(0.05, 1 - 0.95 * t));
+      }, FX.ease.in);
+      for (let i = 0; i < 5; i += 1) { FX.burst(center(victim), i % 2 ? 0xffffff : color, 10, 1.1, 0.8, 0.6); await FX.wait(0.16); }
+      await lift;
+      FX.burst(center(victim), 0xffffff, 24, 2.4, 1, 0.6);
+      FX.flashScreen(0.2);
+      victim.parent?.remove(victim);
+      await ray;
+    },
+    // Machines: sparks, sparks, then the whole thing goes up.
+    async explode(victim, dir, combo) {
+      for (let i = 0; i < 3; i += 1) {
+        FX.burst(center(victim).add(new V3((Math.random() - 0.5) * 0.3, (Math.random() - 0.3) * 0.3, 0)), 0xffd27a, 10, 1.6, 0.7, 0.3);
+        FX.sfx("zap");
+        await FX.wait(0.11);
+      }
+      FX.sfx("boom");
+      FX.shockwave(victim.position, 0xffa23a);
+      FX.burst(center(victim), 0xff7a2a, 30, 3, 1.2, 0.7);
+      FX.shake(0.25);
+      FX.dust(victim.position.clone().setY(0.2), 16);
+      FX.shatter(victim, dir, 1.5 + combo * 0.2);
+    },
+    // Towers, tanks and gunships of the other armies: blown apart.
+    async wreck(victim, dir, combo) {
+      FX.burst(center(victim), 0xffd27a, 12, 1.6, 0.8, 0.3);
+      await FX.wait(0.1);
+      FX.sfx("boom");
+      FX.dust(victim.position.clone().setY(0.2), 14);
+      FX.shatter(victim, dir, 1.3 + combo * 0.2);
+    }
+  };
 
   // ---------------------------------------------------------------- capture scenes
   async function playCapture(fromSq, toSq, victimSq, caption, combo = 0) {
@@ -580,7 +735,7 @@ const Stage = (() => {
       showCaption(caption.who, "");
       await enterCinematic(A, V);
     }
-    turnTo(victim, angleTo(V, A), 0.3);
+    turnTo(victim, angleTo(V, A), 0.3).then(() => brace(victim));
     await turnTo(attacker, angleTo(A, V), 0.3);
     const onImpact = () => {
       showCaption(caption.who, caption.text);
@@ -679,7 +834,8 @@ const Stage = (() => {
       }
     }
 
-    await FX.wait(useCine ? 0.9 : 0.35);
+    // Let the death play out before the victor steps in.
+    await Promise.all([FX.wait(useCine ? 0.9 : 0.35), dying]);
     const dest = squareToWorld(toSq.row, toSq.col);
     if (attacker.position.distanceTo(dest) > 0.05) {
       await turnTo(attacker, angleTo(attacker.position, dest), 0.15);
