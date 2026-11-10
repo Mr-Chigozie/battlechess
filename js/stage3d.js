@@ -64,7 +64,7 @@ const Stage = (() => {
     buildScenery();
     Terrain.init(scene, tiles);
     War.init(scene, hemi, sun);
-    Fort.init(scene);
+    Territory.init(scene);
     markerGroup = new THREE.Group();
     scene.add(markerGroup);
     hoverMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.96), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, depthWrite: false }));
@@ -236,7 +236,7 @@ const Stage = (() => {
         if (piece) placeUnit(Models.buildUnit(armies[piece.color], piece.type, piece.color), row, col);
       }
     }
-    Fort.reset(pos, armies);
+    Territory.reset(pos, armies);
   }
 
   const markerMats = {
@@ -309,7 +309,6 @@ const Stage = (() => {
     FX.update(dt);
     Terrain.update(dt, time);
     War.update(dt, time);
-    Fort.update(time);
     idle(time);
     if (cine.active) camera.lookAt(cine.target);
     else controls.update();
@@ -560,7 +559,6 @@ const Stage = (() => {
       FX.splatter(fallen, spill.color, spill.amount * (1 + combo * 0.25));
     }
     War.ignite(victimSq);
-    Fort.hit(victimSq, dir);
   }
 
   // ---------------------------------------------------------------- capture scenes
@@ -569,7 +567,6 @@ const Stage = (() => {
     const victim = unitAt(victimSq);
     units[fromSq.row][fromSq.col] = null;
     units[victimSq.row][victimSq.col] = null;
-    Fort.leave(fromSq);
     const rig = attacker.userData.rig;
     const style = attacker.userData.style;
     const A = attacker.position.clone();
@@ -690,7 +687,7 @@ const Stage = (() => {
     }
     attacker.position.copy(dest);
     await Terrain.arrive(attacker, toSq);
-    Fort.arrive(attacker, toSq);
+    Territory.arrive(attacker, toSq);
     await turnTo(attacker, SIDE_FACING[attacker.userData.color]);
     attacker.userData.busy = false;
     attacker.userData.square = { ...toSq };
@@ -703,33 +700,27 @@ const Stage = (() => {
   async function playMove({ move, victimSq = null, caption = null, promote = null, combo = 0 }) {
     const from = { row: move.fromRow, col: move.fromCol };
     const to = { row: move.toRow, col: move.toCol };
-    const color = unitAt(from).userData.color;
-    const moved = [to];
     if (victimSq) {
       await playCapture(from, to, victimSq, caption, combo);
     } else {
       const unit = unitAt(from);
       units[from.row][from.col] = null;
-      Fort.leave(from);
       await moveUnit(unit, squareToWorld(to.row, to.col), { hop: unit.userData.type === "n", sq: to });
       unit.userData.square = to;
       units[to.row][to.col] = unit;
-      Fort.arrive(unit, to);
+      Territory.arrive(unit, to);
     }
     if (move.castle) {
       const rookFrom = { row: move.fromRow, col: move.castle === "king" ? 7 : 0 };
       const rookTo = { row: move.fromRow, col: move.castle === "king" ? 5 : 3 };
       const rook = unitAt(rookFrom);
       units[rookFrom.row][rookFrom.col] = null;
-      Fort.leave(rookFrom);
       await moveUnit(rook, squareToWorld(rookTo.row, rookTo.col), { hop: true, sq: rookTo });
       rook.userData.square = rookTo;
       units[rookTo.row][rookTo.col] = rook;
-      Fort.arrive(rook, rookTo);
-      moved.push(rookTo);
+      Territory.arrive(rook, rookTo);
     }
     if (promote) await playPromotion(to, promote());
-    Fort.turnDone(color, moved);
   }
 
   async function playPromotion(sq, newUnit) {
@@ -753,7 +744,6 @@ const Stage = (() => {
     if (!king) return;
     units[sq.row][sq.col] = null;
     king.userData.busy = true;
-    Fort.hit(sq, new V3(0, 0, 0));
     FX.sfx("boom");
     FX.shake(0.25);
     await FX.tween(0.9, t => { king.userData.rig.actor.rotation.x = t * 1.45; }, FX.ease.in);

@@ -602,7 +602,7 @@
       const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
       window.THREE = THREE;
       window.OrbitControls = OrbitControls;
-      for (const src of ["js/models3d.js", "js/fx3d.js", "js/terrain3d.js", "js/war3d.js", "js/fort3d.js", "js/stage3d.js", "js/online3d.js", "js/game3d.js"]) {
+      for (const src of ["js/models3d.js", "js/fx3d.js", "js/terrain3d.js", "js/war3d.js", "js/territory3d.js", "js/stage3d.js", "js/online3d.js", "js/game3d.js"]) {
         await new Promise((resolve, reject) => {
           const script = document.createElement("script");
           script.src = src;

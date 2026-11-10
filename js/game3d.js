@@ -122,8 +122,8 @@
       $(`cap-${color}`).textContent = history.filter(h => h.captured && h.captured.color === color)
         .map(h => army(color).pieces[h.captured.type]).join(" ") || "—";
     }
-    if (typeof Fort !== "undefined") {
-      const share = Fort.share();
+    if (typeof Territory !== "undefined") {
+      const share = Territory.share();
       const hex = color => `#${new THREE.Color(army(color).look.magic).getHexString()}`;
       Object.assign($("terr-w").style, { width: `${share.w}%`, background: hex("w") });
       Object.assign($("terr-b").style, { width: `${share.b}%`, background: hex("b"), marginLeft: "auto" });
