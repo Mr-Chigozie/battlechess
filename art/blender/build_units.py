@@ -6,7 +6,7 @@ to bones, shared animation clips, FBX export for Unity and preview renders.
 Run:
   blender -b -P art/blender/build_units.py -- [--render] [--engine eevee|cycles]
 """
-import bpy, bmesh, math, os, sys
+import bpy, bmesh, math, os, random, sys
 from mathutils import Vector, Matrix, Euler
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -101,7 +101,7 @@ def mid(bone, dx=0, dy=0, dz=0):
     return tuple((a + b) / 2 + o for a, b, o in zip(h, t, (dx, dy, dz)))
 
 
-def build_armature(name, x):
+def build_armature(name, x, rig=None):
     data = bpy.data.armatures.new(name + "_Rig")
     obj = bpy.data.objects.new(name, data)
     bpy.context.scene.collection.objects.link(obj)
@@ -110,11 +110,12 @@ def build_armature(name, x):
     obj.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
     eb = {}
-    for bname, head, tail, parent in BONES:
+    for bname, head, tail, parent, *roll in rig or BONES:
         b = data.edit_bones.new(bname)
         b.head, b.tail = V(*head), V(*tail)
-        # Z axis faces forward on every bone, so +X rotation always means "swing forward".
-        b.align_roll(Vector((0, -1, 0)))
+        # Z axis faces forward on every humanoid bone, so +X rotation always means "swing forward".
+        # Beast bones that point forward roll to face up instead (see beast_rig).
+        b.align_roll(Vector(roll[0] if roll else (0, -1, 0)))
         if parent:
             b.parent = eb[parent]
         eb[bname] = b
@@ -127,8 +128,11 @@ def build_armature(name, x):
 
 # ---------------------------------------------------------------- kit: parts in one mesh
 class Kit:
-    def __init__(self, army, palette, team):
+    def __init__(self, army, palette, team, rig=None):
         self.army, self.palette, self.team = army, palette, team
+        self.rig = rig or BONES
+        self.index = {b[0]: i for i, b in enumerate(self.rig)}
+        self.xf = Matrix()  # extra placement for every part (a rider uses it to sit in the saddle)
         self.bm = bmesh.new()
         self.deform = self.bm.verts.layers.deform.verify()
         self.slots = []
@@ -148,8 +152,8 @@ class Kit:
             bmesh.ops.bevel(bm, geom=list(new) + edges, offset=bevel, offset_type="OFFSET",
                             segments=segs, profile=0.5, affect="EDGES", clamp_overlap=True)
             new = set(bm.verts) - before
-        bmesh.ops.transform(bm, matrix=M, verts=list(new))
-        gi, mi = BONE_INDEX[bone], self._mat_index(slot)
+        bmesh.ops.transform(bm, matrix=self.xf @ M, verts=list(new))
+        gi, mi = self.index[bone], self._mat_index(slot)
         faces = {f for v in new for f in v.link_faces}
         for v in new:
             v[self.deform][gi] = 1.0
@@ -216,7 +220,7 @@ class Kit:
                 me.materials.append(material(f"Team_{self.team}", *spec))
             else:
                 me.materials.append(material(f"{self.army}_{slot}", *self.palette[slot]))
-        for bname, *_ in BONES:
+        for bname, *_ in self.rig:
             obj.vertex_groups.new(name=bname)
         obj.parent = armature
         mod = obj.modifiers.new("Armature", "ARMATURE")
@@ -230,8 +234,10 @@ PALETTES = {
     "Knights": {
         "Armor": (0xB7C3D0, 0.55, 0.35), "Dark": (0x4A505A, 0.5, 0.45), "Cloth": (0x7A1F24, 0.0, 0.8),
         "Accent": (0xD8342C, 0.0, 0.6), "Trim": (0xD9B44A, 0.8, 0.3), "Leather": (0x4A3324, 0.0, 0.8),
-        "Steel": (0xE4E9EF, 0.7, 0.25), "Skin": (0xE0B394, 0.0, 0.6), "Hair": (0x6B4A30, 0.0, 0.8),
-        "Ermine": (0xF4F1EA, 0.0, 0.9),
+        "Steel": (0xE4E9EF, 0.7, 0.25), "Skin": (0xE0B394, 0.0, 0.6), "Hair": (0x6B4A30, 0.0, 0.8), "Beard": (0xA9A39A, 0.0, 0.85),
+        "Ermine": (0xF4F1EA, 0.0, 0.9), "Lips": (0xB8485A, 0.0, 0.5),
+        "Mail": (0x8A9099, 0.65, 0.55), "Holy": (0xFFE7A0, 0.0, 0.5, 2.5), "Wood": (0x5A3A22, 0.0, 0.7),
+        "Stone": (0xBDB5A4, 0.0, 0.85), "StoneDark": (0x8A8274, 0.0, 0.9), "Horse": (0xD6D0C6, 0.0, 0.7),
     },
     "Mafia": {
         "Suit": (0x2E2F36, 0.0, 0.7), "Stripe": (0x8C8E99, 0.0, 0.6), "Lapel": (0x1C1D22, 0.0, 0.6),
@@ -243,7 +249,8 @@ PALETTES = {
         "Bone": (0xE8E2CC, 0.0, 0.75), "Armor": (0x7D7A62, 0.6, 0.65), "Dark": (0x0B0D0B, 0.0, 0.9),
         "Cloth": (0x2F3A2C, 0.0, 0.9), "Accent": (0x7DFF9A, 0.0, 0.5), "Glow": (0x2EF06A, 0.0, 0.5, 2.2),
         "Leather": (0x3A3026, 0.0, 0.85), "Steel": (0x8F978C, 0.8, 0.45), "Trim": (0x8A6A3A, 0.8, 0.5),
-        "Royal": (0x3B2350, 0.0, 0.85), "Gold": (0xB8963A, 0.9, 0.35),
+        "Royal": (0x3B2350, 0.0, 0.85), "Gold": (0xB8963A, 0.9, 0.35), "Robe": (0x24182E, 0.0, 0.9),
+        "Stone": (0x5A5D55, 0.0, 0.9), "StoneDark": (0x34372F, 0.0, 0.95), "Fur": (0x403B35, 0.0, 0.95), "FurDark": (0x25221F, 0.0, 0.95),
     },
 }
 
@@ -381,6 +388,106 @@ def knight_king(k):
     sword(k, length=1.0, width=0.07)
 
 
+def knight_queen(k):
+    """Queen: warrior queen, steel breastplate over a long royal gown, braided hair under a tall crown, slim longsword."""
+    plinth(k)
+    # armoured shins and boots under the gown
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        M, L = along((0.11 * s, 0.02, 0.12), (0.11 * s, 0.01, 0.26))
+        k.cyl("Armor", f"shin.{x}", M, 0.055, 0.06, L, seg=8, bevel=0.01)
+        k.box("Dark", f"foot.{x}", T(0.11 * s, -0.05, 0.05), (0.1, 0.23, 0.09), bevel=0.03)
+    # long gown flaring to the ankles, gold hem and a front panel
+    k.cyl("Cloth", "hips", T(0, 0, 0.62), 0.33, 0.2, 0.8, seg=14)
+    k.cyl("Trim", "hips", T(0, 0, 0.235), 0.336, 0.336, 0.03, seg=14)
+    k.box("Accent", "hips", T(0, -0.268, 0.6) @ R(x=-9), (0.15, 0.02, 0.74))
+    for z in (0.4, 0.62, 0.84):
+        k.box("Trim", "hips", T(0, -0.248 - (0.62 - z) * 0.16, z) @ R(x=-9), (0.155, 0.022, 0.02))
+    k.cyl("Trim", "hips", T(0, 0, 1.02), 0.205, 0.205, 0.05, seg=12)
+    # fitted breastplate with a gold cross, high gorget
+    k.box("Armor", "spine", T(0, 0, 1.13), (0.3, 0.21, 0.2), bevel=0.05)
+    k.box("Armor", "chest", T(0, 0, 1.35), (0.38, 0.25, 0.27), bevel=0.08)
+    k.box("Trim", "chest", T(0, -0.13, 1.31), (0.04, 0.02, 0.26))
+    k.box("Trim", "chest", T(0, -0.13, 1.37), (0.16, 0.02, 0.04))
+    k.cyl("Armor", "chest", T(0, 0, 1.52), 0.115, 0.095, 0.08, seg=10)
+    cape(k, "Cloth", 0.42, 0.72, 1.5, 0.32, tilt=10)
+    knight_arms(k, pauldron=(0.11, 0.11, 0.085), trim=True)
+    # face: finer jaw, red lips, hair framing the face, a long braid down the back
+    M, L = along((0, 0, 1.5), (0, 0, 1.62)); k.cyl("Skin", "neck", M, 0.05, 0.05, L, seg=8)
+    k.sphere("Skin", "head", T(0, 0.0, 1.75), (0.11, 0.12, 0.13), seg=12)
+    k.sphere("Hair", "head", T(0, 0.025, 1.8), (0.13, 0.13, 0.125), seg=12)
+    for s in (1, -1):
+        k.box("Dark", "head", T(0.042 * s, -0.112, 1.752), (0.03, 0.02, 0.026), bevel=0.006)
+        k.box("Dark", "head", T(0.05 * s, -0.116, 1.768), (0.034, 0.018, 0.006))
+        k.box("Hair", "head", T(0.042 * s, -0.114, 1.786), (0.04, 0.014, 0.007))
+        k.box("Hair", "head", T(0.128 * s, 0.025, 1.64), (0.04, 0.1, 0.3), bevel=0.018)
+    k.box("Skin", "head", T(0, -0.124, 1.72), (0.02, 0.02, 0.03), bevel=0.006)
+    k.box("Lips", "head", T(0, -0.114, 1.68), (0.036, 0.012, 0.012), bevel=0.004)
+    k.box("Hair", "head", T(0, 0.085, 1.66) @ R(x=-6), (0.21, 0.07, 0.26), bevel=0.04)
+    for i in range(6):
+        k.sphere("Hair", "chest", T(0, 0.15 + i * 0.006, 1.5 - i * 0.065), (0.045 - i * 0.003,) * 3, seg=8)
+    k.sphere("Trim", "chest", T(0, 0.19, 1.1), (0.025, 0.025, 0.025), seg=8)
+    crown(k, "Trim", "Accent", z=1.89, r=0.124, points=9, tall=0.06, jag=0.7)
+    sword(k, length=0.95, width=0.055)
+
+
+def knight_bishop(k):
+    """Templar: warrior-priest in mail under a white surcoat with a red cross, mail coif, tall mitre, holy staff."""
+    plinth(k)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        M, L = along((0.11 * s, 0.02, 0.12), (0.11 * s, 0.01, 0.26))
+        k.cyl("Mail", f"shin.{x}", M, 0.055, 0.06, L, seg=8)
+        k.box("Leather", f"foot.{x}", T(0.11 * s, -0.05, 0.05), (0.1, 0.23, 0.09), bevel=0.03)
+    # long white robe, gold hem
+    k.cyl("Ermine", "hips", T(0, 0, 0.6), 0.29, 0.21, 0.78, seg=12)
+    k.cyl("Trim", "hips", T(0, 0, 0.225), 0.295, 0.295, 0.03, seg=12)
+    # mail body, white surcoat front and back with a big red cross, belt
+    k.box("Mail", "spine", T(0, 0, 1.13), (0.34, 0.24, 0.22), bevel=0.05)
+    k.box("Mail", "chest", T(0, 0, 1.36), (0.42, 0.27, 0.29), bevel=0.07)
+    for y in (-0.142, 0.142):
+        k.box("Ermine", "chest", T(0, y, 1.2), (0.33, 0.03, 0.58), bevel=0.01)
+    k.box("Accent", "chest", T(0, -0.16, 1.2), (0.075, 0.02, 0.42))
+    k.box("Accent", "chest", T(0, -0.16, 1.31), (0.26, 0.02, 0.075))
+    k.cyl("Leather", "hips", T(0, 0, 1.0), 0.218, 0.218, 0.05, seg=12)
+    k.box("Trim", "hips", T(0, -0.218, 1.0), (0.06, 0.02, 0.05), bevel=0.008)
+    # mail arms and leather gloves
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        k.sphere("Mail", f"upper_arm.{x}", T(0.22 * s, 0, 1.45), (0.1, 0.11, 0.09), seg=10)
+        M, L = along(*B[f"upper_arm.{x}"]); k.cyl("Mail", f"upper_arm.{x}", M, 0.058, 0.062, L, seg=8)
+        M, L = along(*B[f"forearm.{x}"]); k.cyl("Mail", f"forearm.{x}", M, 0.06, 0.055, L, seg=8)
+        k.cyl("Leather", f"forearm.{x}", T(*B[f"forearm.{x}"][1]) @ Matrix.Translation((0, 0, 0.02)), 0.066, 0.06, 0.06, seg=8)
+        k.box("Leather", f"hand.{x}", T(*mid(f"hand.{x}")), (0.085, 0.095, 0.105), bevel=0.02)
+    # face inside a mail coif, grey beard
+    k.cyl("Mail", "chest", T(0, 0.01, 1.54), 0.16, 0.12, 0.1, seg=12)
+    k.sphere("Mail", "head", T(0, 0.04, 1.76), (0.145, 0.15, 0.16), seg=12)
+    k.sphere("Skin", "head", T(0, -0.03, 1.74), (0.1, 0.105, 0.11), seg=12)
+    for s in (1, -1):
+        k.box("Dark", "head", T(0.04 * s, -0.125, 1.76), (0.028, 0.02, 0.016))
+        k.box("Hair", "head", T(0.042 * s, -0.128, 1.785) @ R(y=-8 * s), (0.045, 0.018, 0.012))
+    k.box("Skin", "head", T(0, -0.137, 1.73), (0.03, 0.025, 0.045), bevel=0.008)
+    k.box("Beard", "head", T(0, -0.09, 1.655), (0.17, 0.09, 0.11), bevel=0.035)
+    k.box("Beard", "head", T(0, -0.135, 1.693), (0.1, 0.02, 0.02), bevel=0.006)
+    # tall mitre with gold bands and a red cross
+    mitre = [(-0.11, 0.0), (0.11, 0.0), (0.125, 0.13), (0.0, 0.28), (-0.125, 0.13)]
+    MM = T(0, 0.03, 1.87)
+    k.prism("Ermine", "head", MM, mitre, 0.17)
+    k.box("Trim", "head", MM @ Matrix.Translation((0, 0, 0.02)), (0.235, 0.18, 0.035))
+    k.box("Trim", "head", MM @ Matrix.Translation((0, -0.088, 0.13)), (0.03, 0.01, 0.24))
+    k.box("Accent", "head", MM @ Matrix.Translation((0, -0.092, 0.15)), (0.03, 0.01, 0.1))
+    k.box("Accent", "head", MM @ Matrix.Translation((0, -0.092, 0.165)), (0.08, 0.01, 0.028))
+    # holy staff with a glowing cross
+    hx, hy, hz = mid("hand.R")
+    M, L = along((hx, hy - 0.01, 0.3), (hx, hy - 0.06, 1.98)); k.cyl("Wood", "hand.R", M, 0.022, 0.022, L, seg=6)
+    k.cyl("Trim", "hand.R", T(hx, hy - 0.06, 1.99), 0.035, 0.035, 0.05, seg=8)
+    k.box("Trim", "hand.R", T(hx, hy - 0.06, 2.13), (0.045, 0.045, 0.26), bevel=0.008)
+    k.box("Trim", "hand.R", T(hx, hy - 0.06, 2.17), (0.18, 0.045, 0.045), bevel=0.008)
+    k.box("Holy", "hand.R", T(hx, hy - 0.085, 2.13), (0.02, 0.01, 0.22))
+    k.box("Holy", "hand.R", T(hx, hy - 0.085, 2.17), (0.15, 0.01, 0.02))
+    k.sphere("Holy", "hand.R", T(hx, hy - 0.06, 2.17), (0.035, 0.035, 0.035), seg=8)
+
+
 # ---------------------------------------------------------------- Undead
 def undead_legs(k):
     for s in (1, -1):
@@ -497,6 +604,116 @@ def undead_king(k):
     k.sphere("Glow", "hand.L", T(lx, ly - 0.05, lz - 0.02), (0.05, 0.05, 0.05), seg=8)
 
 
+def undead_queen(k):
+    """Wraith Queen: a legless spectre in a tattered hooded shroud, spiked crown over the hood, claws, a soul-lantern staff."""
+    plinth(k)
+    # she floats: no legs, just a pool of soulfire under a shroud that stops short of the ground
+    k.cyl("Glow", "root", T(0, 0, 0.005), 0.22, 0.22, 0.01, seg=18)
+    k.cyl("Cloth", "hips", T(0, 0, 0.67), 0.3, 0.17, 0.7, seg=12)
+    for i in range(14):
+        a = 2 * math.pi * (i + 0.5) / 14
+        k.cyl("Cloth", "hips", T(0.27 * math.cos(a), 0.27 * math.sin(a), 0.29) @ R(x=180), 0.055, 0.0, 0.1 + 0.09 * (i % 3 == 0), seg=4)
+    k.torus("Glow", "hips", T(0, 0, 0.34), 0.262, 0.01, 20, 5)
+    for px, py, pz, r in ((0.14, 0.2, 0.42, 0.03), (-0.18, 0.16, 0.3, 0.024), (0.04, 0.24, 0.22, 0.02), (-0.06, -0.24, 0.24, 0.02)):
+        k.sphere("Glow", "hips", T(px, py, pz), (r, r, r), seg=6)
+    k.torus("Gold", "hips", T(0, 0, 1.0), 0.19, 0.014, 16, 5)
+    # bare ribs above the shroud, a torn shawl and hanging strips
+    undead_torso(k)
+    k.box("Cloth", "chest", T(0, 0.05, 1.47), (0.46, 0.22, 0.06), bevel=0.02)
+    for s in (1, -1):
+        k.box("Cloth", "chest", T(0.15 * s, -0.11, 1.28) @ R(x=6, y=-8 * s), (0.07, 0.015, 0.36))
+        k.cyl("Cloth", "chest", T(0.15 * s, -0.125, 1.08) @ R(x=180), 0.035, 0.0, 0.07, seg=4)
+    cape(k, "Cloth", 0.5, 0.9, 1.52, 0.18, tilt=10, jagged=5)
+    undead_arms(k)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        tx, ty, tz = B[f"hand.{x}"][1]
+        for oy in (-0.03, 0.03):
+            k.cyl("Bone", f"hand.{x}", T(tx + 0.01 * s, ty + oy, tz - 0.04) @ R(x=180 + oy * 300), 0.01, 0.0, 0.14, seg=4)
+    undead_skull(k)
+    # hood, drapes and a crown of spikes over it
+    k.sphere("Cloth", "head", T(0, 0.07, 1.8), (0.19, 0.15, 0.2), seg=12)
+    k.cyl("Cloth", "head", T(0, 0.08, 1.98) @ R(x=-28), 0.1, 0.0, 0.17, seg=8)
+    for s in (1, -1):
+        k.box("Cloth", "head", T(0.15 * s, 0.03, 1.65), (0.06, 0.2, 0.24), bevel=0.02)
+    crown(k, "Gold", "Glow", z=1.95, r=0.175, points=9, tall=0.14, jag=0.5)
+    # soul-lantern staff in the right hand
+    hx, hy, hz = mid("hand.R")
+    M, L = along((hx, hy - 0.01, 0.3), (hx, hy - 0.06, 2.0)); k.cyl("Leather", "hand.R", M, 0.02, 0.02, L, seg=6)
+    k.torus("Gold", "hand.R", T(hx, hy - 0.06, 2.07) @ R(y=90), 0.07, 0.014, 14, 5)
+    ly = hy - 0.13
+    k.box("Gold", "hand.R", T(hx, ly, 2.035), (0.008, 0.008, 0.07))
+    k.cyl("Gold", "hand.R", T(hx, ly, 2.0), 0.03, 0.05, 0.02, seg=8)
+    k.sphere("Glow", "hand.R", T(hx, ly, 1.93), (0.038, 0.038, 0.055), seg=8)
+    k.cyl("Gold", "hand.R", T(hx, ly, 1.86), 0.05, 0.03, 0.02, seg=8)
+    for dx, dy in ((0.04, 0), (-0.04, 0), (0, 0.04), (0, -0.04)):
+        k.box("Gold", "hand.R", T(hx + dx, ly + dy, 1.93), (0.008, 0.008, 0.14))
+    # soulfire in the left palm
+    lx, ly2, lz = mid("hand.L")
+    k.sphere("Glow", "hand.L", T(lx, ly2 - 0.05, lz - 0.02), (0.05, 0.05, 0.05), seg=8)
+
+
+def undead_bishop(k):
+    """Necromancer: robed skeleton in a tall pointed cowl, glowing runes, skull pauldrons, skull staff, chained spellbook."""
+    plinth(k)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        k.box("Bone", f"foot.{x}", T(0.11 * s, -0.07, 0.035), (0.08, 0.18, 0.05), bevel=0.015)
+    # robe to the ground with a torn hem and a column of runes
+    k.cyl("Robe", "hips", T(0, 0, 0.58), 0.3, 0.2, 0.84, seg=12)
+    for i in range(12):
+        a = 2 * math.pi * (i + 0.5) / 12
+        k.cyl("Robe", "hips", T(0.275 * math.cos(a), 0.275 * math.sin(a), 0.14) @ R(x=180), 0.05, 0.0, 0.07 + 0.05 * (i % 2), seg=4)
+    for i, z in enumerate((0.3, 0.42, 0.54, 0.66, 0.78)):
+        r = 0.2 + (1.0 - z) / 0.84 * 0.1
+        size = (0.055, 0.01, 0.014) if i % 2 else (0.014, 0.01, 0.055)
+        k.box("Glow", "hips", T(0, -r - 0.004, z) @ R(x=-7), size)
+    k.cyl("Leather", "hips", T(0, 0, 1.0), 0.21, 0.21, 0.05, seg=12)
+    k.sphere("Bone", "hips", T(0, -0.215, 1.0), (0.035, 0.025, 0.035), seg=8)
+    # chained spellbook at the left hip
+    k.box("Leather", "hips", T(0.22, -0.06, 0.82) @ R(z=-15), (0.04, 0.13, 0.17), bevel=0.01)
+    k.box("Bone", "hips", T(0.24, -0.065, 0.82) @ R(z=-15), (0.012, 0.11, 0.14))
+    k.sphere("Glow", "hips", T(0.248, -0.07, 0.82), (0.012, 0.02, 0.02), seg=6)
+    M, L = along((0.2, -0.1, 0.99), (0.22, -0.08, 0.9)); k.cyl("Gold", "hips", M, 0.008, 0.008, L, seg=4)
+    # robed body with bone-trimmed front and skull pauldrons
+    k.box("Robe", "spine", T(0, 0, 1.13), (0.34, 0.24, 0.22), bevel=0.05)
+    k.box("Robe", "chest", T(0, 0, 1.35), (0.4, 0.26, 0.28), bevel=0.07)
+    for s in (1, -1):
+        k.box("Bone", "chest", T(0.05 * s, -0.133, 1.3) @ R(y=-10 * s), (0.025, 0.012, 0.36))
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        P = T(0.23 * s, -0.01, 1.48)
+        k.sphere("Bone", f"upper_arm.{x}", P, (0.085, 0.095, 0.08), seg=10)
+        k.box("Bone", f"upper_arm.{x}", P @ Matrix.Translation((0, -0.06, -0.06)), (0.11, 0.07, 0.05), bevel=0.015)
+        for e in (1, -1):
+            k.box("Dark", f"upper_arm.{x}", P @ Matrix.Translation((0.03 * e, -0.085, -0.005)), (0.035, 0.02, 0.03))
+            k.sphere("Glow", f"upper_arm.{x}", P @ Matrix.Translation((0.03 * e, -0.095, -0.005)), (0.01, 0.01, 0.01), seg=6)
+        M, L = along(*B[f"upper_arm.{x}"]); k.cyl("Robe", f"upper_arm.{x}", M, 0.062, 0.068, L, seg=8)
+        M, L = along(*B[f"forearm.{x}"]); k.cyl("Robe", f"forearm.{x}", M, 0.07, 0.115, L - 0.02, seg=8)
+    undead_arms(k)
+    undead_skull(k)
+    # tall pointed cowl
+    k.sphere("Robe", "head", T(0, 0.07, 1.8), (0.19, 0.15, 0.2), seg=12)
+    k.cyl("Robe", "head", T(0, 0.06, 2.04) @ R(x=-10), 0.135, 0.0, 0.32, seg=8)
+    for s in (1, -1):
+        k.box("Robe", "head", T(0.15 * s, 0.03, 1.66), (0.06, 0.2, 0.24), bevel=0.02)
+    k.sphere("Glow", "head", T(0, -0.065, 1.98), (0.022, 0.012, 0.03), seg=8)
+    # skull staff with a green flame and bone horns
+    hx, hy, hz = mid("hand.R")
+    sy = hy - 0.06
+    M, L = along((hx, hy - 0.01, 0.3), (hx, sy, 2.04)); k.cyl("Leather", "hand.R", M, 0.022, 0.022, L, seg=6)
+    for e in (1, -1):
+        k.cyl("Bone", "hand.R", T(hx + 0.07 * e, sy, 2.1) @ R(y=-35 * e), 0.018, 0.0, 0.16, seg=5)
+    k.sphere("Bone", "hand.R", T(hx, sy, 2.1), (0.06, 0.065, 0.06), seg=10)
+    k.box("Bone", "hand.R", T(hx, sy - 0.03, 2.05), (0.07, 0.05, 0.04), bevel=0.01)
+    for e in (1, -1):
+        k.sphere("Glow", "hand.R", T(hx + 0.022 * e, sy - 0.058, 2.105), (0.014, 0.01, 0.014), seg=6)
+    k.cyl("Glow", "hand.R", T(hx, sy, 2.23), 0.04, 0.0, 0.13, seg=6)
+    # soulfire in the left palm
+    lx, ly, lz = mid("hand.L")
+    k.sphere("Glow", "hand.L", T(lx, ly - 0.05, lz - 0.02), (0.05, 0.05, 0.05), seg=8)
+
+
 # ---------------------------------------------------------------- Mafia: Soldier (pawn)
 def mafia_pawn(k):
     plinth(k)
@@ -566,6 +783,228 @@ def mafia_pawn(k):
     k.box("Wood", "hand.R", G(0.0, 0.1, 0.02) @ R(x=8), (0.04, 0.22, 0.08), bevel=0.015)        # stock
 
 
+# ---------------------------------------------------------------- Rooks: buildings on the same skeleton
+# hips = lower tower, spine = middle, chest = battlements, neck = the catapult arm on the roof.
+def jut_blocks(k, slot, bone, rad, z0, z1, count, seed, skip_front=0.55):
+    """Stones jutting slightly out of a round wall, for texture (kept clear of the front)."""
+    rnd = random.Random(seed)
+    placed = 0
+    while placed < count:
+        a = rnd.uniform(0, 2 * math.pi)
+        if abs(a - 1.5 * math.pi) < skip_front:
+            continue
+        z = rnd.uniform(z0, z1)
+        r = rad(z)
+        k.box(slot, bone, T(r * math.cos(a), r * math.sin(a), z) @ R(z=math.degrees(a) + 90),
+              (0.1 * rnd.uniform(0.8, 1.25), 0.03, 0.065), bevel=0.008)
+        placed += 1
+
+
+def tangent(r, a, z):
+    """Matrix for a part sitting on a round wall at angle a, its local -y facing outward."""
+    return T(r * math.cos(a), r * math.sin(a), z) @ R(z=math.degrees(a) + 90)
+
+
+def catapult(k, beam, bucket, payload, weight, post):
+    """Roof catapult. The arm is bound to the neck bone (pivot 1.50) and flings forward over the front."""
+    for s in (1, -1):
+        k.box(post, "chest", T(0.085 * s, 0, 1.52), (0.03, 0.06, 0.08), bevel=0.006)
+    k.cyl("Dark", "chest", T(0, 0, 1.5) @ R(y=90), 0.016, 0.016, 0.21, seg=6)
+    for s in (1, -1):  # rest for the loaded arm
+        k.box(post, "chest", T(0.06 * s, 0.3, 1.51), (0.025, 0.025, 0.06))
+    k.box(post, "chest", T(0, 0.3, 1.54), (0.15, 0.025, 0.025))
+    M, L = along((0, -0.1, 1.495), (0, 0.34, 1.565))
+    beam(M, L)
+    k.cyl(bucket, "neck", T(0, 0.35, 1.585), 0.045, 0.066, 0.05, seg=8)
+    payload((0, 0.35, 1.63))
+    k.box(weight, "neck", T(0, -0.105, 1.515), (0.1, 0.075, 0.07), bevel=0.01)
+
+
+def knight_rook(k):
+    """Keep: round stone tower, oak gate, red banner, lit window, crenellated top with a catapult."""
+    plinth(k)
+    wall = lambda z: 0.36 - 0.04 * z / 1.28
+    k.cyl("StoneDark", "hips", T(0, 0, 0.04), 0.385, 0.375, 0.08, seg=20)
+    k.cyl("Stone", "hips", T(0, 0, 0.55), wall(0), wall(1.1), 1.1, seg=20)
+    k.cyl("Stone", "spine", T(0, 0, 1.19), wall(1.1), wall(1.28), 0.18, seg=20)
+    for z in (0.62, 1.1):
+        k.cyl("StoneDark", "hips", T(0, 0, z), wall(z) + 0.018, wall(z) + 0.018, 0.045, seg=20)
+    jut_blocks(k, "StoneDark", "hips", wall, 0.14, 1.02, 22, seed=7)
+    jut_blocks(k, "StoneDark", "spine", wall, 1.15, 1.25, 5, seed=8)
+    # gate: stone arch, oak door with iron bands
+    k.box("StoneDark", "hips", T(0, -0.345, 0.2), (0.25, 0.06, 0.4))
+    k.cyl("StoneDark", "hips", T(0, -0.345, 0.4) @ R(x=90), 0.125, 0.125, 0.06, seg=14)
+    k.box("Wood", "hips", T(0, -0.378, 0.165), (0.17, 0.02, 0.33))
+    k.cyl("Wood", "hips", T(0, -0.378, 0.33) @ R(x=90), 0.085, 0.085, 0.02, seg=12)
+    for z in (0.1, 0.25):
+        k.box("Dark", "hips", T(0, -0.39, z), (0.18, 0.012, 0.022))
+    k.sphere("Trim", "hips", T(0.05, -0.395, 0.19), (0.014, 0.01, 0.014), seg=6)
+    # arrow slits, one lit
+    for a, z, slot in ((0.0, 0.74, "Holy"), (math.pi, 0.74, "Dark"), (math.pi / 2, 0.74, "Dark"),
+                       (0.3 * math.pi, 0.36, "Dark"), (0.7 * math.pi, 0.36, "Dark")):
+        k.box(slot, "hips", tangent(wall(z) - 0.004, a, z), (0.028, 0.04, 0.13))
+    for a in (0.25 * math.pi, 0.75 * math.pi):
+        k.box("Dark", "spine", tangent(wall(1.19) - 0.004, a, 1.19), (0.028, 0.04, 0.1))
+    # banner hanging down the front (on the spine, so it swings when the tower moves)
+    Mb = T(0, -0.335, 1.25) @ R(x=-3)
+    k.cyl("Wood", "spine", Mb @ Matrix.Translation((0, -0.012, 0.005)) @ R(y=90), 0.012, 0.012, 0.3, seg=6)
+    k.prism("Accent", "spine", Mb, [(-0.12, 0), (0.12, 0), (0.12, -0.5), (0, -0.6), (-0.12, -0.5)], 0.012)
+    k.box("Trim", "spine", Mb @ Matrix.Translation((0, -0.008, -0.26)), (0.035, 0.006, 0.26))
+    k.box("Trim", "spine", Mb @ Matrix.Translation((0, -0.008, -0.2)), (0.16, 0.006, 0.035))
+    k.box("Trim", "spine", Mb @ Matrix.Translation((0, -0.004, -0.02)), (0.25, 0.018, 0.03))
+    # overhanging battlements
+    k.cyl("StoneDark", "chest", T(0, 0, 1.33), wall(1.28), 0.41, 0.1, seg=20)
+    for i in range(10):
+        a = 2 * math.pi * (i + 0.5) / 10
+        k.box("StoneDark", "chest", tangent(0.335, a, 1.27), (0.05, 0.05, 0.08))
+    k.cyl("Stone", "chest", T(0, 0, 1.43), 0.41, 0.41, 0.1, seg=20)
+    k.cyl("Wood", "chest", T(0, 0, 1.483), 0.355, 0.355, 0.01, seg=20)
+    for i in range(8):
+        a = 2 * math.pi * (i + 0.5) / 8
+        k.box("Stone", "chest", tangent(0.37, a, 1.54), (0.15, 0.08, 0.12), bevel=0.01)
+    # pennant on a back merlon
+    a = 2 * math.pi * 3.5 / 8
+    px, py = 0.37 * math.cos(a), 0.37 * math.sin(a)
+    M, L = along((px, py, 1.6), (px, py, 2.06)); k.cyl("Wood", "chest", M, 0.012, 0.012, L, seg=6)
+    k.sphere("Trim", "chest", T(px, py, 2.07), (0.022, 0.022, 0.022), seg=8)
+    k.prism("Accent", "chest", T(px, py, 2.03), [(0, 0), (0.24, -0.055), (0, -0.12)], 0.01)
+    # catapult
+    catapult(k, lambda M, L: k.box("Wood", "neck", M, (0.04, 0.035, L), bevel=0.006),
+             "Wood", lambda p: k.sphere("StoneDark", "neck", T(*p), (0.05, 0.05, 0.048), seg=8),
+             "Dark", "Wood")
+
+
+def undead_rook(k):
+    """Crypt: square mausoleum of dark stone, glowing barred gate, skulls, tattered banner, bone catapult."""
+    plinth(k)
+    sq = lambda z: 0.43 - 0.04 * z / 1.28          # half-diagonal of the square wall
+    hs = lambda z: sq(z) / math.sqrt(2)            # half-side
+    Q = R(z=45)
+    k.cyl("StoneDark", "hips", T(0, 0, 0.05) @ Q, 0.45, 0.44, 0.1, seg=4)
+    k.cyl("Stone", "hips", T(0, 0, 0.55) @ Q, sq(0), sq(1.1), 1.1, seg=4)
+    k.cyl("Stone", "spine", T(0, 0, 1.19) @ Q, sq(1.1), sq(1.28), 0.18, seg=4)
+    k.cyl("StoneDark", "hips", T(0, 0, 1.1) @ Q, sq(1.1) + 0.025, sq(1.1) + 0.025, 0.05, seg=4)
+    # corner buttresses with pyramid caps
+    for sx in (1, -1):
+        for sy in (1, -1):
+            c = hs(0.5)
+            k.box("StoneDark", "hips", T(sx * c, sy * c, 0.48), (0.09, 0.09, 0.86))
+            k.cyl("StoneDark", "hips", T(sx * c, sy * c, 0.97) @ Q, 0.068, 0.0, 0.12, seg=4)
+    # moss at the foot
+    for x, y in ((0.2, -0.31), (-0.27, 0.2), (0.3, 0.12)):
+        k.sphere("Cloth", "hips", T(x, y, 0.1), (0.07, 0.04, 0.035), seg=8)
+    # pointed gate glowing green behind iron bars, skull keystone
+    y0 = -hs(0.2)
+    arch = lambda w, h, top: [(-w, 0), (w, 0), (w, h), (0, top), (-w, h)]
+    k.prism("StoneDark", "hips", T(0, y0 - 0.01, 0.0), arch(0.14, 0.28, 0.48), 0.05)
+    k.prism("Dark", "hips", T(0, y0 - 0.035, 0.0), arch(0.1, 0.25, 0.4), 0.006)
+    k.prism("Glow", "hips", T(0, y0 - 0.039, 0.02), arch(0.065, 0.2, 0.3), 0.004)
+    for x in (-0.06, -0.02, 0.02, 0.06):
+        top = 0.39 - abs(x) * 0.9
+        M, L = along((x, y0 - 0.045, 0.0), (x, y0 - 0.045, top)); k.cyl("Steel", "hips", M, 0.009, 0.009, L, seg=5)
+    k.box("Steel", "hips", T(0, y0 - 0.045, 0.19), (0.2, 0.012, 0.016))
+    k.sphere("Bone", "hips", T(0, y0 - 0.035, 0.53), (0.05, 0.04, 0.05), seg=10)
+    k.box("Bone", "hips", T(0, y0 - 0.045, 0.49), (0.05, 0.03, 0.025), bevel=0.006)
+    for e in (1, -1):
+        k.sphere("Glow", "hips", T(0.018 * e, y0 - 0.07, 0.535), (0.012, 0.008, 0.012), seg=6)
+    # glowing pointed windows on the sides and back
+    win = arch(0.026, 0.1, 0.145)
+    for z, bone in ((0.68, "hips"), (1.15, "spine")):
+        for s in (1, -1):
+            k.prism("Glow", bone, T(s * (hs(z) + 0.002), 0, z) @ R(z=90), win, 0.01)
+        k.prism("Glow", bone, T(0, hs(z) + 0.002, z), win, 0.01)
+    # cracks
+    for x, z, rot, ln in ((0.16, 0.86, 30, 0.14), (-0.18, 0.4, -40, 0.12), (0.22, 0.25, 70, 0.1)):
+        k.box("Dark", "hips", T(x, -hs(z) - 0.004, z) @ R(y=rot), (ln, 0.01, 0.012))
+    # tattered banner with a glowing rune
+    Mb = T(0, -hs(1.25) - 0.012, 1.25) @ R(x=-3)
+    jag = [(-0.12, 0), (0.12, 0), (0.12, -0.46), (0.07, -0.4), (0.03, -0.55), (-0.02, -0.44), (-0.07, -0.58), (-0.12, -0.47)]
+    k.prism("Royal", "spine", Mb, jag, 0.012)
+    k.box("Bone", "spine", Mb @ Matrix.Translation((0, -0.004, -0.01)), (0.27, 0.025, 0.025), bevel=0.006)
+    k.prism("Glow", "spine", Mb @ Matrix.Translation((0, -0.008, -0.27)), [(0, -0.07), (0.05, 0), (0, 0.07), (-0.05, 0)], 0.004)
+    # overhanging parapet, spiked merlons, skull corners, glowing pit on the roof
+    k.cyl("StoneDark", "chest", T(0, 0, 1.33) @ Q, sq(1.28), 0.47, 0.1, seg=4)
+    k.cyl("Stone", "chest", T(0, 0, 1.43) @ Q, 0.47, 0.47, 0.1, seg=4)
+    k.cyl("Glow", "chest", T(0, 0, 1.483) @ Q, 0.2, 0.2, 0.006, seg=4)
+    e = 0.47 / math.sqrt(2) - 0.04
+    for u in (-0.17, 0.17):
+        for (mx, my, rot) in ((u, -e, 0), (u, e, 0), (e, u, 90), (-e, u, 90)):
+            k.box("Stone", "chest", T(mx, my, 1.53) @ R(z=rot), (0.1, 0.06, 0.1), bevel=0.008)
+            k.cyl("StoneDark", "chest", T(mx, my, 1.62) @ R(z=rot + 45), 0.055, 0.0, 0.09, seg=4)
+    for sx in (1, -1):
+        for sy in (1, -1):
+            cx, cy = sx * e, sy * e
+            k.box("StoneDark", "chest", T(cx, cy, 1.53), (0.11, 0.11, 0.1), bevel=0.01)
+            k.sphere("Bone", "chest", T(cx, cy, 1.635), (0.06, 0.055, 0.058), seg=10)
+            k.box("Bone", "chest", T(cx, cy - 0.03, 1.595), (0.055, 0.035, 0.028), bevel=0.006)
+            for ex in (1, -1):
+                k.box("Dark", "chest", T(cx + 0.02 * ex, cy - 0.05, 1.64), (0.022, 0.016, 0.02))
+                k.sphere("Glow", "chest", T(cx + 0.02 * ex, cy - 0.056, 1.64), (0.007, 0.006, 0.007), seg=6)
+    # bone catapult flinging a burning skull
+    def femur(M, L):
+        k.cyl("Bone", "neck", M, 0.022, 0.02, L, seg=6)
+        for p in ((0, -0.1, 1.495), (0, 0.34, 1.565)):
+            k.sphere("Bone", "neck", T(*p), (0.032, 0.032, 0.032), seg=8)
+
+    def burning_skull(p):
+        x, y, z = p
+        k.sphere("Bone", "neck", T(x, y, z), (0.045, 0.042, 0.045), seg=8)
+        for ex in (1, -1):
+            k.sphere("Glow", "neck", T(x + 0.016 * ex, y - 0.036, z + 0.004), (0.01, 0.008, 0.01), seg=6)
+        k.cyl("Glow", "neck", T(x, y, z + 0.08), 0.035, 0.0, 0.1, seg=6)
+
+    catapult(k, femur, "Leather", burning_skull, "Steel", "StoneDark")
+    # a scatter of bones at the foot
+    k.sphere("Bone", "root", T(0.21, -0.35, 0.03), (0.04, 0.036, 0.038), seg=8)
+    for (x, y, a) in ((-0.2, -0.355, 20), (-0.12, -0.38, -35)):
+        k.cyl("Bone", "root", T(x, y, 0.012) @ R(y=90, z=a), 0.012, 0.012, 0.14, seg=5)
+
+
+def anchored(rx=0.0, rz=0.0, lift=0.0, pivot=0.98):
+    """Hips location that keeps the tower's base in place while the hips bone tilts (lean rx, roll rz)."""
+    return {"hips": (-pivot * math.sin(math.radians(rz)), lift, pivot * math.sin(math.radians(rx)))}
+
+
+TOWER_CLIPS = {
+    "Idle": (60, True, [
+        (0, {}, {}),
+        (30, {"spine": (1.5, 0, 0), "chest": (-1, 0, 0), "neck": (-4, 0, 0)}, anchored(lift=0.008)),
+        (60, {}, {}),
+    ]),
+    # a heavy waddle: rock side to side on the base, hopping between
+    "Walk": (24, True, [
+        (0, {"hips": (0, 0, 4), "chest": (0, 0, -2)}, anchored(rz=4)),
+        (6, {"hips": (3, 0, 0), "chest": (2, 0, 0), "neck": (-8, 0, 0)}, anchored(rx=3, lift=0.07)),
+        (12, {"hips": (0, 0, -4), "chest": (0, 0, 2)}, anchored(rz=-4)),
+        (18, {"hips": (3, 0, 0), "chest": (2, 0, 0), "neck": (-8, 0, 0)}, anchored(rx=3, lift=0.07)),
+        (24, {"hips": (0, 0, 4), "chest": (0, 0, -2)}, anchored(rz=4)),
+    ]),
+    # wind the catapult back, then fling it over the front
+    "Attack": (32, False, [
+        (0, {}, {}),
+        (8, {"hips": (-3, 0, 0), "spine": (-5, 0, 0), "chest": (-5, 0, 0), "neck": (-22, 0, 0)}, anchored(rx=-3, lift=-0.03)),
+        (13, {"hips": (4, 0, 0), "spine": (6, 0, 0), "chest": (5, 0, 0), "neck": (118, 0, 0)}, anchored(rx=4, lift=0.03)),
+        (18, {"hips": (2, 0, 0), "spine": (3, 0, 0), "chest": (2, 0, 0), "neck": (100, 0, 0)}, anchored(rx=2)),
+        (32, {}, {}),
+    ]),
+    # rapid volley
+    "Shoot": (34, False, [
+        (0, {}, {}),
+        *[(f, {"chest": (-3 if i % 2 == 0 else 3, 0, 0), "neck": (-15 if i % 2 == 0 else 70, 0, 0)},
+           anchored(lift=-0.015 if i % 2 == 0 else 0.01)) for i, f in enumerate(range(4, 26, 4))],
+        (34, {}, {}),
+    ]),
+    # shudder, crack, topple and sink into the board
+    "Death": (46, False, [
+        (0, {}, {}),
+        (6, {"chest": (-6, 0, 4), "neck": (-30, 0, 0)}, anchored(lift=0.02)),
+        (12, {"hips": (3, 0, -3), "spine": (-6, 0, 5), "chest": (8, 0, -6), "neck": (40, 0, 10)}, anchored(3, -3, -0.05)),
+        (24, {"hips": (6, 0, 4), "spine": (5, 0, 4), "chest": (24, 0, 10), "neck": (70, 0, 20)}, anchored(6, 4, -0.45)),
+        (46, {"hips": (9, 0, 5), "spine": (7, 0, 5), "chest": (34, 0, 14), "neck": (95, 0, 25)}, anchored(9, 5, -1.0)),
+    ]),
+}
+
+
 # ---------------------------------------------------------------- animation (shared by every humanoid)
 GUARD = {"forearm.R": (30, 0, 0), "forearm.L": (40, 0, 0)}
 
@@ -632,6 +1071,271 @@ CLIPS = {
 }
 
 
+# ---------------------------------------------------------------- Knights (chess piece): four-legged rigs
+# A beast skeleton: body (pivot at the rump, so +X rears up), neck, head, jaw, tail, two-part legs,
+# plus a full rider skeleton sitting in the saddle (unused on a riderless beast, but every beast
+# shares the same bones so they all share one clip set). Non-leg bones: +X lifts the tip.
+RIDER = Matrix.Translation((0, 0.08, 0.32)) @ S(0.85, 0.85, 0.85)
+
+
+def rider_bones():
+    out = []
+    for name, h, t, parent in BONES[1:]:
+        hh, tt = RIDER @ V(*h), RIDER @ V(*t)
+        out.append((name, (hh.x, hh.y, hh.z - H0), (tt.x, tt.y, tt.z - H0), "body" if parent == "root" else parent))
+    return out
+
+
+def beast_rig(body, neck, head, jaw, tail, fl, bl):
+    up = (0, 0, 1)
+    bones = [("root", (0, 0, -H0), (0, 0, 0.17), None),
+             ("body", *body, "root", up), ("neck_q", *neck, "body", up), ("head_q", *head, "neck_q", up),
+             ("jaw", *jaw, "head_q", up), ("tail", *tail, "body", (0, 1, 0))]
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        for pre, (a, b, c) in (("fl", fl), ("bl", bl)):
+            m = lambda p: (p[0] * s, p[1], p[2])
+            bones.append((f"{pre}_up.{x}", m(a), m(b), "body"))
+            bones.append((f"{pre}_lo.{x}", m(b), m(c), f"{pre}_up.{x}"))
+    return bones + rider_bones()
+
+
+HORSE = beast_rig(body=((0, 0.38, 0.92), (0, -0.32, 0.95)), neck=((0, -0.3, 1.0), (0, -0.5, 1.32)),
+                  head=((0, -0.5, 1.32), (0, -0.74, 1.1)), jaw=((0, -0.56, 1.2), (0, -0.74, 1.06)),
+                  tail=((0, 0.46, 0.98), (0, 0.6, 0.62)),
+                  fl=((0.13, -0.27, 0.8), (0.13, -0.29, 0.42), (0.13, -0.27, 0.03)),
+                  bl=((0.13, 0.33, 0.82), (0.13, 0.4, 0.42), (0.13, 0.35, 0.03)))
+WOLF = beast_rig(body=((0, 0.38, 0.82), (0, -0.3, 0.92)), neck=((0, -0.28, 0.95), (0, -0.48, 1.12)),
+                 head=((0, -0.48, 1.12), (0, -0.8, 1.02)), jaw=((0, -0.54, 1.02), (0, -0.82, 0.94)),
+                 tail=((0, 0.44, 0.92), (0, 0.78, 0.72)),
+                 fl=((0.15, -0.24, 0.76), (0.15, -0.21, 0.4), (0.15, -0.26, 0.03)),
+                 bl=((0.14, 0.32, 0.8), (0.14, 0.44, 0.42), (0.14, 0.36, 0.03)))
+
+
+def limb(k, slot, bone, rig_b, r1, r2):
+    M, L = along(*rig_b[bone]); k.cyl(slot, bone, M, r1, r2, L, seg=8)
+
+
+def knight_knight(k):
+    """Paladin: armoured knight on a barded grey warhorse - red caparison with gold crosses, chanfron, kite shield."""
+    RB = {n: (h, t) for n, h, t, *_ in HORSE}
+    plinth(k)
+    # legs (tops hidden under the caparison), hooves
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        limb(k, "Horse", f"fl_up.{x}", RB, 0.075, 0.055)
+        limb(k, "Horse", f"fl_lo.{x}", RB, 0.045, 0.04)
+        limb(k, "Horse", f"bl_up.{x}", RB, 0.09, 0.055)
+        limb(k, "Horse", f"bl_lo.{x}", RB, 0.045, 0.04)
+        for pre in ("fl", "bl"):
+            kx, ky, kz = RB[f"{pre}_lo.{x}"][0]
+            k.sphere("Horse", f"{pre}_lo.{x}", T(kx, ky, kz), (0.055, 0.055, 0.055), seg=8)
+            hx, hy, hz = RB[f"{pre}_lo.{x}"][1]
+            k.cyl("Hair", f"{pre}_lo.{x}", T(hx, hy, hz + 0.09), 0.06, 0.045, 0.06, seg=8)   # feathering
+            k.cyl("Dark", f"{pre}_lo.{x}", T(hx, hy - 0.01, hz + 0.03), 0.065, 0.058, 0.06, seg=10)
+    # body under a caparison: domed top, side skirts, gold hems and crosses
+    k.sphere("Horse", "body", T(0, 0.03, 0.9), (0.2, 0.44, 0.21), seg=14)
+    k.sphere("Horse", "body", T(0, -0.27, 0.95), (0.2, 0.2, 0.22), seg=12)
+    k.cyl("Cloth", "body", T(0, 0.04, 0.92) @ R(x=90), 0.24, 0.24, 0.96, seg=16)
+    for s in (1, -1):
+        k.box("Cloth", "body", T(0.235 * s, 0.04, 0.76), (0.02, 0.96, 0.32))
+        k.box("Trim", "body", T(0.245 * s, 0.04, 0.61), (0.012, 0.97, 0.03))
+        for y in (-0.22, 0.28):
+            k.box("Trim", "body", T(0.248 * s, y, 0.82), (0.008, 0.045, 0.2))
+            k.box("Trim", "body", T(0.248 * s, y, 0.85), (0.008, 0.15, 0.045))
+    for y, z in ((-0.44, 0.76), (0.52, 0.76)):
+        k.box("Cloth", "body", T(0, y, z), (0.47, 0.02, 0.32))
+        k.box("Trim", "body", T(0, y + (0.012 if y > 0 else -0.012), 0.61), (0.48, 0.012, 0.03))
+    k.box("Trim", "body", T(0, -0.452, 0.84), (0.045, 0.008, 0.2))
+    k.box("Trim", "body", T(0, -0.452, 0.87), (0.15, 0.008, 0.045))
+    # saddle
+    k.box("Leather", "body", T(0, 0.1, 1.17), (0.28, 0.34, 0.05), bevel=0.015)
+    k.box("Leather", "body", T(0, 0.27, 1.22), (0.24, 0.04, 0.1), bevel=0.015)
+    k.box("Trim", "body", T(0, -0.07, 1.21), (0.16, 0.04, 0.06), bevel=0.01)
+    # neck with mane and crinet plates
+    M, L = along((0, -0.27, 0.97), (0, -0.51, 1.34)); k.cyl("Horse", "neck_q", M, 0.14, 0.095, L, seg=10)
+    M, L = along((0, -0.24, 1.07), (0, -0.46, 1.4)); k.box("Hair", "neck_q", M, (0.04, 0.07, L), bevel=0.01)
+    for t in (0.25, 0.5, 0.75):
+        p = (0, -0.27 - 0.24 * t, 0.97 + 0.37 * t)
+        k.box("Armor", "neck_q", T(p[0], p[1] - 0.02, p[2] + 0.03) @ R(x=-33), (0.2, 0.14, 0.06), bevel=0.015)
+    # head with chanfron, plume, ears, eyes
+    M, L = along((0, -0.49, 1.36), (0, -0.76, 1.09))
+    k.box("Horse", "head_q", M, (0.13, 0.15, L), bevel=0.04)
+    k.box("Dark", "head_q", T(0, -0.78, 1.07), (0.1, 0.06, 0.08), bevel=0.02)
+    k.box("Armor", "head_q", M @ Matrix.Translation((0, -0.07, 0.02)), (0.14, 0.02, L * 0.85), bevel=0.01)
+    k.box("Trim", "head_q", M @ Matrix.Translation((0, -0.083, 0.02)), (0.025, 0.01, L * 0.7))
+    k.cyl("Accent", "head_q", T(0, -0.52, 1.46) @ R(x=-20), 0.035, 0.07, 0.14, seg=8)
+    for s in (1, -1):
+        k.cyl("Horse", "head_q", T(0.045 * s, -0.47, 1.42) @ R(y=12 * s), 0.025, 0.0, 0.09, seg=5)
+        k.sphere("Dark", "head_q", T(0.07 * s, -0.56, 1.29), (0.018, 0.022, 0.018), seg=6)
+    # tail
+    M, L = along(*RB["tail"]); k.cyl("Hair", "tail", M, 0.05, 0.075, L, seg=8)
+    # the knight in the saddle: shared knight parts, scaled and placed by RIDER
+    k.xf = RIDER
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        M, L = along((0.13 * s, 0, 0.95), (0.3 * s, -0.25, 0.78)); k.cyl("Armor", "hips", M, 0.08, 0.07, L, seg=8)
+        k.sphere("Armor", "hips", T(0.3 * s, -0.27, 0.78), (0.07, 0.07, 0.07), seg=8)
+        M, L = along((0.3 * s, -0.25, 0.78), (0.31 * s, -0.17, 0.42)); k.cyl("Armor", "hips", M, 0.065, 0.055, L, seg=8)
+        k.box("Dark", "hips", T(0.31 * s, -0.21, 0.37), (0.1, 0.22, 0.09), bevel=0.025)
+        k.box("Trim", "hips", T(0.31 * s, -0.19, 0.32), (0.11, 0.06, 0.015))
+    knight_torso(k)
+    k.cyl("Armor", "chest", T(0, 0, 1.53), 0.13, 0.11, 0.09, seg=10)
+    knight_arms(k, trim=True)
+    cape(k, "Cloth", 0.44, 0.6, 1.5, 0.9, tilt=30)
+    k.cyl("Armor", "head", T(0, 0, 1.76), 0.155, 0.15, 0.30, seg=12, bevel=0.01)
+    k.cyl("Trim", "head", T(0, 0, 1.935), 0.15, 0.08, 0.07, seg=12)
+    k.box("Dark", "head", T(0, -0.145, 1.78), (0.25, 0.04, 0.035))
+    k.box("Trim", "head", T(0, -0.155, 1.71), (0.035, 0.03, 0.18))
+    k.box("Accent", "head", T(0, 0.03, 2.02), (0.04, 0.3, 0.14), bevel=0.02)
+    k.cyl("Accent", "head", T(0, 0.2, 1.93) @ R(x=-30), 0.03, 0.0, 0.2, seg=6)
+    sword(k, length=0.95)
+    kite = [(0, 0.28), (0.19, 0.22), (0.2, 0.02), (0.0, -0.36), (-0.2, 0.02), (-0.19, 0.22)]
+    SM = T(0.44, -0.07, 1.02) @ R(z=37) @ R(x=-8)
+    k.prism("Trim", "forearm.L", SM, [(u * 1.08, v * 1.06) for u, v in kite], 0.03)
+    k.prism("Accent", "forearm.L", SM @ Matrix.Translation((0, -0.014, 0)), kite, 0.03)
+    k.box("Trim", "forearm.L", SM @ Matrix.Translation((0, -0.032, -0.02)), (0.045, 0.012, 0.46))
+    k.box("Trim", "forearm.L", SM @ Matrix.Translation((0, -0.032, 0.1)), (0.3, 0.012, 0.045))
+    k.xf = Matrix()
+
+
+def undead_knight(k):
+    """Dire Wolf: huge rotting wolf - bare skull muzzle, glowing eyes and maw, exposed ribs, bone spine, spiked collar."""
+    RB = {n: (h, t) for n, h, t, *_ in WOLF}
+    plinth(k)
+    # legs: furred fronts, bony hind shanks, clawed paws
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        limb(k, "Fur", f"fl_up.{x}", RB, 0.09, 0.06)
+        limb(k, "Fur", f"fl_lo.{x}", RB, 0.055, 0.045)
+        k.sphere("Fur", f"bl_up.{x}", T(0.14 * s, 0.34, 0.74), (0.1, 0.15, 0.15), seg=10)
+        limb(k, "Fur", f"bl_up.{x}", RB, 0.08, 0.05)
+        limb(k, "Bone", f"bl_lo.{x}", RB, 0.03, 0.026)
+        k.sphere("Bone", f"bl_lo.{x}", T(*RB[f"bl_lo.{x}"][0]), (0.045, 0.045, 0.045), seg=8)
+        for pre in ("fl", "bl"):
+            hx, hy, hz = RB[f"{pre}_lo.{x}"][1]
+            k.box("FurDark", f"{pre}_lo.{x}", T(hx, hy - 0.03, hz + 0.03), (0.11, 0.15, 0.06), bevel=0.02)
+            for c in (-0.03, 0.0, 0.03):
+                k.cyl("Bone", f"{pre}_lo.{x}", T(hx + c, hy - 0.115, hz + 0.02) @ R(x=100), 0.011, 0.0, 0.05, seg=4)
+    # body: deep chest, gaunt waist with exposed ribs, haunches
+    k.sphere("Fur", "body", T(0, -0.16, 0.9), (0.23, 0.26, 0.27), seg=14)
+    k.sphere("Fur", "body", T(0, 0.12, 0.86), (0.16, 0.24, 0.17), seg=12)
+    k.sphere("Fur", "body", T(0, 0.33, 0.86), (0.17, 0.17, 0.18), seg=12)
+    for s in (1, -1):
+        k.box("Dark", "body", T(0.135 * s, 0.1, 0.85), (0.04, 0.24, 0.17))
+        for y in (0.0, 0.065, 0.13, 0.195):
+            k.box("Bone", "body", T(0.155 * s, y, 0.85) @ R(x=12), (0.025, 0.025, 0.2), bevel=0.008)
+    for i in range(7):
+        y = -0.32 + i * 0.11
+        z = 1.17 - abs(y + 0.15) * 0.35
+        k.cyl("Bone", "body", T(0, y, z) @ R(x=15), 0.025, 0.0, 0.1 - 0.008 * i, seg=5)
+    # torn shroud over the back
+    k.prism("Royal", "body", T(0, 0.15, 1.02) @ R(z=90), [(-0.17, 0.0), (0.17, 0.0), (0.15, -0.2), (0.07, -0.12), (0.0, -0.25), (-0.08, -0.13), (-0.16, -0.22)], 0.36)
+    # spiked collar at the neck root
+    k.torus("Leather", "neck_q", T(0, -0.3, 1.0) @ R(x=-40), 0.17, 0.03, su=14)
+    for i in range(7):
+        a = 2 * math.pi * i / 7
+        k.cyl("Steel", "neck_q", T(0, -0.3, 1.0) @ R(x=-40) @ Matrix.Translation((0.19 * math.cos(a), 0.19 * math.sin(a), 0)) @ R(y=90) @ R(x=-math.degrees(a)),
+              0.018, 0.0, 0.07, seg=4)
+    # neck and mane spikes
+    M, L = along((0, -0.26, 0.93), (0, -0.5, 1.13)); k.cyl("Fur", "neck_q", M, 0.17, 0.12, L, seg=10)
+    for i in range(4):
+        t = i / 3
+        k.cyl("FurDark", "neck_q", T(0, -0.26 - 0.2 * t, 1.08 + 0.15 * t) @ R(x=35), 0.04, 0.0, 0.14, seg=5)
+    # head: furred skull, bare bone muzzle, fangs, glowing eyes and maw
+    k.box("Fur", "head_q", T(0, -0.56, 1.11), (0.22, 0.2, 0.17), bevel=0.05)
+    M, L = along((0, -0.62, 1.08), (0, -0.84, 1.04)); k.box("Bone", "head_q", M, (0.11, 0.09, L), bevel=0.025)
+    k.box("Dark", "head_q", T(0, -0.85, 1.06), (0.05, 0.02, 0.025))
+    for s in (1, -1):
+        k.box("Dark", "head_q", T(0.06 * s, -0.645, 1.135), (0.05, 0.03, 0.035), bevel=0.008)
+        k.sphere("Glow", "head_q", T(0.06 * s, -0.66, 1.135), (0.018, 0.012, 0.014), seg=6)
+        k.cyl("Fur", "head_q", T(0.075 * s, -0.5, 1.23) @ R(x=-15, y=15 * s), 0.045, 0.0, 0.13, seg=5)
+        k.cyl("Bone", "head_q", T(0.035 * s, -0.8, 0.99) @ R(x=180), 0.012, 0.0, 0.06, seg=4)
+    k.box("Glow", "head_q", T(0, -0.7, 1.0), (0.07, 0.17, 0.012))
+    # lower jaw with fangs
+    M, L = along((0, -0.56, 0.99), (0, -0.82, 0.94)); k.box("Bone", "jaw", M, (0.09, 0.05, L), bevel=0.015)
+    for s in (1, -1):
+        k.cyl("Bone", "jaw", T(0.03 * s, -0.79, 0.98), 0.01, 0.0, 0.05, seg=4)
+    # tail fraying into bone
+    M, L = along((0, 0.44, 0.92), (0, 0.66, 0.8)); k.cyl("FurDark", "tail", M, 0.06, 0.045, L, seg=8)
+    for i in range(3):
+        p = (0, 0.68 + 0.04 * i, 0.79 - 0.025 * i)
+        k.sphere("Bone", "tail", T(*p), (0.02, 0.02, 0.02), seg=6)
+
+
+# ---------------------------------------------------------------- beast clip set (horse and wolf, with or without a rider)
+SEAT = dict(upperarm_L=(30, 0, 0), forearm_L=(50, 0, 0), upperarm_R=(25, 0, 0), forearm_R=(45, 0, 0), hips=(6, 0, 0))
+
+
+def bpose(**bones):
+    return pose(**{**SEAT, **bones})
+
+
+STRIDE_A = dict(fl_up_L=(30, 0, 0), fl_lo_L=(-10, 0, 0), fl_up_R=(20, 0, 0), fl_lo_R=(-5, 0, 0),
+                bl_up_L=(-25, 0, 0), bl_lo_L=(15, 0, 0), bl_up_R=(-18, 0, 0), bl_lo_R=(10, 0, 0),
+                body=(4, 0, 0), neck_q=(-6, 0, 0), tail=(10, 0, 0), hips=(10, 0, 0))
+STRIDE_B = dict(fl_up_L=(-25, 0, 0), fl_lo_L=(-45, 0, 0), fl_up_R=(-18, 0, 0), fl_lo_R=(-35, 0, 0),
+                bl_up_L=(30, 0, 0), bl_lo_L=(-15, 0, 0), bl_up_R=(22, 0, 0), bl_lo_R=(-10, 0, 0),
+                body=(-4, 0, 0), neck_q=(6, 0, 0), tail=(-5, 0, 0), hips=(2, 0, 0), upperarm_R=(35, 0, 0))
+REAR = dict(body=(28, 0, 0), bl_up_L=(-28, 0, 0), bl_up_R=(-28, 0, 0), bl_lo_L=(10, 0, 0), bl_lo_R=(10, 0, 0),
+            fl_up_L=(75, 0, 0), fl_lo_L=(-95, 0, 0), fl_up_R=(60, 0, 0), fl_lo_R=(-80, 0, 0),
+            neck_q=(-10, 0, 0), head_q=(10, 0, 0), jaw=(-30, 0, 0), tail=(20, 0, 0))
+
+BEAST_CLIPS = {
+    "Idle": (60, True, [
+        (0, bpose(), {}),
+        (30, bpose(neck_q=(-4, 0, 0), head_q=(-5, 0, 0), tail=(0, 0, 10), chest=(3, 0, 0)), {"body": (0, 0, -0.008)}),
+        (60, bpose(), {}),
+    ]),
+    # canter: two strides per loop
+    "Walk": (24, True, [
+        (0, bpose(**STRIDE_A), {"body": (0, 0, 0.06)}),
+        (6, bpose(**STRIDE_B), {"body": (0, 0, 0)}),
+        (12, bpose(**STRIDE_A), {"body": (0, 0, 0.06)}),
+        (18, bpose(**STRIDE_B), {"body": (0, 0, 0)}),
+        (24, bpose(**STRIDE_A), {"body": (0, 0, 0.06)}),
+    ]),
+    # rear up with the sword high, then crash down and strike (the wolf lunges and bites)
+    "Attack": (32, False, [
+        (0, bpose(), {}),
+        (8, bpose(**REAR, hips=(24, 0, 0), upperarm_R=(150, 0, -15), forearm_R=(50, 0, 0)), {"body": (0, 0, 0.02)}),
+        (14, bpose(body=(-6, 0, 0), bl_up_L=(8, 0, 0), bl_up_R=(8, 0, 0), fl_up_L=(-5, 0, 0), fl_up_R=(-8, 0, 0),
+                   neck_q=(6, 0, 0), head_q=(-10, 0, 0), jaw=(-35, 0, 0), tail=(10, 0, 0),
+                   hips=(12, 0, 0), spine=(15, -10, 0), upperarm_R=(45, 0, 0), forearm_R=(5, 0, 0)), {"body": (0, 0.14, -0.03)}),
+        (20, bpose(body=(-5, 0, 0), bl_up_L=(6, 0, 0), bl_up_R=(6, 0, 0), neck_q=(4, 0, 0), head_q=(-8, 0, 0), jaw=(-10, 0, 0),
+                   hips=(12, 0, 0), spine=(18, -12, 0), upperarm_R=(25, 0, 0), forearm_R=(0, 0, 0)), {"body": (0, 0.12, -0.03)}),
+        (32, bpose(), {}),
+    ]),
+    # rear and roar / whinny, sword raised to the sky
+    "Shoot": (34, False, [
+        (0, bpose(), {}),
+        (8, bpose(**{**REAR, "body": (18, 0, 0), "bl_up_L": (-18, 0, 0), "bl_up_R": (-18, 0, 0),
+                     "neck_q": (15, 0, 0), "head_q": (25, 0, 0), "jaw": (-40, 0, 0), "hips": (16, 0, 0),
+                     "upperarm_R": (165, 0, -10), "forearm_R": (20, 0, 0)}), {}),
+        (22, bpose(**{**REAR, "body": (20, 0, 0), "bl_up_L": (-20, 0, 0), "bl_up_R": (-20, 0, 0), "fl_up_L": (45, 0, 0), "fl_up_R": (80, 0, 0),
+                      "neck_q": (18, 0, 0), "head_q": (25, 0, 0), "jaw": (-35, 0, 0), "hips": (16, 0, 0),
+                      "upperarm_R": (170, 0, -10), "forearm_R": (15, 0, 0)}), {}),
+        (34, bpose(), {}),
+    ]),
+    # stagger, buckle and fall onto the side
+    "Death": (46, False, [
+        (0, bpose(), {}),
+        (8, bpose(body=(-6, 4, 0), neck_q=(-10, 0, 0), head_q=(15, 0, 0), jaw=(-25, 0, 0), fl_up_L=(15, 0, 0),
+                  hips=(-15, 0, 0), upperarm_R=(55, 0, -20), upperarm_L=(20, 0, 25)), {"body": (0, 0, -0.04)}),
+        (20, bpose(body=(-4, 40, 0), fl_up_L=(40, 0, 0), fl_lo_L=(-90, 0, 0), fl_up_R=(40, 0, 0), fl_lo_R=(-90, 0, 0),
+                   bl_up_L=(35, 0, 0), bl_lo_L=(-40, 0, 0), bl_up_R=(35, 0, 0), bl_lo_R=(-40, 0, 0),
+                   neck_q=(-15, 0, 0), head_q=(-10, 0, 0), jaw=(-20, 0, 0), hips=(0, 0, -25), upperarm_R=(60, 0, -40)),
+         {"body": (0, 0, -0.3)}),
+        (46, bpose(body=(0, 85, 0), fl_up_L=(30, 0, 0), fl_lo_L=(-40, 0, 0), fl_up_R=(20, 0, 0), fl_lo_R=(-30, 0, 0),
+                   bl_up_L=(20, 0, 0), bl_lo_L=(-20, 0, 0), bl_up_R=(10, 0, 0), bl_lo_R=(-15, 0, 0),
+                   neck_q=(-15, 0, 0), head_q=(-20, 0, 0), jaw=(-15, 0, 0), tail=(-10, 0, 0),
+                   hips=(0, 0, -20), chest=(10, 0, 0), upperarm_R=(70, 0, -45), upperarm_L=(30, 0, 40)),
+         {"body": (0, 0, -0.7)}),
+    ]),
+}
+RIG_OF = {knight_knight: HORSE, undead_knight: WOLF}
+
+
 def set_action(arm, act):
     ad = arm.animation_data or arm.animation_data_create()
     ad.action = act
@@ -639,15 +1343,14 @@ def set_action(arm, act):
         ad.action_slot = act.slots[0]
 
 
-def make_clips(arm):
+def make_clips(arm, clips=None, prefix="", loc_bones=("hips",)):
     acts = {}
-    for name, (end, cyclic, keys) in CLIPS.items():
-        act = bpy.data.actions.new(name)
+    for name, (end, cyclic, keys) in (clips or CLIPS).items():
+        act = bpy.data.actions.new(prefix + name)
         act.use_fake_user = True
         set_action(arm, act)
         # Key every bone in every clip so each clip is self-contained (no pose bleeding between clips).
-        rot_bones = [b for b, *_ in BONES]
-        loc_bones = ["hips"]
+        rot_bones = [pb.name for pb in arm.pose.bones]
         for frame, p, l in keys:
             for b in rot_bones:
                 pb = arm.pose.bones[b]
@@ -665,6 +1368,18 @@ def make_clips(arm):
 
 
 # ---------------------------------------------------------------- scene
+def clipset(arm, kind, prefix=""):
+    """Make one clip set, removing any other first: both exporters put every armature action in the
+    file into each export, so humanoid and tower clips must never exist at the same time."""
+    for a in list(bpy.data.actions):
+        bpy.data.actions.remove(a)
+    clips, loc = CLIPSETS[kind]
+    return make_clips(arm, clips, prefix, loc)
+
+
+CLIPSETS = {"human": (CLIPS, ("hips",)), "tower": (TOWER_CLIPS, ("hips",)), "beast": (BEAST_CLIPS, ("body",))}
+
+
 def clear():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     sc = bpy.context.scene
@@ -672,8 +1387,9 @@ def clear():
 
 
 def unit(army, team, builder, name, x):
-    arm = build_armature(name, x)
-    k = Kit(army, PALETTES[army], team)
+    rig = RIG_OF.get(builder)
+    arm = build_armature(name, x, rig)
+    k = Kit(army, PALETTES[army], team, rig)
     builder(k)
     k.build(name, arm)
     return arm
@@ -803,27 +1519,57 @@ def main():
                   ("Undead", "Onyx", undead_pawn, "Undead_Pawn", 1.2)],
         "kings": [("Knights", "Ivory", knight_king, "Knights_King", -0.65),
                   ("Undead", "Onyx", undead_king, "Undead_King", 0.65)],
+        "queens": [("Knights", "Ivory", knight_queen, "Knights_Queen", -0.65),
+                   ("Undead", "Onyx", undead_queen, "Undead_Queen", 0.65)],
+        "bishops": [("Knights", "Ivory", knight_bishop, "Knights_Bishop", -0.65),
+                    ("Undead", "Onyx", undead_bishop, "Undead_Bishop", 0.65)],
+        "rooks": [("Knights", "Ivory", knight_rook, "Knights_Rook", -0.65),
+                  ("Undead", "Onyx", undead_rook, "Undead_Rook", 0.65)],
+        "knights": [("Knights", "Ivory", knight_knight, "Knights_Knight", -0.7),
+                    ("Undead", "Onyx", undead_knight, "Undead_Knight", 0.7)],
     }
+    kind_of = {"rooks": "tower", "knights": "beast"}  # everything else is humanoid
     built = {g: [unit(*spec) for spec in specs] for g, specs in groups.items()}
     every = [a for arms in built.values() for a in arms]
-    acts = make_clips(every[0])
-    for arm in every:
-        set_action(arm, acts["Idle"])
-        export_fbx(arm, os.path.join(EXPORT, arm.name + ".fbx"))
-    if "--render" in ARGS:
-        engine = ARGS[ARGS.index("--engine") + 1] if "--engine" in ARGS else "eevee"
-        only = ARGS[ARGS.index("--group") + 1] if "--group" in ARGS else None
+    kinds = {kd: [g for g in built if kind_of.get(g, "human") == kd] for kd in CLIPSETS}
+    render = "--render" in ARGS
+    engine = ARGS[ARGS.index("--engine") + 1] if "--engine" in ARGS else "eevee"
+    only = ARGS[ARGS.index("--group") + 1] if "--group" in ARGS else None
+    if render:
         stage(engine)
-        shots = {
+    shots = {
             "pawns": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Shoot", 10), ("Death", 46)],
             "kings": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Death", 20), ("Death", 46)],
+            "queens": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Death", 20), ("Death", 46)],
+            "bishops": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Death", 20), ("Death", 46)],
+            "rooks": [("Idle", 0), ("Walk", 6), ("Attack", 8), ("Attack", 13), ("Death", 24), ("Death", 46)],
+            "knights": [("Idle", 0), ("Walk", 0), ("Walk", 6), ("Attack", 8), ("Attack", 14), ("Death", 46)],
         }
-        for g, arms in built.items():
-            if only and g != only:
-                continue
-            show_only(arms, every)
-            render_sheet(arms, acts, g, shots[g])
-        show_only(every, every)
+    for kind, gs in kinds.items():
+        arms = [a for g in gs for a in built[g]]
+        if not arms:
+            continue
+        acts = clipset(arms[0], kind)
+        for arm in arms:
+            set_action(arm, acts["Idle"])
+            export_fbx(arm, os.path.join(EXPORT, arm.name + ".fbx"))
+        if render:
+            for g in gs:
+                if not only or g == only:
+                    show_only(built[g], every)
+                    render_sheet(built[g], acts, g, shots[g])
+    # keep every clip set in the .blend for reference (non-humanoid sets prefixed there)
+    for a in list(bpy.data.actions):
+        bpy.data.actions.remove(a)
+    for kind, gs in kinds.items():
+        arms = [a for g in gs for a in built[g]]
+        if not arms:
+            continue
+        clips, loc = CLIPSETS[kind]
+        acts = make_clips(arms[0], clips, "" if kind == "human" else kind.capitalize() + "_", loc)
+        for arm in arms:
+            set_action(arm, acts["Idle"])
+    show_only(every, every)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(EXPORT, "units.blend"))
     print("CHESSWARS DONE")
 
