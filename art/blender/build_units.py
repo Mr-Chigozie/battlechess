@@ -244,6 +244,13 @@ PALETTES = {
         "Shirt": (0xF1EEE6, 0.0, 0.6), "Tie": (0x9A1B1B, 0.0, 0.5), "Hat": (0x232327, 0.0, 0.75),
         "Band": (0xC9A24A, 0.3, 0.5), "Skin": (0xE0B394, 0.0, 0.6), "Dark": (0x111114, 0.2, 0.4),
         "Wood": (0x6A3D1F, 0.0, 0.55), "Metal": (0x3C3F45, 0.85, 0.35), "Accent": (0xC9A24A, 0.6, 0.4),
+        "Coat": (0xA88458, 0.0, 0.85), "Trench": (0x8A7350, 0.0, 0.8), "WhiteHat": (0xECE6D8, 0.0, 0.6),
+        "Grey": (0x6E7178, 0.0, 0.7), "Cigar": (0x5A3A22, 0.0, 0.8), "Ember": (0xFF6A1A, 0.0, 0.5, 4.0),
+        "Hair": (0x2A2420, 0.0, 0.8), "GreyHair": (0x9A9894, 0.0, 0.85), "Leather": (0x4A3324, 0.0, 0.8),
+        "Stubble": (0x9E7E68, 0.0, 0.8), "Scar": (0xB0675A, 0.0, 0.6),
+        "Brick": (0x8C3B2A, 0.0, 0.9), "BrickDark": (0x5A281E, 0.0, 0.9), "Awning": (0x1F5A3A, 0.0, 0.8),
+        "Neon": (0xFF4FA3, 0.0, 0.4, 4.0), "Lamp": (0xFFC870, 0.0, 0.5, 3.0), "Glass": (0x2A3A48, 0.3, 0.15),
+        "Car": (0x1A1B20, 0.6, 0.25), "Chrome": (0xD8DCE0, 1.0, 0.15),
     },
     "Undead": {
         "Bone": (0xE8E2CC, 0.0, 0.75), "Armor": (0x7D7A62, 0.6, 0.65), "Dark": (0x0B0D0B, 0.0, 0.9),
@@ -767,20 +774,7 @@ def mafia_pawn(k):
     k.cyl("Hat", "head", HM @ Matrix.Translation((0, 0.01, 0.075)), 0.15, 0.125, 0.13, seg=12, bevel=0.012)
     k.cyl("Band", "head", HM @ Matrix.Translation((0, 0.01, 0.03)), 0.153, 0.152, 0.035, seg=12)
     k.box("Hat", "head", HM @ Matrix.Translation((0, -0.02, 0.145)), (0.05, 0.16, 0.02))  # crown pinch
-    # Tommy gun in the right hand. Modelled hanging down along the arm, so it is carried low at rest
-    # and comes level when the Shoot clip raises the arm. Local layout: -Y = muzzle, -Z = grip.
-    gx, gy, gz = mid("hand.R")
-    G = lambda dx, dy, dz: T(gx, gy, gz) @ R(x=90) @ Matrix.Translation((dx, dy, dz))
-    k.box("Metal", "hand.R", G(0.0, -0.17, 0.05), (0.05, 0.34, 0.07), bevel=0.01)          # receiver
-    k.cyl("Metal", "hand.R", G(0.0, -0.4, 0.06) @ R(x=90), 0.03, 0.03, 0.16, seg=10)        # finned barrel
-    for fy in (-0.35, -0.39, -0.43, -0.47):
-        k.cyl("Dark", "hand.R", G(0.0, fy, 0.06) @ R(x=90), 0.036, 0.036, 0.012, seg=10)
-    k.cyl("Metal", "hand.R", G(0.0, -0.53, 0.06) @ R(x=90), 0.014, 0.014, 0.08, seg=6)     # muzzle
-    k.cyl("Metal", "hand.R", G(0.0, -0.2, -0.04) @ R(y=90), 0.085, 0.085, 0.055, seg=14)   # drum magazine
-    k.cyl("Dark", "hand.R", G(0.0, -0.2, -0.04) @ R(y=90), 0.03, 0.03, 0.06, seg=8)
-    k.box("Wood", "hand.R", G(0.0, -0.02, -0.03) @ R(x=-15), (0.035, 0.045, 0.1), bevel=0.01)   # pistol grip
-    k.box("Wood", "hand.R", G(0.0, -0.33, -0.01), (0.03, 0.04, 0.09), bevel=0.01)              # fore grip
-    k.box("Wood", "hand.R", G(0.0, 0.1, 0.02) @ R(x=8), (0.04, 0.22, 0.08), bevel=0.015)        # stock
+    tommy_gun(k)
 
 
 # ---------------------------------------------------------------- Rooks: buildings on the same skeleton
@@ -1078,15 +1072,15 @@ CLIPS = {
 RIDER = Matrix.Translation((0, 0.08, 0.32)) @ S(0.85, 0.85, 0.85)
 
 
-def rider_bones():
+def rider_bones(place):
     out = []
     for name, h, t, parent in BONES[1:]:
-        hh, tt = RIDER @ V(*h), RIDER @ V(*t)
+        hh, tt = place @ V(*h), place @ V(*t)
         out.append((name, (hh.x, hh.y, hh.z - H0), (tt.x, tt.y, tt.z - H0), "body" if parent == "root" else parent))
     return out
 
 
-def beast_rig(body, neck, head, jaw, tail, fl, bl):
+def beast_rig(body, neck, head, jaw, tail, fl, bl, rider=RIDER):
     up = (0, 0, 1)
     bones = [("root", (0, 0, -H0), (0, 0, 0.17), None),
              ("body", *body, "root", up), ("neck_q", *neck, "body", up), ("head_q", *head, "neck_q", up),
@@ -1097,7 +1091,7 @@ def beast_rig(body, neck, head, jaw, tail, fl, bl):
             m = lambda p: (p[0] * s, p[1], p[2])
             bones.append((f"{pre}_up.{x}", m(a), m(b), "body"))
             bones.append((f"{pre}_lo.{x}", m(b), m(c), f"{pre}_up.{x}"))
-    return bones + rider_bones()
+    return bones + rider_bones(rider)
 
 
 HORSE = beast_rig(body=((0, 0.38, 0.92), (0, -0.32, 0.95)), neck=((0, -0.3, 1.0), (0, -0.5, 1.32)),
@@ -1333,7 +1327,375 @@ BEAST_CLIPS = {
          {"body": (0, 0, -0.7)}),
     ]),
 }
-RIG_OF = {knight_knight: HORSE, undead_knight: WOLF}
+
+
+# ---------------------------------------------------------------- Mafia: shared parts
+def tommy_gun(k):
+    """Tommy gun in the right hand. Modelled hanging down along the arm, so it is carried low at rest
+    and comes level when the Shoot clip raises the arm. Local layout: -Y = muzzle, -Z = grip."""
+    gx, gy, gz = mid("hand.R")
+    G = lambda dx, dy, dz: T(gx, gy, gz) @ R(x=90) @ Matrix.Translation((dx, dy, dz))
+    k.box("Metal", "hand.R", G(0.0, -0.17, 0.05), (0.05, 0.34, 0.07), bevel=0.01)          # receiver
+    k.cyl("Metal", "hand.R", G(0.0, -0.4, 0.06) @ R(x=90), 0.03, 0.03, 0.16, seg=10)        # finned barrel
+    for fy in (-0.35, -0.39, -0.43, -0.47):
+        k.cyl("Dark", "hand.R", G(0.0, fy, 0.06) @ R(x=90), 0.036, 0.036, 0.012, seg=10)
+    k.cyl("Metal", "hand.R", G(0.0, -0.53, 0.06) @ R(x=90), 0.014, 0.014, 0.08, seg=6)     # muzzle
+    k.cyl("Metal", "hand.R", G(0.0, -0.2, -0.04) @ R(y=90), 0.085, 0.085, 0.055, seg=14)   # drum magazine
+    k.cyl("Dark", "hand.R", G(0.0, -0.2, -0.04) @ R(y=90), 0.03, 0.03, 0.06, seg=8)
+    k.box("Wood", "hand.R", G(0.0, -0.02, -0.03) @ R(x=-15), (0.035, 0.045, 0.1), bevel=0.01)   # pistol grip
+    k.box("Wood", "hand.R", G(0.0, -0.33, -0.01), (0.03, 0.04, 0.09), bevel=0.01)              # fore grip
+    k.box("Wood", "hand.R", G(0.0, 0.1, 0.02) @ R(x=8), (0.04, 0.22, 0.08), bevel=0.015)        # stock
+
+
+def mafia_legs(k, slot="Suit", spats=True):
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        k.box(slot, f"thigh.{x}", T(0.12 * s, 0, 0.77), (0.15, 0.16, 0.42), bevel=0.03)
+        M, L = along((0.12 * s, 0.02, 0.1), (0.12 * s, 0.0, 0.57))
+        k.cyl(slot, f"shin.{x}", M, 0.068, 0.062, L, seg=8)
+        if spats:
+            k.cyl("Shirt", f"foot.{x}", T(0.12 * s, 0.005, 0.1), 0.066, 0.06, 0.06, seg=8)
+        k.box("Dark", f"foot.{x}", T(0.12 * s, -0.04, 0.04), (0.11, 0.25, 0.08), bevel=0.03)
+
+
+def mafia_jacket(k, slot="Suit", tie="Tie", lapel="Lapel", stripes=False):
+    k.cyl(slot, "hips", T(0, 0, 0.92), 0.235, 0.215, 0.22, seg=10)
+    k.box(slot, "spine", T(0, 0, 1.13), (0.36, 0.24, 0.26), bevel=0.05)
+    k.box(slot, "chest", T(0, 0, 1.36), (0.44, 0.27, 0.30), bevel=0.07)
+    k.box("Shirt", "chest", T(0, -0.13, 1.39), (0.13, 0.02, 0.2))
+    if tie:
+        k.box(tie, "chest", T(0, -0.145, 1.34), (0.045, 0.015, 0.24))
+        k.box(tie, "chest", T(0, -0.145, 1.475), (0.055, 0.02, 0.04))
+    for s in (1, -1):
+        k.box(lapel, "chest", T(0.075 * s, -0.142, 1.37) @ R(y=-18 * s), (0.05, 0.015, 0.26))
+        if stripes:
+            for dx in (0.13, 0.18):
+                k.box("Stripe", "chest", T(dx * s, -0.138, 1.3), (0.006, 0.006, 0.36))
+    k.cyl("Shirt", "chest", T(0, 0, 1.53), 0.095, 0.09, 0.05, seg=10)
+
+
+def mafia_arms(k, slot="Suit", pads=True):
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        if pads:
+            k.box(slot, f"upper_arm.{x}", T(0.21 * s, 0, 1.46), (0.13, 0.21, 0.1), bevel=0.04)
+        M, L = along(*B[f"upper_arm.{x}"]); k.cyl(slot, f"upper_arm.{x}", M, 0.058, 0.064, L, seg=8)
+        M, L = along(*B[f"forearm.{x}"]); k.cyl(slot, f"forearm.{x}", M, 0.06, 0.054, L - 0.03, seg=8)
+        h, t = B[f"forearm.{x}"]
+        k.cyl("Shirt", f"forearm.{x}", T(*t) @ Matrix.Translation((0, 0, 0.02)), 0.05, 0.05, 0.035, seg=8)
+        k.box("Skin", f"hand.{x}", T(*mid(f"hand.{x}")), (0.075, 0.09, 0.1), bevel=0.02)
+
+
+def mafia_face(k, brow="Hat", jaw=True, temples=None, tache=None):
+    M, L = along((0, 0, 1.5), (0, 0, 1.62)); k.cyl("Skin", "neck", M, 0.06, 0.06, L, seg=8)
+    k.sphere("Skin", "head", T(0, 0.0, 1.75), (0.125, 0.135, 0.14), seg=12)
+    if jaw:
+        k.box("Skin", "head", T(0, -0.035, 1.665), (0.18, 0.17, 0.09), bevel=0.035)
+    for s in (1, -1):
+        k.sphere("Skin", "head", T(0.125 * s, 0.0, 1.74), (0.025, 0.035, 0.04), seg=6)
+        k.box("Dark", "head", T(0.048 * s, -0.125, 1.755), (0.035, 0.02, 0.018))
+        k.box(brow, "head", T(0.05 * s, -0.128, 1.785) @ R(y=8 * s), (0.055, 0.02, 0.016))
+        if temples:
+            k.box(temples, "head", T(0.122 * s, 0.03, 1.78), (0.03, 0.13, 0.08), bevel=0.01)
+    k.box("Skin", "head", T(0, -0.14, 1.72), (0.035, 0.03, 0.05), bevel=0.01)  # nose
+    k.box("Lapel", "head", T(0, -0.12, 1.66), (0.06, 0.01, 0.008))             # mouth
+    if tache:
+        k.box(tache, "head", T(0, -0.135, 1.685), (0.1, 0.022, 0.022), bevel=0.006)
+
+
+def fedora(k, hat="Hat", band="Band", tilt=6):
+    HM = T(0, 0.0, 1.87) @ R(x=tilt, y=-5)
+    k.cyl(hat, "head", HM @ S(1, 0.9, 1), 0.235, 0.235, 0.02, seg=16)
+    k.cyl(hat, "head", HM @ Matrix.Translation((0, 0.01, 0.075)), 0.15, 0.125, 0.13, seg=12, bevel=0.012)
+    k.cyl(band, "head", HM @ Matrix.Translation((0, 0.01, 0.03)), 0.153, 0.152, 0.035, seg=12)
+    k.box(hat, "head", HM @ Matrix.Translation((0, -0.02, 0.145)), (0.05, 0.16, 0.02))
+
+
+# ---------------------------------------------------------------- Mafia: The Boss (king)
+def mafia_king(k):
+    """The Boss: double-breasted pinstripes, camel overcoat over the shoulders, white fedora, cigar, gold-topped cane."""
+    plinth(k)
+    mafia_legs(k)
+    mafia_jacket(k, tie="Accent", stripes=True)
+    for s in (1, -1):
+        for z in (1.2, 1.3):
+            k.sphere("Accent", "chest", T(0.065 * s, -0.138, z), (0.014, 0.008, 0.014), seg=6)
+    k.sphere("Accent", "chest", T(0, -0.155, 1.42), (0.012, 0.008, 0.012), seg=6)   # tie pin
+    mafia_arms(k)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        hx, hy, hz = mid(f"hand.{x}")
+        k.box("Accent", f"hand.{x}", T(hx, hy - 0.035, hz - 0.02), (0.08, 0.02, 0.022))  # rings
+    # camel overcoat worn over the shoulders, arms free
+    cape(k, "Coat", 0.6, 0.8, 1.52, 0.48, back=0.16, tilt=5)
+    for s in (1, -1):
+        k.box("Coat", "chest", T(0.275 * s, 0.03, 1.17), (0.08, 0.3, 0.66), bevel=0.03)
+    k.cyl("Coat", "chest", T(0, 0.04, 1.51), 0.21, 0.17, 0.07, seg=12, bevel=0.015)
+    mafia_face(k, temples="GreyHair", tache="GreyHair")
+    k.box("Skin", "head", T(0, -0.05, 1.64), (0.2, 0.16, 0.06), bevel=0.025)        # heavy jowls
+    M, L = along((0.035, -0.13, 1.665), (0.075, -0.25, 1.645)); k.cyl("Cigar", "head", M, 0.013, 0.013, L, seg=6)
+    k.sphere("Ember", "head", T(0.077, -0.255, 1.645), (0.014, 0.012, 0.014), seg=6)
+    fedora(k, hat="WhiteHat", band="Lapel", tilt=3)
+    # gold-topped cane in the right hand
+    hx, hy, hz = mid("hand.R")
+    M, L = along((hx, hy - 0.02, hz + 0.06), (hx + 0.05, hy - 0.12, 0.03)); k.cyl("Dark", "hand.R", M, 0.014, 0.012, L, seg=6)
+    k.sphere("Accent", "hand.R", T(hx, hy - 0.015, hz + 0.08), (0.03, 0.03, 0.03), seg=8)
+
+
+# ---------------------------------------------------------------- Mafia: Underboss (queen)
+def mafia_queen(k):
+    """Underboss: belted trench coat with the collar up, hat brim low, scarred face, Tommy gun."""
+    plinth(k)
+    mafia_legs(k, spats=False)
+    k.cyl("Trench", "hips", T(0, 0, 0.66), 0.31, 0.225, 0.64, seg=12)
+    k.box("Trench", "hips", T(0, -0.25, 0.66), (0.025, 0.02, 0.6))                   # front opening
+    mafia_jacket(k, slot="Trench", tie="Tie", lapel="Trench")
+    k.cyl("Leather", "hips", T(0, 0, 0.99), 0.235, 0.235, 0.06, seg=12)
+    k.box("Metal", "hips", T(0, -0.235, 0.99), (0.06, 0.02, 0.05), bevel=0.008)
+    for s in (1, -1):
+        k.box("Trench", "chest", T(0.115 * s, 0.03, 1.58) @ R(y=-12 * s), (0.05, 0.15, 0.14), bevel=0.015)   # collar up
+        k.box("Trench", "chest", T(0.2 * s, 0, 1.5), (0.1, 0.18, 0.03))                                         # epaulettes
+        k.sphere("Metal", "chest", T(0.08 * s, -0.14, 1.2), (0.015, 0.008, 0.015), seg=6)
+    mafia_arms(k, slot="Trench", pads=False)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        k.cyl("Trench", f"forearm.{x}", T(*B[f"forearm.{x}"][1]) @ Matrix.Translation((0, 0, 0.07)), 0.068, 0.068, 0.04, seg=8)
+    mafia_face(k, brow="Hair")
+    k.box("Stubble", "head", T(0, -0.06, 1.645), (0.17, 0.14, 0.05), bevel=0.02)
+    k.box("Scar", "head", T(-0.07, -0.122, 1.71) @ R(y=35), (0.08, 0.01, 0.01))
+    fedora(k, tilt=12)
+    tommy_gun(k)
+
+
+# ---------------------------------------------------------------- Mafia: Consigliere (bishop)
+def mafia_bishop(k):
+    """Consigliere: grey three-piece with a watch chain and bow tie, bowler hat, round spectacles, briefcase, revolver."""
+    plinth(k)
+    mafia_legs(k, slot="Grey", spats=False)
+    mafia_jacket(k, slot="Grey", tie=None, lapel="Grey")
+    k.box("Suit", "chest", T(0, -0.137, 1.26), (0.17, 0.02, 0.26))                     # waistcoat
+    for z in (1.17, 1.24, 1.31):
+        k.sphere("Accent", "chest", T(0, -0.15, z), (0.01, 0.006, 0.01), seg=6)
+    M, L = along((-0.07, -0.15, 1.22), (0.0, -0.152, 1.19)); k.box("Accent", "chest", M, (0.008, 0.006, L))
+    M, L = along((0.0, -0.152, 1.19), (0.07, -0.15, 1.22)); k.box("Accent", "chest", M, (0.008, 0.006, L))
+    for s in (1, -1):                                                                   # bow tie
+        k.prism("Tie", "chest", T(0, -0.15, 1.475), [(0, 0), (0.05 * s, 0.025), (0.05 * s, -0.025)], 0.02)
+    k.sphere("Tie", "chest", T(0, -0.152, 1.475), (0.014, 0.01, 0.014), seg=6)
+    mafia_arms(k, slot="Grey")
+    mafia_face(k, brow="GreyHair", jaw=False, temples="GreyHair", tache="GreyHair")
+    k.box("Skin", "head", T(0, -0.03, 1.665), (0.16, 0.15, 0.08), bevel=0.035)
+    for s in (1, -1):                                                                   # spectacles
+        k.torus("Accent", "head", T(0.048 * s, -0.138, 1.755) @ R(x=90), 0.03, 0.004, su=12, sv=4)
+        k.box("Accent", "head", T(0.1 * s, -0.07, 1.765), (0.005, 0.13, 0.005))
+    k.box("Accent", "head", T(0, -0.14, 1.76), (0.03, 0.005, 0.005))
+    # bowler hat
+    k.sphere("Hat", "head", T(0, 0.0, 1.86), (0.145, 0.15, 0.12), seg=14)
+    k.cyl("Hat", "head", T(0, 0.0, 1.85), 0.2, 0.2, 0.018, seg=16)
+    k.cyl("Lapel", "head", T(0, 0.0, 1.87), 0.148, 0.146, 0.03, seg=14)
+    # briefcase in the left hand
+    hx, hy, hz = mid("hand.L")
+    k.box("Leather", "hand.L", T(hx + 0.02, hy, hz - 0.17), (0.09, 0.32, 0.23), bevel=0.015)
+    k.box("Accent", "hand.L", T(hx + 0.068, hy, hz - 0.1), (0.005, 0.05, 0.02))
+    k.torus("Dark", "hand.L", T(hx + 0.02, hy, hz - 0.05) @ R(y=90), 0.035, 0.008, su=10, sv=4)
+    # snub revolver in the right hand (hangs down at rest, levels when the arm comes up)
+    gx, gy, gz = mid("hand.R")
+    G = lambda dx, dy, dz: T(gx, gy, gz) @ R(x=90) @ Matrix.Translation((dx, dy, dz))
+    k.box("Metal", "hand.R", G(0.0, -0.09, 0.04), (0.035, 0.13, 0.05), bevel=0.008)
+    k.cyl("Metal", "hand.R", G(0.0, -0.06, 0.04) @ R(x=90), 0.03, 0.03, 0.05, seg=8)
+    k.box("Wood", "hand.R", G(0.0, 0.0, -0.02) @ R(x=-15), (0.03, 0.04, 0.08), bevel=0.008)
+
+
+# ---------------------------------------------------------------- Mafia: Speakeasy (rook)
+def mafia_rook(k):
+    """Speakeasy: narrow brick bar - green awning, peephole door, neon cocktail sign, lit windows, barrel catapult."""
+    plinth(k)
+    w = 0.3
+    k.box("BrickDark", "hips", T(0, 0, 0.04), (0.66, 0.66, 0.08))
+    k.box("Brick", "hips", T(0, 0, 0.59), (2 * w, 2 * w, 1.02))
+    k.box("Brick", "spine", T(0, 0, 1.19), (2 * w - 0.02, 2 * w - 0.02, 0.18))
+    k.box("BrickDark", "hips", T(0, 0, 1.1), (2 * w + 0.03, 2 * w + 0.03, 0.05))
+    rnd = random.Random(11)
+    for _ in range(26):                                     # brick texture
+        side, u, z = rnd.choice((1, 2, 3)), rnd.uniform(-0.24, 0.24), rnd.uniform(0.15, 1.05)
+        if side == 1:
+            k.box("BrickDark", "hips", T(w, u, z), (0.016, 0.1, 0.045))
+        elif side == 2:
+            k.box("BrickDark", "hips", T(-w, u, z), (0.016, 0.1, 0.045))
+        elif abs(u) > 0.13:
+            k.box("BrickDark", "hips", T(u, -w, z + 0.3 if z < 0.5 else z), (0.1, 0.016, 0.045))
+    # door with a peephole slit and a lamp, steps
+    k.box("Dark", "hips", T(0, -w - 0.005, 0.24), (0.2, 0.02, 0.4))
+    k.box("Wood", "hips", T(0, -w - 0.012, 0.23), (0.16, 0.02, 0.36))
+    k.box("Dark", "hips", T(0, -w - 0.024, 0.33), (0.07, 0.01, 0.018))
+    k.box("Lamp", "hips", T(0, -w - 0.02, 0.33), (0.05, 0.004, 0.01))
+    k.sphere("Accent", "hips", T(0.055, -w - 0.03, 0.22), (0.012, 0.01, 0.012), seg=6)
+    k.box("BrickDark", "root", T(0, -0.36, 0.02), (0.26, 0.1, 0.04))
+    k.sphere("Lamp", "hips", T(-0.14, -w - 0.03, 0.47), (0.025, 0.025, 0.03), seg=8)
+    # striped green awning over the door
+    k.box("Awning", "hips", T(0, -w - 0.08, 0.5) @ R(x=-30), (0.34, 0.02, 0.2))
+    for u in (-0.12, 0.0, 0.12):
+        k.box("Shirt", "hips", T(u, -w - 0.085, 0.5) @ R(x=-30), (0.04, 0.025, 0.2))
+    # lit windows with blinds
+    for z, bone in ((0.75, "hips"), (1.17, "spine")):
+        for u in (-0.13, 0.13):
+            k.box("BrickDark", bone, T(u, -w - 0.006, z), (0.13, 0.02, 0.17))
+            k.box("Lamp", bone, T(u, -w - 0.012, z), (0.1, 0.01, 0.14))
+            for dz in (-0.04, 0.0, 0.04):
+                k.box("Dark", bone, T(u, -w - 0.02, z + dz), (0.1, 0.006, 0.012))
+        k.box("Lamp", bone, T(w + 0.006, 0, z), (0.01, 0.1, 0.14))
+    # neon cocktail-glass sign on a bracket at the front corner
+    k.box("Metal", "spine", T(w - 0.02, -w - 0.06, 1.2), (0.02, 0.14, 0.02))
+    SM = T(w - 0.02, -w - 0.13, 0.98)
+    k.box("Dark", "spine", SM, (0.02, 0.13, 0.4), bevel=0.01)
+    k.prism("Neon", "spine", SM @ Matrix.Translation((0.013, 0, 0.06)) @ R(z=90), [(-0.05, 0.07), (0.05, 0.07), (0.0, 0.0)], 0.006)
+    k.box("Neon", "spine", SM @ Matrix.Translation((0.013, 0, -0.01)), (0.006, 0.01, 0.07))
+    k.box("Neon", "spine", SM @ Matrix.Translation((0.013, 0, -0.05)), (0.006, 0.06, 0.01))
+    k.sphere("Neon", "spine", SM @ Matrix.Translation((0.013, 0.03, 0.12)), (0.006, 0.015, 0.015), seg=6)
+    # barrels by the door
+    for (x, y, z) in ((-0.36, -0.3, 0.1), (-0.36, -0.12, 0.1), (-0.36, -0.21, 0.27)):
+        k.cyl("Wood", "root", T(x, y, z) @ R(x=90), 0.075, 0.075, 0.15, seg=10)
+        for e in (-0.05, 0.05):
+            k.cyl("Metal", "root", T(x, y + e, z) @ R(x=90), 0.078, 0.078, 0.012, seg=10)
+    # cornice, parapet, roof
+    k.box("BrickDark", "chest", T(0, 0, 1.33), (2 * w + 0.06, 2 * w + 0.06, 0.1))
+    k.box("Brick", "chest", T(0, 0, 1.43), (2 * w + 0.08, 2 * w + 0.08, 0.1))
+    k.box("Dark", "chest", T(0, 0, 1.481), (2 * w, 2 * w, 0.004))
+    e = w + 0.04
+    for u in (-0.2, 0.2):
+        for (mx, my) in ((u, -e + 0.02), (u, e - 0.02), (e - 0.02, u), (-e + 0.02, u)):
+            k.box("BrickDark", "chest", T(mx, my, 1.52), (0.1, 0.1, 0.08), bevel=0.008)
+    # rooftop catapult throwing a whiskey barrel
+    def barrel(p):
+        x, y, z = p
+        k.cyl("Wood", "neck", T(x, y, z + 0.01), 0.045, 0.045, 0.08, seg=8)
+        for dz in (-0.02, 0.04):
+            k.cyl("Metal", "neck", T(x, y, z + dz), 0.048, 0.048, 0.01, seg=8)
+    catapult(k, lambda M, L: k.box("Wood", "neck", M, (0.04, 0.035, L), bevel=0.006),
+             "Wood", barrel, "Metal", "Wood")
+
+
+# ---------------------------------------------------------------- Mafia: Getaway Car (knight)
+# A 1920s open tourer on the beast rig: legs are wheels (each wheel spins about its *_lo bone head),
+# the rider bones are the gangster at the wheel.
+CAR_RIDER = Matrix.Translation((0, 0.08, -0.17)) @ S(0.72, 0.72, 0.72)
+CAR = beast_rig(body=((0, 0.46, 0.36), (0, -0.46, 0.36)), neck=((0, -0.5, 0.5), (0, -0.55, 0.55)),
+                head=((0, -0.55, 0.55), (0, -0.62, 0.55)), jaw=((0, -0.56, 0.5), (0, -0.62, 0.48)),
+                tail=((0, 0.5, 0.4), (0, 0.55, 0.3)),
+                fl=((0.27, -0.36, 0.36), (0.27, -0.36, 0.15), (0.27, -0.36, 0.0)),
+                bl=((0.27, 0.32, 0.36), (0.27, 0.32, 0.15), (0.27, 0.32, 0.0)), rider=CAR_RIDER)
+
+
+def mafia_knight(k):
+    """Getaway Car: black open tourer with chrome grille and lamps, whitewall wheels, spare tyre, gangster with a Tommy gun."""
+    plinth(k)
+    # wheels: tyre, whitewall, hub and spokes so the spin reads
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        for pre, y in (("fl", -0.36), ("bl", 0.32)):
+            bone = f"{pre}_lo.{x}"
+            W = T(0.27 * s, y, 0.15) @ R(y=90)
+            k.cyl("Dark", bone, W, 0.15, 0.15, 0.09, seg=16)
+            k.cyl("Shirt", bone, W, 0.11, 0.11, 0.094, seg=16)
+            k.cyl("Car", bone, W, 0.085, 0.085, 0.098, seg=12)
+            k.cyl("Chrome", bone, W, 0.035, 0.035, 0.11, seg=8)
+            for a in (0, 45, 90, 135):
+                k.box("Chrome", bone, W @ R(z=a), (0.16, 0.012, 0.1))
+    # chassis, body, running boards, fenders
+    k.box("Dark", "body", T(0, -0.02, 0.24), (0.42, 1.04, 0.06))
+    k.box("Car", "body", T(0, 0.04, 0.43), (0.5, 0.86, 0.3), bevel=0.04)
+    k.box("Car", "body", T(0, -0.42, 0.48), (0.36, 0.34, 0.26), bevel=0.04)           # hood
+    for s in (1, -1):
+        k.box("Accent", "body", T(0.252 * s, 0.04, 0.5), (0.008, 0.84, 0.02))
+        k.box("Dark", "body", T(0.3 * s, -0.02, 0.27), (0.1, 0.42, 0.025))               # running board
+        for y in (-0.36, 0.32):                                                           # arched fenders
+            k.box("Car", "body", T(0.28 * s, y, 0.335), (0.12, 0.2, 0.025), bevel=0.008)
+            for e in (1, -1):
+                k.box("Car", "body", T(0.28 * s, y + 0.14 * e, 0.29) @ R(x=40 * e), (0.12, 0.13, 0.025), bevel=0.008)
+        for i, y in enumerate((-0.5, -0.44, -0.38, -0.32)):
+            k.box("Chrome", "body", T(0.182 * s, y, 0.5), (0.006, 0.02, 0.12))           # hood louvres
+    k.box("Car", "body", T(0, 0.04, 0.585), (0.5, 0.86, 0.02), bevel=0.008)              # body top rim
+    # grille, bumper, headlamps
+    k.box("Chrome", "body", T(0, -0.6, 0.46), (0.28, 0.04, 0.28), bevel=0.02)
+    for z in (0.39, 0.44, 0.49, 0.54):
+        k.box("Dark", "body", T(0, -0.622, z), (0.2, 0.01, 0.012))
+    k.box("Chrome", "body", T(0, -0.66, 0.24), (0.52, 0.04, 0.04), bevel=0.01)
+    k.box("Chrome", "body", T(0, 0.52, 0.24), (0.5, 0.04, 0.04), bevel=0.01)
+    for s in (1, -1):
+        k.cyl("Chrome", "body", T(0.21 * s, -0.56, 0.6) @ R(x=90), 0.06, 0.06, 0.08, seg=12)
+        k.cyl("Lamp", "body", T(0.21 * s, -0.6, 0.6) @ R(x=90), 0.048, 0.048, 0.006, seg=12)
+    # windscreen, seats, folded hood, spare tyre
+    k.box("Chrome", "body", T(0, -0.2, 0.7), (0.46, 0.02, 0.22), bevel=0.006)
+    k.box("Glass", "body", T(0, -0.2, 0.7), (0.42, 0.024, 0.18))
+    k.box("Leather", "body", T(0, 0.2, 0.66), (0.42, 0.08, 0.18), bevel=0.02)
+    k.box("Leather", "body", T(0, 0.38, 0.66), (0.42, 0.08, 0.18), bevel=0.02)
+    k.box("Hat", "body", T(0, 0.46, 0.63), (0.46, 0.08, 0.1), bevel=0.03)
+    k.torus("Dark", "body", T(0, 0.56, 0.42) @ R(x=90), 0.11, 0.035, su=16, sv=6)
+    k.cyl("Shirt", "body", T(0, 0.56, 0.42) @ R(x=90), 0.075, 0.075, 0.03, seg=12)
+    # steering wheel
+    k.torus("Dark", "body", T(0, -0.08, 0.66) @ R(x=-55), 0.065, 0.008, su=12, sv=4)
+    # the gangster at the wheel (shared parts, placed by CAR_RIDER)
+    k.xf = CAR_RIDER
+    mafia_jacket(k, stripes=True)
+    mafia_arms(k)
+    mafia_face(k)
+    fedora(k)
+    tommy_gun(k)
+    k.xf = Matrix()
+
+
+# ---------------------------------------------------------------- vehicle clip set (beast rig: legs are wheels, rider is the driver)
+WHEELS = ("fl_lo_L", "fl_lo_R", "bl_lo_L", "bl_lo_R")
+DRIVE = dict(upperarm_L=(45, 0, 0), forearm_L=(45, 0, 0), upperarm_R=(45, 0, 0), forearm_R=(45, 0, 0))
+GUN_UP = dict(upperarm_R=(35, 0, 0), forearm_R=(62, 0, 0), upperarm_L=(42, 0, -28), forearm_L=(72, 0, 0))
+
+
+def vpose(spin=0.0, **bones):
+    """Driver pose plus a wheel angle (degrees; negative rolls forward)."""
+    return pose(**{**DRIVE, **{w: (spin, 0, 0) for w in WHEELS}, **bones})
+
+
+VEHICLE_CLIPS = {
+    # engine running: a fine shudder
+    "Idle": (60, True, [
+        *[(f, vpose(chest=(1.5 * (i % 2), 0, 0)), {"body": (0, 0, 0.005 * (i % 2))}) for i, f in enumerate(range(0, 60, 4))],
+        (60, vpose(), {}),
+    ]),
+    # wheels roll a full turn per loop; the body bounces on its springs
+    "Walk": (24, True, [
+        (0, vpose(0, body=(1, 0, 0)), {"body": (0, 0, 0.0)}),
+        (6, vpose(-90, body=(-1, 0, 1)), {"body": (0, 0, 0.02)}),
+        (12, vpose(-180, body=(1, 0, 0)), {"body": (0, 0, 0.0)}),
+        (18, vpose(-270, body=(-1, 0, -1)), {"body": (0, 0, 0.02)}),
+        (24, vpose(-360, body=(1, 0, 0)), {"body": (0, 0, 0.0)}),
+    ], "linear"),
+    # wheelie, then slam down and ram forward, gun blazing
+    "Attack": (32, False, [
+        (0, vpose(0), {}),
+        (8, vpose(-270, body=(14, 0, 0), hips=(-8, 0, 0), **GUN_UP), {"body": (0, 0, 0.02)}),
+        (14, vpose(-540, body=(-4, 0, 0), spine=(8, 0, 0), **GUN_UP), {"body": (0, 0.22, -0.02)}),
+        (20, vpose(-660, body=(-2, 0, 0), **GUN_UP), {"body": (0, 0.2, 0)}),
+        (32, vpose(-720), {}),
+    ]),
+    # drive-by: the gangster rattles off a burst, the car rocks with each kick
+    "Shoot": (34, False, [
+        (0, vpose(), {}),
+        (6, vpose(**GUN_UP, spine=(-4, -12, 0)), {}),
+        *[(f, vpose(**{**GUN_UP, "upperarm_R": (35 - 4 * (i % 2), 0, 0)}, spine=(-4 - 3 * (i % 2), -12, 0),
+                    body=(0, 1.5 * (i % 2), 0)), {}) for i, f in enumerate(range(8, 22, 2))],
+        (24, vpose(**GUN_UP, spine=(-4, -12, 0)), {}),
+        (34, vpose(), {}),
+    ]),
+    # skid, tip and roll onto its side
+    "Death": (46, False, [
+        (0, vpose(), {}),
+        (6, vpose(-60, body=(0, 0, -15), chest=(-15, 0, 0), head=(-20, 0, 0)), {}),
+        (18, vpose(-120, body=(5, 45, -20), chest=(10, 0, 10), head=(10, 0, 0)), {"body": (0, 0, 0.12)}),
+        (30, vpose(-160, body=(0, 100, -25), chest=(25, 0, 10), head=(30, 0, 0)), {"body": (0, 0, -0.06)}),
+        (46, vpose(-170, body=(0, 92, -25), chest=(20, 0, 10), head=(30, 0, 0), upperarm_R=(10, 0, -30)), {"body": (0, 0, -0.08)}),
+    ]),
+}
+
+RIG_OF = {knight_knight: HORSE, undead_knight: WOLF, mafia_knight: CAR}
 
 
 def set_action(arm, act):
@@ -1345,7 +1707,7 @@ def set_action(arm, act):
 
 def make_clips(arm, clips=None, prefix="", loc_bones=("hips",)):
     acts = {}
-    for name, (end, cyclic, keys) in (clips or CLIPS).items():
+    for name, (end, cyclic, keys, *opts) in (clips or CLIPS).items():
         act = bpy.data.actions.new(prefix + name)
         act.use_fake_user = True
         set_action(arm, act)
@@ -1360,6 +1722,13 @@ def make_clips(arm, clips=None, prefix="", loc_bones=("hips",)):
                 pb = arm.pose.bones[b]
                 pb.location = l.get(b, (0, 0, 0))
                 pb.keyframe_insert("location", frame=frame, group=b)
+        if "linear" in opts:  # constant speed, e.g. wheels turning
+            for layer in act.layers:
+                for strip in layer.strips:
+                    for cb in strip.channelbags:
+                        for fc in cb.fcurves:
+                            for kp in fc.keyframe_points:
+                                kp.interpolation = "LINEAR"
         act.use_frame_range = True
         act.frame_start, act.frame_end = 0, end
         act.use_cyclic = cyclic
@@ -1377,7 +1746,8 @@ def clipset(arm, kind, prefix=""):
     return make_clips(arm, clips, prefix, loc)
 
 
-CLIPSETS = {"human": (CLIPS, ("hips",)), "tower": (TOWER_CLIPS, ("hips",)), "beast": (BEAST_CLIPS, ("body",))}
+CLIPSETS = {"human": (CLIPS, ("hips",)), "tower": (TOWER_CLIPS, ("hips",)), "beast": (BEAST_CLIPS, ("body",)),
+            "vehicle": (VEHICLE_CLIPS, ("body",))}
 
 
 def clear():
@@ -1527,8 +1897,13 @@ def main():
                   ("Undead", "Onyx", undead_rook, "Undead_Rook", 0.65)],
         "knights": [("Knights", "Ivory", knight_knight, "Knights_Knight", -0.7),
                     ("Undead", "Onyx", undead_knight, "Undead_Knight", 0.7)],
+        "mafia": [("Mafia", "Ivory", mafia_king, "Mafia_King", -1.2),
+                  ("Mafia", "Ivory", mafia_queen, "Mafia_Queen", 0.0),
+                  ("Mafia", "Ivory", mafia_bishop, "Mafia_Bishop", 1.2)],
+        "mafia_rook": [("Mafia", "Ivory", mafia_rook, "Mafia_Rook", 0.0)],
+        "mafia_knight": [("Mafia", "Ivory", mafia_knight, "Mafia_Knight", 0.0)],
     }
-    kind_of = {"rooks": "tower", "knights": "beast"}  # everything else is humanoid
+    kind_of = {"rooks": "tower", "mafia_rook": "tower", "knights": "beast", "mafia_knight": "vehicle"}  # everything else is humanoid
     built = {g: [unit(*spec) for spec in specs] for g, specs in groups.items()}
     every = [a for arms in built.values() for a in arms]
     kinds = {kd: [g for g in built if kind_of.get(g, "human") == kd] for kd in CLIPSETS}
@@ -1544,18 +1919,22 @@ def main():
             "bishops": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Death", 20), ("Death", 46)],
             "rooks": [("Idle", 0), ("Walk", 6), ("Attack", 8), ("Attack", 13), ("Death", 24), ("Death", 46)],
             "knights": [("Idle", 0), ("Walk", 0), ("Walk", 6), ("Attack", 8), ("Attack", 14), ("Death", 46)],
+            "mafia": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Shoot", 10), ("Death", 46)],
+            "mafia_rook": [("Idle", 0), ("Walk", 6), ("Attack", 8), ("Attack", 13), ("Death", 24), ("Death", 46)],
+            "mafia_knight": [("Idle", 0), ("Walk", 3), ("Attack", 8), ("Attack", 14), ("Shoot", 10), ("Death", 46)],
         }
     for kind, gs in kinds.items():
         arms = [a for g in gs for a in built[g]]
         if not arms:
             continue
         acts = clipset(arms[0], kind)
+        show_only(every, every)  # a render of an earlier group hides the rest, and hidden units export empty
         for arm in arms:
             set_action(arm, acts["Idle"])
             export_fbx(arm, os.path.join(EXPORT, arm.name + ".fbx"))
         if render:
             for g in gs:
-                if not only or g == only:
+                if not only or g in only.split(","):  # --group takes a comma-separated list
                     show_only(built[g], every)
                     render_sheet(built[g], acts, g, shots[g])
     # keep every clip set in the .blend for reference (non-humanoid sets prefixed there)
