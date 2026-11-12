@@ -45,7 +45,7 @@
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) { /* progress just won't persist */ }
   };
   let story = load(STORY_KEY, null);
-  const settings = { cinematics: true, sound: true, blood: true, ...load(SETTINGS_KEY, {}) };
+  const settings = { cinematics: true, sound: true, blood: true, badges: true, ...load(SETTINGS_KEY, {}) };
 
   // ---------------------------------------------------------------- naming
   const army = color => ARMIES[armies[color]];
@@ -865,6 +865,12 @@
     setToggle("btn-blood", settings.blood);
     save(SETTINGS_KEY, settings);
   });
+  $("btn-badges").addEventListener("click", () => {
+    settings.badges = !settings.badges;
+    Stage.badges = settings.badges;
+    setToggle("btn-badges", settings.badges);
+    save(SETTINGS_KEY, settings);
+  });
   $("btn-sound").addEventListener("click", () => {
     settings.sound = !settings.sound;
     FX.muted = !settings.sound;
@@ -955,6 +961,8 @@
   setToggle("btn-cine", settings.cinematics);
   setToggle("btn-blood", settings.blood);
   setToggle("btn-sound", settings.sound);
+  Stage.badges = settings.badges;
+  setToggle("btn-badges", settings.badges);
   Stage.setTheme("knights");
   Stage.syncAll(position, armies);
   refreshMenu();

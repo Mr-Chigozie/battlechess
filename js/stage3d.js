@@ -34,6 +34,7 @@ const Stage = (() => {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
     container.appendChild(renderer.domElement);
 
     scene = new THREE.Scene();
@@ -165,7 +166,7 @@ const Stage = (() => {
     scene.add(labels);
 
     const light = new THREE.MeshStandardMaterial({ color: 0xd8cfb6, roughness: 0.45, metalness: 0.05 });
-    const dark = new THREE.MeshStandardMaterial({ color: 0x46503c, roughness: 0.5, metalness: 0.05 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x5d6a4c, roughness: 0.5, metalness: 0.05 });
     const tileGeo = new THREE.BoxGeometry(1, 0.12, 1);
     for (let row = 0; row < 8; row += 1) {
       for (let col = 0; col < 8; col += 1) {
@@ -206,8 +207,9 @@ const Stage = (() => {
     scene.background = new THREE.Color(look.sky);
     scene.fog = new THREE.Fog(look.fog, 16, 46);
     ground.material.color.setHex(look.ground);
-    hemi.color.setHex(look.sky).lerp(new THREE.Color(0xffffff), 0.5);
-    hemi.groundColor.setHex(look.ground);
+    // Night armies keep their dark sky, but the board itself stays well lit enough to read the pieces.
+    hemi.color.setHex(look.sky).lerp(new THREE.Color(0xffffff), 0.68);
+    hemi.groundColor.setHex(look.ground).lerp(new THREE.Color(0x8a8a80), 0.35);
     for (const item of scenery) {
       if (item.userData.flame) item.material.color.setHex(look.magic);
       else item.material.color.setHex(look.ground).lerp(new THREE.Color(0x9a958a), 0.5);
@@ -274,6 +276,84 @@ const Stage = (() => {
     }
   }
 
+  // ---------------------------------------------------------------- piece badges
+  // A small chess symbol floats over each unit, so anyone can tell a knight from a bishop at a glance.
+  // Drawn as shapes (not font glyphs, which some phones turn into colour emoji).
+  let badges = true;
+  const badgeOf = new Map();
+  const badgeMats = {};
+  const SHAPES = {
+    p: g => { g.arc(50, 34, 13, 0, Math.PI * 2); g.moveTo(40, 48); g.lineTo(60, 48); g.lineTo(66, 76); g.lineTo(34, 76); },
+    r: g => {
+      g.moveTo(30, 20); g.lineTo(38, 20); g.lineTo(38, 27); g.lineTo(46, 27); g.lineTo(46, 20); g.lineTo(54, 20); g.lineTo(54, 27);
+      g.lineTo(62, 27); g.lineTo(62, 20); g.lineTo(70, 20); g.lineTo(70, 36); g.lineTo(64, 40); g.lineTo(66, 76); g.lineTo(34, 76);
+      g.lineTo(36, 40); g.lineTo(30, 36);
+    },
+    b: g => {
+      g.arc(50, 15, 5, 0, Math.PI * 2);
+      g.moveTo(50, 21); g.bezierCurveTo(68, 32, 66, 50, 58, 56); g.lineTo(64, 76); g.lineTo(36, 76); g.lineTo(42, 56);
+      g.bezierCurveTo(34, 50, 32, 32, 50, 21);
+    },
+    n: g => {
+      g.moveTo(36, 76); g.lineTo(38, 58); g.bezierCurveTo(30, 54, 24, 50, 26, 44); g.lineTo(44, 34); g.lineTo(40, 22);
+      g.bezierCurveTo(52, 16, 70, 22, 70, 44); g.lineTo(66, 76);
+    },
+    q: g => {
+      for (const [x, y] of [[26, 22], [38, 16], [50, 13], [62, 16], [74, 22]]) { g.moveTo(x + 5, y); g.arc(x, y, 5, 0, Math.PI * 2); }
+      g.moveTo(26, 28); g.lineTo(38, 46); g.lineTo(38, 22); g.lineTo(50, 44); g.lineTo(62, 22); g.lineTo(62, 46); g.lineTo(74, 28);
+      g.lineTo(64, 58); g.lineTo(66, 76); g.lineTo(34, 76); g.lineTo(36, 58);
+    },
+    k: g => {
+      g.rect(46, 8, 8, 22); g.rect(39, 14, 22, 7);
+      g.moveTo(50, 32); g.bezierCurveTo(74, 30, 76, 50, 62, 58); g.lineTo(66, 76); g.lineTo(34, 76); g.lineTo(38, 58);
+      g.bezierCurveTo(24, 50, 26, 30, 50, 32);
+    }
+  };
+  function badgeMat(color, type) {
+    const key = color + type;
+    if (badgeMats[key]) return badgeMats[key];
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 128;
+    const g = canvas.getContext("2d");
+    g.scale(1.28, 1.28);
+    const ivory = color === "w";
+    g.beginPath();
+    g.arc(50, 50, 46, 0, Math.PI * 2);
+    g.fillStyle = ivory ? "#f3ead2" : "#17181c";
+    g.fill();
+    g.lineWidth = 5;
+    g.strokeStyle = "#d6ad66";
+    g.stroke();
+    g.save();
+    g.translate(50, 52); g.scale(0.82, 0.82); g.translate(-50, -50);
+    g.beginPath();
+    SHAPES[type](g);
+    g.rect(30, 76, 40, 9);
+    g.fillStyle = ivory ? "#1b1c20" : "#f3ead2";
+    g.fill();
+    g.restore();
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    badgeMats[key] = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, transparent: true });
+    return badgeMats[key];
+  }
+  function updateBadges() {
+    for (const unit of units.flat()) {
+      if (unit && !badgeOf.has(unit)) {
+        const sprite = new THREE.Sprite(badgeMat(unit.userData.color, unit.userData.type));
+        sprite.scale.setScalar(coarse ? 0.34 : 0.3);
+        sprite.renderOrder = 10;
+        scene.add(sprite);
+        badgeOf.set(unit, sprite);
+      }
+    }
+    for (const [unit, sprite] of badgeOf) {
+      if (!unit.parent) { scene.remove(sprite); badgeOf.delete(unit); continue; }
+      sprite.visible = badges && !cine.active && !unit.userData.dying;
+      sprite.position.set(unit.position.x, unit.position.y + unit.userData.height + 0.18, unit.position.z);
+    }
+  }
+
   function pickTile(event) {
     setRay(event);
     const hit = raycaster.intersectObjects(tiles, false)[0];
@@ -310,6 +390,7 @@ const Stage = (() => {
     Terrain.update(dt, time);
     War.update(dt, time);
     idle(time);
+    updateBadges();
     if (cine.active) camera.lookAt(cine.target);
     else controls.update();
     const amp = FX.shakeAmp;
@@ -342,6 +423,7 @@ const Stage = (() => {
   function viewFor(color) {
     const aspect = window.innerWidth / window.innerHeight;
     const portrait = aspect < 0.8;
+    if (portrait) return portraitView(color, aspect);
     const elevation = portrait ? 1.2 : aspect < 1.25 ? 0.98 : 0.8;
     const halfV = THREE.MathUtils.degToRad(camera.fov / 2);
     const halfH = Math.atan(Math.tan(halfV) * aspect);
@@ -353,6 +435,53 @@ const Stage = (() => {
     const side = color === "w" ? 1 : -1;
     const target = new V3(0, 0, 0.3 * side);
     return { target, position: target.clone().add(new V3(0, Math.sin(elevation) * distance, Math.cos(elevation) * distance * side)), distance };
+  }
+
+  // Phones held upright: a lower, three-quarter angle so units are seen from the side (not as tops of heads).
+  // Fit by projecting the board itself: as wide as the screen at the near edge, and the whole board,
+  // back-rank units included, between the HUD at the top and the narration bar at the bottom.
+  function portraitView(color, aspect) {
+    const side = color === "w" ? 1 : -1;
+    const elevation = 1.02;
+    const cam = new THREE.PerspectiveCamera(42, aspect, 0.1, 120);
+    const points = [];
+    for (const x of [-4.5, 4.5]) for (const z of [-4.5, 4.5]) points.push(new V3(x, 0, z));
+    for (const x of [-3.5, 3.5]) points.push(new V3(x, 1.1, -3.5 * side));
+    const top = 0.7, bottom = -0.74;
+    const halfV = THREE.MathUtils.degToRad(21);
+    let tz = 0, distance = 12;
+    const place = () => {
+      cam.position.set(0, Math.sin(elevation) * distance, tz + Math.cos(elevation) * distance * side);
+      cam.lookAt(0, 0, tz);
+      cam.updateMatrixWorld();
+    };
+    const extent = () => {
+      let x = 0, lo = Infinity, hi = -Infinity;
+      for (const p of points) {
+        const v = p.clone().project(cam);
+        x = Math.max(x, Math.abs(v.x));
+        lo = Math.min(lo, v.y);
+        hi = Math.max(hi, v.y);
+      }
+      return { x, lo, hi };
+    };
+    for (let pass = 0; pass < 4; pass += 1) {
+      let near = 4, far = 60;
+      for (let i = 0; i < 28; i += 1) {
+        distance = (near + far) / 2;
+        place();
+        const e = extent();
+        if (e.x <= 0.985 && e.hi - e.lo <= top - bottom) far = distance; else near = distance;
+      }
+      distance = far;
+      place();
+      const e = extent();
+      // Slide the aim along the board so it sits in the middle of the free band.
+      tz -= side * ((e.hi + e.lo) / 2 - (top + bottom) / 2) * distance * Math.tan(halfV) / Math.sin(elevation);
+    }
+    place();
+    const target = new V3(0, 0, tz);
+    return { target, position: cam.position.clone(), distance };
   }
 
   function applyView(color) {
@@ -552,6 +681,7 @@ const Stage = (() => {
     FX.shake((style === "slam" || style === "lightning" ? 0.4 : 0.18) + combo * 0.08);
     if (["spell", "beam", "lightning", "slam"].includes(style) || combo > 1) FX.flashScreen(0.3);
     if (style === "slam") FX.shockwave(victim.position, color);
+    victim.userData.dying = true;
     flashWhite(victim);
     punchIn(0.12 + combo * 0.03);
     onImpact?.();
@@ -929,6 +1059,7 @@ const Stage = (() => {
     set cinematics(value) { cinematics = value; },
     get cinematics() { return cinematics; },
     get touch() { return coarse; },
-    set blood(value) { blood = value; }
+    set blood(value) { blood = value; },
+    set badges(value) { badges = value; }
   };
 })();
