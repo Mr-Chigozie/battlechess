@@ -48,24 +48,36 @@ const UNITS = [
   { id: "knights-pawn", group: "Pawns", file: "export/Knights_Pawn.glb", name: "Squire", army: "Order of Knights", side: "Ivory" },
   { id: "mafia-pawn", group: "Pawns", file: "export/Mafia_Pawn.glb", name: "Soldier", army: "The Mafia", side: "Ivory" },
   { id: "undead-pawn", group: "Pawns", file: "export/Undead_Pawn.glb", name: "Skeleton", army: "Army of the Dead", side: "Onyx" },
+  { id: "marines-pawn", group: "Pawns", file: "export/Marines_Pawn.glb", name: "Rifleman", army: "Marines", side: "Ivory" },
+  { id: "vikings-pawn", group: "Pawns", file: "export/Vikings_Pawn.glb", name: "Raider", army: "Vikings", side: "Onyx" },
   { id: "knights-king", group: "Kings", file: "export/Knights_King.glb", name: "King", army: "Order of Knights", side: "Ivory" },
   { id: "undead-king", group: "Kings", file: "export/Undead_King.glb", name: "Bone King", army: "Army of the Dead", side: "Onyx" },
+  { id: "marines-king", group: "Kings", file: "export/Marines_King.glb", name: "Commander", army: "Marines", side: "Ivory" },
+  { id: "vikings-king", group: "Kings", file: "export/Vikings_King.glb", name: "Jarl", army: "Vikings", side: "Onyx" },
   { id: "mafia-king", group: "Kings", file: "export/Mafia_King.glb", name: "The Boss", army: "The Mafia", side: "Ivory" },
   { id: "knights-queen", group: "Queens", file: "export/Knights_Queen.glb", name: "Queen", army: "Order of Knights", side: "Ivory" },
   { id: "undead-queen", group: "Queens", file: "export/Undead_Queen.glb", name: "Wraith Queen", army: "Army of the Dead", side: "Onyx" },
+  { id: "marines-queen", group: "Queens", file: "export/Marines_Queen.glb", name: "Heavy Gunner", army: "Marines", side: "Ivory" },
+  { id: "vikings-queen", group: "Queens", file: "export/Vikings_Queen.glb", name: "Shieldmaiden", army: "Vikings", side: "Onyx" },
   { id: "mafia-queen", group: "Queens", file: "export/Mafia_Queen.glb", name: "Underboss", army: "The Mafia", side: "Ivory" },
   { id: "knights-bishop", group: "Bishops", file: "export/Knights_Bishop.glb", name: "Templar", army: "Order of Knights", side: "Ivory" },
   { id: "undead-bishop", group: "Bishops", file: "export/Undead_Bishop.glb", name: "Necromancer", army: "Army of the Dead", side: "Onyx" },
+  { id: "marines-bishop", group: "Bishops", file: "export/Marines_Bishop.glb", name: "Sniper", army: "Marines", side: "Ivory" },
+  { id: "vikings-bishop", group: "Bishops", file: "export/Vikings_Bishop.glb", name: "Seer", army: "Vikings", side: "Onyx" },
   { id: "mafia-bishop", group: "Bishops", file: "export/Mafia_Bishop.glb", name: "Consigliere", army: "The Mafia", side: "Ivory" },
   { id: "knights-rook", group: "Rooks", file: "export/Knights_Rook.glb", name: "Keep", army: "Order of Knights", side: "Ivory" },
   { id: "undead-rook", group: "Rooks", file: "export/Undead_Rook.glb", name: "Crypt", army: "Army of the Dead", side: "Onyx" },
+  { id: "marines-rook", group: "Rooks", file: "export/Marines_Rook.glb", name: "Bunker", army: "Marines", side: "Ivory" },
+  { id: "vikings-rook", group: "Rooks", file: "export/Vikings_Rook.glb", name: "Longship", army: "Vikings", side: "Onyx" },
   { id: "mafia-rook", group: "Rooks", file: "export/Mafia_Rook.glb", name: "Speakeasy", army: "The Mafia", side: "Ivory" },
   { id: "knights-knight", group: "Knights", file: "export/Knights_Knight.glb", name: "Paladin", army: "Order of Knights", side: "Ivory" },
   { id: "undead-knight", group: "Knights", file: "export/Undead_Knight.glb", name: "Dire Wolf", army: "Army of the Dead", side: "Onyx" },
+  { id: "marines-knight", group: "Knights", file: "export/Marines_Knight.glb", name: "Jeep", army: "Marines", side: "Ivory" },
+  { id: "vikings-knight", group: "Knights", file: "export/Vikings_Knight.glb", name: "War Bear", army: "Vikings", side: "Onyx" },
   { id: "mafia-knight", group: "Knights", file: "export/Mafia_Knight.glb", name: "Getaway Car", army: "The Mafia", side: "Ivory" },
 ];
 const GROUPS = [...new Set(UNITS.map(u => u.group))];
-const CLIPS = ["Idle", "Walk", "Attack", "Shoot", "Death"];
+const CLIPS = ["Idle", "Walk", "Attack", "Shoot", "Death", "Behead"];
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -135,7 +147,7 @@ function play(name) {
     for (const a of Object.values(actions)) if (a !== next) a.fadeOut(0.2);
     const once = name !== "Idle" && name !== "Walk";
     next.reset().setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
-    next.clampWhenFinished = name === "Death";
+    next.clampWhenFinished = name === "Death" || name === "Behead";
     next.fadeIn(0.2).play();
   }
   renderButtons();
