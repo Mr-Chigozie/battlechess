@@ -19,6 +19,8 @@ const Stage = (() => {
   let cinematics = true;
   let blood = true;
   const cine = { active: false, target: new V3() };
+  let animating = 0;        // move/capture scenes in progress; units are only swapped for models between them
+  let upgradePending = false;
 
   const squareToWorld = (row, col) => new V3(col - 3.5, 0, row - 3.5);
   const angleTo = (from, to) => Math.atan2(to.x - from.x, to.z - from.z);
@@ -241,6 +243,21 @@ const Stage = (() => {
     Territory.reset(pos, armies);
   }
 
+  // Called when an army's models finish loading: rebuild its units as models at the next quiet moment.
+  function upgradeUnits() { upgradePending = true; }
+
+  function applyUpgrades() {
+    upgradePending = false;
+    for (let row = 0; row < 8; row += 1) {
+      for (let col = 0; col < 8; col += 1) {
+        const old = units[row][col];
+        if (!old || old.userData.model || old.userData.busy || !Units.ready(old.userData.army, old.userData.type)) continue;
+        scene.remove(old);
+        placeUnit(Models.buildUnit(old.userData.army, old.userData.type, old.userData.color), row, col);
+      }
+    }
+  }
+
   const markerMats = {
     selected: new THREE.MeshBasicMaterial({ color: 0xf0c060, transparent: true, opacity: 0.9, depthWrite: false }),
     move: new THREE.MeshBasicMaterial({ color: 0xf6e3a8, transparent: true, opacity: 0.55, depthWrite: false }),
@@ -389,6 +406,8 @@ const Stage = (() => {
     FX.update(dt);
     Terrain.update(dt, time);
     War.update(dt, time);
+    Units.update(dt * FX.speed);
+    if (upgradePending && !animating) applyUpgrades();
     idle(time);
     updateBadges();
     if (cine.active) camera.lookAt(cine.target);
@@ -612,11 +631,12 @@ const Stage = (() => {
     });
   }
 
-  async function travel(unit, to, { seconds, arc = 0, cadence = 13, easing } = {}) {
+  async function travel(unit, to, { seconds, arc = 0, cadence = 13, easing, walk = true } = {}) {
     const rig = unit.userData.rig;
     const from = unit.position.clone();
     seconds ??= arc ? 0.55 + from.distanceTo(to) * 0.08 : 0.25 + from.distanceTo(to) * 0.38;
     unit.userData.busy = true;
+    if (walk) Units.play(unit, "Walk");
     let steps = 0;
     if (arc) FX.sfx("whoosh");
     await FX.tween(seconds, t => {
@@ -634,6 +654,7 @@ const Stage = (() => {
     }, easing || (arc ? FX.ease.inOut : FX.ease.linear));
     gait(rig, 0, 0);
     unit.position.y = 0;
+    if (walk) Units.play(unit, "Idle");
     if (arc) { FX.dust(unit.position.clone().setY(0.05), 6); FX.sfx("step"); }
     unit.userData.busy = false;
   }
@@ -737,6 +758,7 @@ const Stage = (() => {
   const DEATHS = { undead: "crumble", knights: "kneel", machines: "explode", samurai: "slash", asgardians: "ascend", vikings: "knockback", spartans: "knockback", marines: "knockback" };
 
   function die(victim, dir, combo) {
+    if (victim.userData.model) return modelDeath(victim, dir, combo).catch(error => { console.error(error); victim.parent?.remove(victim); });
     let kind = DEATHS[victim.userData.army] || "knockback";
     if (!victim.userData.rig.head && ["kneel", "slash", "knockback"].includes(kind)) kind = "wreck";
     return DIE[kind](victim, dir, combo).catch(error => { console.error(error); victim.parent?.remove(victim); });
@@ -749,6 +771,58 @@ const Stage = (() => {
     const y = unit.position.y;
     await FX.tween(0.6, t => { unit.position.y = y - 0.9 * t; }, FX.ease.in);
     unit.parent?.remove(unit);
+  }
+
+  // A generated model plays its Death clip (or Behead, after a blade kill with Blood on), with its army's
+  // flourish on top, then sinks away. Asgardians still rise into light instead of sinking.
+  async function modelDeath(victim, dir, combo) {
+    const army = victim.userData.army;
+    const behead = victim.userData.behead;
+    const length = Units.play(victim, behead ? "Behead" : "Death", { fade: 0.08 });
+    const spot = center(victim);
+    if (behead) {
+      const neck = victim.position.clone().setY(victim.userData.height * 0.78);
+      FX.burst(neck, ARMIES[army].look.blood, 24, 1.9, 0.9, 0.8);
+      FX.sfx("crack");
+    }
+    if (army === "undead") {
+      FX.sfx("crack");
+      const soul = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), FX.glowMat(0x63ff8a, 0.85));
+      soul.position.copy(spot);
+      FX.spawn(soul, { vel: new V3(0, 0.9, 0), grow: 0.6, life: 1.6, fade: 1.1 });
+    } else if (army === "machines") {
+      for (let i = 0; i < 3; i += 1) {
+        FX.burst(center(victim).add(new V3((Math.random() - 0.5) * 0.3, (Math.random() - 0.3) * 0.3, 0)), 0xffd27a, 10, 1.6, 0.7, 0.3);
+        FX.sfx("zap");
+        await FX.wait(0.11);
+      }
+      FX.sfx("boom");
+      FX.shockwave(victim.position, 0xffa23a);
+      FX.burst(center(victim), 0xff7a2a, 30, 3, 1.2, 0.7);
+      FX.shake(0.25 + combo * 0.05);
+    } else if (army === "samurai") {
+      const cut = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.018, 0.018), FX.glowMat(0xffffff, 1));
+      cut.position.copy(spot).add(new V3(0, 0.05, 0));
+      cut.rotation.set(0, victim.rotation.y, 0.6);
+      FX.spawn(cut, { life: 0.5, fade: 0.4, grow: 0.3 });
+      FX.burst(spot, 0xffb7c5, 26, 1.8, 1, 1.1);
+    }
+    await FX.wait(Math.min(length || 1.2, 1.5) * 0.75);
+    FX.sfx("hit");
+    FX.dust(victim.position.clone().setY(0.1), 12);
+    FX.shake(0.08);
+    if (army === "asgardians") {
+      const from = victim.position.clone();
+      const color = ARMIES[army].look.magic;
+      FX.sfx("spell");
+      const ray = FX.beam(from.clone().setY(8), from.clone().setY(0.05), color, 1);
+      await FX.tween(0.7, t => { victim.position.copy(from).setY(0.6 * t); victim.scale.setScalar(Math.max(0.05, 1 - 0.95 * t)); }, FX.ease.in);
+      FX.burst(center(victim), 0xffffff, 24, 2.4, 1, 0.6);
+      victim.parent?.remove(victim);
+      await ray;
+      return;
+    }
+    await sinkAway(victim, 0.25);
   }
 
   const DIE = {
@@ -860,6 +934,7 @@ const Stage = (() => {
     const color = ARMIES[attacker.userData.army].look.magic;
     const useCine = cinematics;
     attacker.userData.busy = true;
+    victim.userData.behead = blood && style === "strike" && !!victim.userData.rig.actions?.Behead;
 
     if (useCine) {
       showCaption(caption.who, "");
@@ -876,6 +951,7 @@ const Stage = (() => {
       case "strike": {
         await travel(attacker, V.clone().addScaledVector(dir, -0.62));
         const rest = rig.armR?.rotation.x ?? 0;
+        Units.strikeAt(attacker, 0.46);
         FX.sfx("whoosh");
         await armTo(rig, -2.7, 0.34);
         await Promise.all([armTo(rig, 0.25, 0.12, FX.ease.in), nudge(attacker, dir, 0.14, 0.12, FX.ease.in)]);
@@ -886,6 +962,7 @@ const Stage = (() => {
       case "thrust": {
         await travel(attacker, V.clone().addScaledVector(dir, -0.72));
         const rest = rig.armR?.rotation.x ?? 0;
+        Units.strikeAt(attacker, 0.52);
         await armTo(rig, -1.5, 0.2);
         await nudge(attacker, dir, -0.12, 0.22);
         FX.sfx("whoosh");
@@ -897,13 +974,15 @@ const Stage = (() => {
       case "charge": {
         await travel(attacker, A.clone().addScaledVector(dir, -0.25), { seconds: 0.35 });
         FX.sfx("whoosh");
-        await travel(attacker, V.clone().addScaledVector(dir, -0.45), { seconds: 0.2 + A.distanceTo(V) * 0.16, cadence: 24, easing: FX.ease.in });
+        Units.strikeAt(attacker, 0.2 + A.distanceTo(V) * 0.16);
+        await travel(attacker, V.clone().addScaledVector(dir, -0.45), { seconds: 0.2 + A.distanceTo(V) * 0.16, cadence: 24, easing: FX.ease.in, walk: !attacker.userData.model });
         await impact(attacker, victim, dir, style, onImpact, victimSq, combo);
         break;
       }
       case "slam": {
+        Units.strikeAt(attacker, 1.0);
         await Promise.all([armTo(rig, -2.9, 0.3), armTo(rig, -2.9, 0.3, FX.ease.out, "armL")]);
-        await travel(attacker, V, { arc: 1.7, seconds: 0.7 });
+        await travel(attacker, V, { arc: 1.7, seconds: 0.7, walk: !attacker.userData.model });
         await impact(attacker, victim, dir, style, onImpact, victimSq, combo);
         FX.sfx("boom");
         armTo(rig, -0.4, 0.3);
@@ -912,7 +991,9 @@ const Stage = (() => {
       }
       case "shoot": {
         const tank = ARMIES[attacker.userData.army].look.rook === "tank" && attacker.userData.type === "r";
+        Units.play(attacker, "Shoot");
         await armTo(rig, -1.45, 0.2);
+        await FX.wait(Units.aimDelay(attacker));
         const shots = tank ? 1 : 4;
         for (let i = 0; i < shots; i += 1) {
           const tip = tipOf(attacker);
@@ -928,6 +1009,7 @@ const Stage = (() => {
         break;
       }
       case "spell": {
+        Units.play(attacker, "Shoot");
         FX.sfx("spell");
         await armTo(rig, -2.3, 0.35);
         for (let i = 0; i < 3; i += 1) {
@@ -940,6 +1022,7 @@ const Stage = (() => {
         break;
       }
       case "beam": {
+        Units.play(attacker, "Shoot");
         FX.sfx("spell");
         for (let i = 0; i < 3; i += 1) {
           FX.burst(tipOf(attacker), color, 8, 0.8, 0.8, 0.3);
@@ -953,6 +1036,7 @@ const Stage = (() => {
         break;
       }
       case "lightning": {
+        Units.play(attacker, "Shoot");
         await armTo(rig, -2.95, 0.4);
         FX.sfx("zap");
         FX.flashScreen(0.5);
@@ -983,7 +1067,12 @@ const Stage = (() => {
   }
 
   // Animate one engine move. `victimSq` is set for captures; `promote` builds the promoted unit.
-  async function playMove({ move, victimSq = null, caption = null, promote = null, combo = 0 }) {
+  async function playMove(args) {
+    animating += 1;
+    try { await runMove(args); } finally { animating -= 1; }
+  }
+
+  async function runMove({ move, victimSq = null, caption = null, promote = null, combo = 0 }) {
     const from = { row: move.fromRow, col: move.fromCol };
     const to = { row: move.toRow, col: move.toCol };
     if (victimSq) {
@@ -1032,6 +1121,16 @@ const Stage = (() => {
     king.userData.busy = true;
     FX.sfx("boom");
     FX.shake(0.25);
+    if (king.userData.model) {
+      animating += 1;
+      const length = Units.play(king, "Death", { fade: 0.1 });
+      await FX.wait(Math.min(length || 1.2, 1.5) * 0.8);
+      FX.dust(king.position.clone().setY(0.1), 14);
+      FX.flashScreen(0.4);
+      await sinkAway(king, 0.35);
+      animating -= 1;
+      return;
+    }
     await FX.tween(0.9, t => { king.userData.rig.actor.rotation.x = t * 1.45; }, FX.ease.in);
     FX.dust(king.position.clone().setY(0.1), 14);
     await FX.wait(0.35);
@@ -1055,7 +1154,7 @@ const Stage = (() => {
   };
 
   return {
-    init, setTheme, syncAll, setMarkers, setView, toggleView, playMove, playCheckmate, killVerb,
+    init, setTheme, syncAll, upgradeUnits, setMarkers, setView, toggleView, playMove, playCheckmate, killVerb,
     set cinematics(value) { cinematics = value; },
     get cinematics() { return cinematics; },
     get touch() { return coarse; },

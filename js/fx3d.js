@@ -354,6 +354,7 @@ const FX = (() => {
     get shakeAmp() { return shakeAmp; },
     get muted() { return muted; },
     set muted(value) { muted = value; },
-    set speed(value) { speed = value; }
+    set speed(value) { speed = value; },
+    get speed() { return speed; }
   };
 })();

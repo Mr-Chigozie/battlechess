@@ -5,8 +5,8 @@
 const ARMIES = {
   marines: {
     name: "Marines", mark: "⚓",
-    pieces: { k: "🎖️", q: "⭐", r: "🛡️", b: "🚁", n: "🪂", p: "🪖" },
-    units: { k: "General", q: "Colonel", r: "Armor Squad", b: "Gunship", n: "Paratrooper", p: "Rifleman" },
+    pieces: { k: "🎖️", q: "⭐", r: "🛡️", b: "🎯", n: "🚙", p: "🪖" },
+    units: { k: "Commander", q: "Heavy Gunner", r: "Bunker", b: "Sniper", n: "Jeep", p: "Rifleman" },
     taunts: ["Semper fi. Let's see what you've got.", "You can call it a retreat. We call it a tactical adjustment.", "Eyes up. The next move is ours."],
     look: {
       armor: 0x5f6b45, cloth: 0x4a5236, accent: 0xc9a227, skin: 0xc68e6a, head: "combat",
@@ -16,7 +16,7 @@ const ARMIES = {
     story: {
       title: "Operation Iron Tide",
       intro: "The Marines hit the beach of the Board at dawn: landing craft, smoke and steel. They hold every square they take, and they hold it under fire.",
-      victory: "Their General salutes as the last rifle falls silent. \"Hell of a fight. We'll be ready next time.\""
+      victory: "Their Commander salutes as the last rifle falls silent. \"Hell of a fight. We'll be ready next time.\""
     }
   },
   undead: {
@@ -53,8 +53,8 @@ const ARMIES = {
   },
   asgardians: {
     name: "Asgardians", mark: "ᚨ",
-    pieces: { k: "👁️", q: "⚡", r: "🌈", b: "🐍", n: "🐎", p: "⚔️" },
-    units: { k: "All-Father", q: "Thunder God", r: "Bifrost Gate", b: "Trickster", n: "Valkyrie", p: "Einherjar" },
+    pieces: { k: "👁️", q: "🛡️", r: "🌈", b: "⚡", n: "🐎", p: "⚔️" },
+    units: { k: "All-Father", q: "Valkyrie", r: "Bifrost Gate", b: "Thunderer", n: "Sleipnir", p: "Einherjar" },
     taunts: ["The Nine Realms have seen better generals than you.", "Thunder answers every insult.", "Ragnarök comes early for your king."],
     look: {
       armor: 0xd9c27a, cloth: 0x2b4a8a, accent: 0x7fd4ff, skin: 0xf0c8a0, head: "winged",
@@ -63,14 +63,14 @@ const ARMIES = {
     },
     story: {
       title: "Twilight of the Gods",
-      intro: "The Bifrost cracks open over the board. Gods do not ask permission to wage war, and the Thunder God is already swinging.",
+      intro: "The Bifrost cracks open over the board. Gods do not ask permission to wage war, and the Thunderer is already swinging.",
       victory: "The All-Father closes his one eye. \"The sagas will sing of this game. Not kindly, perhaps, but loudly.\""
     }
   },
   vikings: {
     name: "Vikings", mark: "ᛟ",
     pieces: { k: "🪓", q: "🛡️", r: "🛶", b: "🔮", n: "🐻", p: "🏹" },
-    units: { k: "Jarl", q: "Shieldmaiden", r: "Longship", b: "Seer", n: "Berserker", p: "Raider" },
+    units: { k: "Jarl", q: "Shieldmaiden", r: "Longship", b: "Seer", n: "War Bear", p: "Raider" },
     taunts: ["The ravens are already circling.", "A fine move. Shame it will not save you.", "Valhalla is watching this board."],
     look: {
       armor: 0x8c8f93, cloth: 0x6b4a2e, accent: 0xd9a441, skin: 0xe6b08f, head: "horned",
@@ -85,8 +85,8 @@ const ARMIES = {
   },
   samurai: {
     name: "Samurai Clans", mark: "⛩",
-    pieces: { k: "🏯", q: "🐉", r: "⛩️", b: "🥷", n: "🏇", p: "🎌" },
-    units: { k: "Shogun", q: "Dragon General", r: "Torii Gate", b: "Shinobi", n: "Mounted Samurai", p: "Ashigaru" },
+    pieces: { k: "🏯", q: "🗡️", r: "🏮", b: "🥷", n: "🏇", p: "🎌" },
+    units: { k: "Daimyo", q: "Onna-musha", r: "Pagoda", b: "Ninja", n: "Samurai Cavalry", p: "Ashigaru" },
     taunts: ["The blade is drawn only once.", "Patience is the sharpest sword.", "Your castle is paper. Our resolve is steel."],
     look: {
       armor: 0x2d2a2e, cloth: 0xa3232b, accent: 0xe8c547, skin: 0xe8c09c, head: "kabuto",
@@ -95,14 +95,14 @@ const ARMIES = {
     },
     story: {
       title: "Blossoms and Steel",
-      intro: "Cherry petals fall on silent ranks. The Shogun's army does not shout. It waits, and when it strikes, it strikes once.",
-      victory: "The Shogun sheathes his blade and bows low. \"There is honour in defeat by a master.\""
+      intro: "Cherry petals fall on silent ranks. The Daimyo's army does not shout. It waits, and when it strikes, it strikes once.",
+      victory: "The Daimyo sheathes his blade and bows low. \"There is honour in defeat by a master.\""
     }
   },
   spartans: {
     name: "Spartans", mark: "Λ",
-    pieces: { k: "🏛️", q: "🦁", r: "🧱", b: "🏺", n: "🐴", p: "🔱" },
-    units: { k: "Basileus", q: "Lion of Sparta", r: "Phalanx Wall", b: "Oracle", n: "Horseman", p: "Hoplite" },
+    pieces: { k: "🏛️", q: "🦁", r: "🗼", b: "🏺", n: "🐾", p: "🔱" },
+    units: { k: "Warlord", q: "Champion", r: "Watchtower", b: "Oracle", n: "War Lion", p: "Hoplite" },
     taunts: ["Come and take them.", "Return with your shield, or on it.", "Our walls are made of men."],
     look: {
       armor: 0xc08a3e, cloth: 0x9b1c1c, accent: 0xd6332c, skin: 0xc98e64, head: "crested",
@@ -112,13 +112,13 @@ const ARMIES = {
     story: {
       title: "The Narrow Pass",
       intro: "Bronze shields lock together across the pass. Three hundred stand where three thousand should, and not one of them will step back.",
-      victory: "The Basileus plants his spear in the dust. \"Tell them in Sparta: we fell facing forward.\""
+      victory: "The Warlord plants his spear in the dust. \"Tell them in Sparta: we fell facing forward.\""
     }
   },
   machines: {
     name: "Machine Legion", mark: "⚙",
-    pieces: { k: "🧠", q: "🛸", r: "🦾", b: "📡", n: "🕷️", p: "🤖" },
-    units: { k: "Core Mind", q: "Mothership", r: "Heavy Frame", b: "Uplink", n: "Spider Mech", p: "Drone" },
+    pieces: { k: "👑", q: "🚀", r: "🗼", b: "📡", n: "🐕", p: "🤖" },
+    units: { k: "Overlord", q: "Annihilator", r: "Turret", b: "Seeker", n: "Mech Hound", p: "Drone" },
     taunts: ["Probability of your victory: 0.03%.", "Your move has been predicted and logged.", "Resistance is computationally inefficient."],
     look: {
       armor: 0x9aa3ad, cloth: 0x30363d, accent: 0xff3b3b, skin: 0x9aa3ad, head: "visor",
@@ -128,7 +128,7 @@ const ARMIES = {
     story: {
       title: "Protocol Zero",
       intro: "The board hums. Red optics flicker on in perfect rows. The Machine Legion has run this game ten million times, and it has never lost.",
-      victory: "The Core Mind flickers. \"ERROR. Outcome not in model. Recalculating… recalculating…\""
+      victory: "The Overlord flickers. \"ERROR. Outcome not in model. Recalculating… recalculating…\""
     }
   }
 };

@@ -582,7 +582,13 @@ const Models = (() => {
     return rig;
   }
 
+  // Where a character model (units3d.js) carries a different weapon from the hand-built unit, its attack follows
+  // the model: the Jeep rams, the Valkyrie cuts, the Thunderer calls lightning, the Annihilator and Pagoda fire.
+  const MODEL_STYLE = { "marines/n": "charge", "asgardians/q": "strike", "asgardians/b": "lightning",
+    "machines/q": "shoot", "samurai/r": "shoot" };
+
   function attackStyle(army, type) {
+    if (MODEL_STYLE[`${army}/${type}`]) return MODEL_STYLE[`${army}/${type}`];
     const look = ARMIES[army].look;
     if (type === "n") return look.mount === "parachute" ? "slam" : "charge";
     if (type === "b") return look.bishop === "caster" ? "spell" : "shoot";
@@ -600,6 +606,9 @@ const Models = (() => {
   const BUILDERS = { p: buildPawn, k: buildKing, q: buildQueen, b: buildBishop, n: buildKnight, r: buildRook };
 
   function buildUnit(army, type, color) {
+    // The generated character model, once its army has finished loading (see units3d.js).
+    // (`Units` is a top-level const in another classic script, so it is not a window property.)
+    if (typeof Units !== "undefined" && Units.ready(army, type)) return Units.build(army, type, color);
     const P = palette(army, color);
     const look = ARMIES[army].look;
     const unit = new THREE.Group();

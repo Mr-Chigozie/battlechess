@@ -45,7 +45,8 @@
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) { /* progress just won't persist */ }
   };
   let story = load(STORY_KEY, null);
-  const settings = { cinematics: true, sound: true, blood: true, badges: true, ...load(SETTINGS_KEY, {}) };
+  // Blood (splatter and beheadings) starts off; players who want it turn it on.
+  const settings = { cinematics: true, sound: true, blood: false, badges: true, ...load(SETTINGS_KEY, {}) };
 
   // ---------------------------------------------------------------- naming
   const army = color => ARMIES[armies[color]];
@@ -237,6 +238,8 @@
       lastMove = legal;
     }
     Stage.syncAll(position, armies);
+    // The armies take the field in their built-in look and change into their character models once loaded.
+    Promise.all([Units.preload(white), Units.preload(black)]).then(() => Stage.upgradeUnits());
     Stage.setView(online ? online.myColor : aiColor === "w" ? "b" : "w", false);
     battle.sub += ` · ${Terrain.name}`;
     if (online) {
@@ -965,6 +968,7 @@
   setToggle("btn-badges", settings.badges);
   Stage.setTheme("knights");
   Stage.syncAll(position, armies);
+  Promise.all([Units.preload(armies.w), Units.preload(armies.b)]).then(() => Stage.upgradeUnits());
   refreshMenu();
   $("loading").remove();
   showScreen("menu-screen");
