@@ -274,6 +274,40 @@ PALETTES = {
         "Bone": (0xE8E2CC, 0.0, 0.75), "Lips": (0xB8485A, 0.0, 0.5), "Raven": (0x15161A, 0.2, 0.4),
         "Robe": (0x55606E, 0.0, 0.9), "Stone": (0x8A8A84, 0.0, 0.9),
     },
+    "Samurai": {
+        "Lacquer": (0xA3262A, 0.2, 0.35), "LacquerDark": (0x2A2426, 0.3, 0.35), "Silk": (0x2F3E66, 0.0, 0.8),
+        "White": (0xF0EDE4, 0.0, 0.7), "Straw": (0xC9A86A, 0.0, 0.85), "Skin": (0xE8C29E, 0.0, 0.6),
+        "Hair": (0x141414, 0.0, 0.7), "Lips": (0xB8485A, 0.0, 0.5), "Gold": (0xD4A940, 0.9, 0.3),
+        "Steel": (0xDDE2E8, 0.85, 0.2), "Wood": (0x6A4526, 0.0, 0.7), "Ninja": (0x1C1E26, 0.0, 0.85),
+        "NinjaBelt": (0x3A3F4E, 0.0, 0.8), "Stone": (0x8A8A84, 0.0, 0.9), "Roof": (0x3A3F48, 0.3, 0.55),
+        "Lantern": (0xFFB25A, 0.0, 0.5, 3.0), "Bronze": (0xA8783A, 0.85, 0.35), "Horse": (0x5A3A22, 0.0, 0.7),
+        "Cord": (0xC8462E, 0.0, 0.8), "Dark": (0x121212, 0.0, 0.7), "Accent": (0xC8462E, 0.2, 0.5),
+    },
+    "Spartans": {
+        "Skin": (0xC99470, 0.0, 0.6), "Leather": (0x6A4A2C, 0.0, 0.8), "Bronze": (0xB0803A, 0.85, 0.35),
+        "BronzeDark": (0x7A5524, 0.8, 0.45), "Crimson": (0x9A1E1E, 0.0, 0.8), "Hair": (0x2A1E16, 0.0, 0.8),
+        "Gold": (0xD4A940, 0.9, 0.3), "Lion": (0xC8955A, 0.0, 0.85), "LionMane": (0x7A4A22, 0.0, 0.95),
+        "LionLight": (0xE0C08E, 0.0, 0.85), "Linen": (0xEDE7D8, 0.0, 0.85), "LinenDark": (0xCFC7B4, 0.0, 0.9),
+        "Laurel": (0x6E8A3A, 0.0, 0.7), "Fire": (0xFF8A2A, 0.0, 0.5, 4.0), "Wood": (0x7A5232, 0.0, 0.7),
+        "Marble": (0xE6E2D8, 0.0, 0.5), "MarbleDark": (0xB8B2A6, 0.0, 0.6), "Bone": (0xEDE6D2, 0.0, 0.6),
+        "Dark": (0x161412, 0.0, 0.7), "Lips": (0xA8484E, 0.0, 0.5), "Accent": (0xC23A2E, 0.2, 0.5),
+    },
+    "Asgardians": {
+        "Gold": (0xE0B84A, 0.9, 0.25), "GoldDark": (0xA8822E, 0.85, 0.35), "Celestial": (0x2C4A8C, 0.0, 0.7),
+        "Night": (0x141A33, 0.0, 0.8), "Silver": (0xC9D2DC, 0.9, 0.2), "Glow": (0x9FE6FF, 0.0, 0.5, 3.0),
+        "Lightning": (0xD8F2FF, 0.0, 0.4, 5.0), "Feather": (0xF6F4EE, 0.0, 0.7), "Skin": (0xEBC4A2, 0.0, 0.6),
+        "Blond": (0xE0C27A, 0.0, 0.75), "Beard": (0xEDEBE6, 0.0, 0.85), "Ginger": (0xC2582A, 0.0, 0.85),
+        "Leather": (0x5A3E28, 0.0, 0.8), "Crimson": (0x9A1E1E, 0.0, 0.8), "Raven": (0x15161A, 0.2, 0.4),
+        "Lips": (0xB8485A, 0.0, 0.5), "Dark": (0x111216, 0.0, 0.7), "Stone": (0xB8B4C8, 0.0, 0.75),
+        "StoneDark": (0x7C7896, 0.0, 0.8), "HorseGrey": (0xC8CACF, 0.0, 0.7),
+        "RbRed": (0xFF5A5A, 0.0, 0.5, 2.0), "RbYellow": (0xFFD84A, 0.0, 0.5, 2.0), "RbGreen": (0x5AE07A, 0.0, 0.5, 2.0),
+        "RbBlue": (0x5AA8FF, 0.0, 0.5, 2.0), "RbViolet": (0xB07AFF, 0.0, 0.5, 2.0), "Accent": (0x9FE6FF, 0.2, 0.5),
+    },
+    "Machines": {
+        "Plate": (0x5C646E, 0.7, 0.35), "Gunmetal": (0x2E333A, 0.8, 0.4), "Chrome": (0xD8DCE0, 1.0, 0.15),
+        "Glow": (0xFF3B2E, 0.0, 0.5, 3.5), "Hazard": (0xE8B21E, 0.3, 0.5), "HazardDark": (0x1C1C1C, 0.2, 0.6),
+        "Dark": (0x0E0F12, 0.2, 0.6), "Accent": (0xFF3B2E, 0.2, 0.5),
+    },
     "Undead": {
         "Bone": (0xE8E2CC, 0.0, 0.75), "Armor": (0x7D7A62, 0.6, 0.65), "Dark": (0x0B0D0B, 0.0, 0.9),
         "Cloth": (0x2F3A2C, 0.0, 0.9), "Accent": (0x7DFF9A, 0.0, 0.5), "Glow": (0x2EF06A, 0.0, 0.5, 2.2),
@@ -2465,7 +2499,910 @@ def viking_knight(k):
     round_shield(k, face="Sail", ring="TunicRed")
     k.xf = Matrix()
 
-RIG_OF = {knight_knight: HORSE, undead_knight: WOLF, mafia_knight: CAR, marine_knight: JEEP, viking_knight: BEAR}
+
+
+# ---------------------------------------------------------------- shared building blocks for the later armies
+def humanoid(k, legs="Trousers", boots="Leather", tunic="Tunic", chest=None, sleeve=None, forearm=None,
+             hands="Skin", skirt=None, skirt_len=0.34, belt="Leather", buckle="Gold", wide=False, show_legs=True):
+    """A plain body: legs, optional skirt, torso, belt and arms, each in its own palette slot."""
+    if show_legs:
+        for s in (1, -1):
+            x = "L" if s > 0 else "R"
+            k.box(legs, f"thigh.{x}", T(0.12 * s, 0, 0.77), (0.19 if wide else 0.17, 0.19 if wide else 0.18, 0.42), bevel=0.04)
+            M, L = along((0.12 * s, 0.02, 0.14), (0.12 * s, 0.0, 0.57))
+            k.cyl(legs, f"shin.{x}", M, 0.1 if wide else 0.072, 0.085 if wide else 0.066, L, seg=8)
+            k.box(boots, f"foot.{x}", T(0.12 * s, -0.04, 0.05), (0.12, 0.24, 0.1), bevel=0.03)
+    if skirt:
+        k.cyl(skirt, "hips", T(0, 0, 0.98 - skirt_len / 2), 0.27, 0.215, skirt_len, seg=10)
+    k.box(tunic, "spine", T(0, 0, 1.13), (0.36, 0.25, 0.25), bevel=0.05)
+    k.box(chest or tunic, "chest", T(0, 0, 1.36), (0.46, 0.28, 0.31), bevel=0.07)
+    if belt:
+        k.cyl(belt, "hips", T(0, 0, 0.99), 0.225, 0.225, 0.065, seg=12)
+        if buckle:
+            k.box(buckle, "hips", T(0, -0.227, 0.99), (0.07, 0.02, 0.055), bevel=0.01)
+    sleeve = sleeve or tunic
+    forearm = forearm or sleeve
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        k.sphere(sleeve, f"upper_arm.{x}", T(0.22 * s, 0, 1.45), (0.1, 0.11, 0.09), seg=8)
+        M, L = along(*B[f"upper_arm.{x}"]); k.cyl(sleeve, f"upper_arm.{x}", M, 0.064, 0.067, L, seg=8)
+        M, L = along(*B[f"forearm.{x}"]); k.cyl(forearm, f"forearm.{x}", M, 0.064, 0.056, L, seg=8)
+        k.box(hands, f"hand.{x}", T(*mid(f"hand.{x}")), (0.08, 0.095, 0.105), bevel=0.02)
+
+
+def face2(k, hair=None, beard=None, brow="Hair", female=False, skin="Skin", lips="Lips"):
+    """A face: male (square jaw, optional beard and moustache) or female (finer features, lips, lashes)."""
+    M, L = along((0, 0, 1.5), (0, 0, 1.62)); k.cyl(skin, "neck", M, 0.05 if female else 0.062, 0.05 if female else 0.062, L, seg=8)
+    if female:
+        k.sphere(skin, "head", T(0, 0.0, 1.75), (0.11, 0.12, 0.13), seg=12)
+        for s in (1, -1):
+            k.box("Dark", "head", T(0.042 * s, -0.112, 1.752), (0.03, 0.02, 0.026), bevel=0.006)
+            k.box("Dark", "head", T(0.05 * s, -0.116, 1.768), (0.034, 0.018, 0.006))
+            k.box(brow, "head", T(0.042 * s, -0.114, 1.786), (0.04, 0.014, 0.007))
+        k.box(skin, "head", T(0, -0.124, 1.72), (0.02, 0.02, 0.03), bevel=0.006)
+        k.box(lips, "head", T(0, -0.114, 1.68), (0.036, 0.012, 0.012), bevel=0.004)
+        if hair:
+            k.sphere(hair, "head", T(0, 0.025, 1.79), (0.125, 0.13, 0.125), seg=12)
+            k.box(hair, "head", T(0, 0.085, 1.66) @ R(x=-6), (0.2, 0.07, 0.24), bevel=0.04)
+        return
+    k.sphere(skin, "head", T(0, 0.0, 1.75), (0.123, 0.133, 0.14), seg=12)
+    k.box(skin, "head", T(0, -0.035, 1.665), (0.17, 0.16, 0.085), bevel=0.035)
+    for s in (1, -1):
+        k.sphere(skin, "head", T(0.123 * s, 0.0, 1.74), (0.025, 0.035, 0.04), seg=6)
+        k.box("Dark", "head", T(0.047 * s, -0.125, 1.755), (0.034, 0.02, 0.018))
+        k.box(brow, "head", T(0.05 * s, -0.128, 1.786) @ R(y=-8 * s), (0.055, 0.021, 0.017))
+    k.box(skin, "head", T(0, -0.14, 1.72), (0.036, 0.032, 0.05), bevel=0.01)
+    k.box("Dark", "head", T(0, -0.12, 1.66), (0.055, 0.01, 0.008))
+    if hair:
+        k.sphere(hair, "head", T(0, 0.035, 1.785), (0.13, 0.13, 0.12), seg=12)
+    if beard:
+        k.box(beard, "head", T(0, -0.085, 1.645), (0.2, 0.11, 0.12), bevel=0.04)
+        k.box(beard, "head", T(0, -0.135, 1.69), (0.12, 0.025, 0.025), bevel=0.008)
+
+
+def upright(k, shaft, top=2.0, bottom=0.25, r=0.018):
+    """A pole held upright in the right hand (spear, staff, naginata); returns the top point."""
+    hx, hy, hz = mid("hand.R")
+    M, L = along((hx, hy - 0.01, bottom), (hx, hy - 0.06, top)); k.cyl(shaft, "hand.R", M, r, r, L, seg=6)
+    return hx, hy - 0.06, top
+
+
+def leaf_blade(k, slot, p, length=0.22, width=0.04):
+    x, y, z = p
+    k.prism(slot, "hand.R", T(x, y, z), [(0, 0), (width, length * 0.32), (0, length), (-width, length * 0.32)], 0.012)
+
+
+def back_flag(k, pole="Wood", cloth="White", mark=None, h=0.5):
+    """A sashimono-style banner on a pole rising from the back."""
+    M, L = along((0, 0.17, 1.15), (0, 0.17, 1.62 + h)); k.cyl(pole, "chest", M, 0.012, 0.012, L, seg=5)
+    k.box(cloth, "chest", T(0.1, 0.17, 1.42 + h), (0.18, 0.008, 0.4), bevel=0.004)
+    k.cyl(pole, "chest", T(0.1, 0.17, 1.62 + h) @ R(y=90), 0.008, 0.008, 0.2, seg=4)
+    if mark:
+        k.cyl(mark, "chest", T(0.1, 0.165, 1.44 + h) @ R(x=90), 0.055, 0.055, 0.012, seg=12)
+
+
+def round_bronze_shield(k, face="Bronze", mark="Crimson", rim="BronzeDark", r=0.27):
+    SM = T(0.45, -0.07, 1.02) @ R(z=37) @ R(x=-8)
+    k.cyl(face, "forearm.L", SM @ R(x=90), r, r * 0.95, 0.05, seg=20)
+    k.torus(rim, "forearm.L", SM @ R(x=90), r, 0.016, su=22, sv=4)
+    return SM
+
+
+def horse(k, coat="Horse", mane="Hair", hoof="Dark", tack="Leather", eight=False):
+    """A riding horse on the HORSE rig (no barding). eight=True doubles every leg (Sleipnir)."""
+    RB = {n: (h, t) for n, h, t, *_ in HORSE}
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        for pre, r_up in (("fl", 0.075), ("bl", 0.09)):
+            offs = [(0.0, 0.0)] + ([(0.03, 0.11 if pre == "fl" else -0.11)] if eight else [])
+            for dx, dy in offs:
+                sh = lambda p: (p[0] - dx * s, p[1] + dy, p[2])
+                for part, r1, r2 in ((f"{pre}_up.{x}", r_up, 0.055), (f"{pre}_lo.{x}", 0.045, 0.04)):
+                    h, t = RB[part]
+                    M, L = along(sh(h), sh(t)); k.cyl(coat, part, M, r1, r2, L, seg=8)
+                lo = f"{pre}_lo.{x}"
+                k.sphere(coat, lo, T(*sh(RB[lo][0])), (0.055, 0.055, 0.055), seg=8)
+                hx, hy, hz = sh(RB[lo][1])
+                k.cyl(mane, lo, T(hx, hy, hz + 0.09), 0.06, 0.045, 0.06, seg=8)
+                k.cyl(hoof, lo, T(hx, hy - 0.01, hz + 0.03), 0.065, 0.058, 0.06, seg=10)
+    k.sphere(coat, "body", T(0, 0.03, 0.9), (0.21, 0.45, 0.22), seg=14)
+    k.sphere(coat, "body", T(0, -0.27, 0.95), (0.2, 0.2, 0.22), seg=12)
+    k.sphere(coat, "body", T(0, 0.3, 0.94), (0.2, 0.2, 0.2), seg=12)
+    M, L = along((0, -0.27, 0.97), (0, -0.51, 1.34)); k.cyl(coat, "neck_q", M, 0.14, 0.095, L, seg=10)
+    M, L = along((0, -0.24, 1.07), (0, -0.46, 1.4)); k.box(mane, "neck_q", M, (0.045, 0.08, L), bevel=0.012)
+    M, L = along((0, -0.49, 1.36), (0, -0.76, 1.09)); k.box(coat, "head_q", M, (0.13, 0.15, L), bevel=0.04)
+    k.box("Dark", "head_q", T(0, -0.78, 1.07), (0.1, 0.06, 0.08), bevel=0.02)
+    k.box(mane, "head_q", T(0, -0.5, 1.42), (0.05, 0.08, 0.05), bevel=0.012)
+    for s in (1, -1):
+        k.cyl(coat, "head_q", T(0.045 * s, -0.47, 1.42) @ R(y=12 * s), 0.025, 0.0, 0.09, seg=5)
+        k.sphere("Dark", "head_q", T(0.07 * s, -0.56, 1.29), (0.018, 0.022, 0.018), seg=6)
+        k.box(tack, "head_q", T(0.068 * s, -0.66, 1.18) @ R(x=-42), (0.01, 0.025, 0.24))      # bridle
+    M, L = along(*RB["tail"]); k.cyl(mane, "tail", M, 0.05, 0.075, L, seg=8)
+    k.box(tack, "body", T(0, 0.1, 1.13), (0.3, 0.34, 0.05), bevel=0.015)                         # saddle
+    k.box(tack, "body", T(0, 0.27, 1.19), (0.24, 0.04, 0.1), bevel=0.015)
+    k.box(tack, "body", T(0, -0.07, 1.17), (0.16, 0.04, 0.06), bevel=0.01)
+    for s in (1, -1):
+        k.box(tack, "body", T(0.215 * s, 0.1, 0.98), (0.012, 0.05, 0.3))                         # girth strap
+
+
+def rider_legs(k, legs, boots):
+    """A rider's legs astride the saddle (call with k.xf = RIDER, bound to the rider's hips)."""
+    for s in (1, -1):
+        M, L = along((0.13 * s, 0, 0.95), (0.32 * s, -0.25, 0.79)); k.cyl(legs, "hips", M, 0.08, 0.07, L, seg=8)
+        k.sphere(legs, "hips", T(0.32 * s, -0.27, 0.79), (0.068, 0.068, 0.068), seg=8)
+        M, L = along((0.32 * s, -0.25, 0.79), (0.33 * s, -0.17, 0.43)); k.cyl(legs, "hips", M, 0.065, 0.055, L, seg=8)
+        k.box(boots, "hips", T(0.33 * s, -0.21, 0.38), (0.1, 0.22, 0.09), bevel=0.025)
+
+
+# ---------------------------------------------------------------- Samurai Clans
+def samurai_armor(k, armor="Lacquer", lace="Silk", sode=True, legs=True):
+    """Hakama, shin guards, laced cuirass, hanging skirt plates, shoulder plates and armoured sleeves."""
+    humanoid(k, legs="Silk", boots="White", tunic=armor, chest=armor, sleeve="Silk", forearm="LacquerDark",
+             hands="Skin", belt=lace, buckle=None, wide=True, show_legs=legs)
+    for s in ((1, -1) if legs else ()):
+        x = "L" if s > 0 else "R"
+        M, L = along((0.12 * s, -0.04, 0.16), (0.12 * s, -0.05, 0.5)); k.box("LacquerDark", f"shin.{x}", M, (0.12, 0.03, L), bevel=0.01)
+        k.box("Straw", f"foot.{x}", T(0.12 * s, -0.04, 0.012), (0.13, 0.26, 0.025))
+    for y in (-0.11, 0.0, 0.11):                                            # lacing rows on the cuirass
+        k.box(lace, "chest", T(0, -0.142, 1.28 + y * 0.6), (0.4, 0.008, 0.012))
+        k.box(lace, "spine", T(0, -0.128, 1.1 + y * 0.4), (0.33, 0.008, 0.012))
+    for i, a in enumerate((-60, -20, 20, 60, 180)):                         # kusazuri skirt plates
+        r = math.radians(a - 90)
+        P = T(0.24 * math.cos(r), 0.24 * math.sin(r), 0.82) @ R(z=a) @ R(x=-8)
+        k.box(armor, "hips", P, (0.15, 0.025, 0.24), bevel=0.008)
+        for dz in (-0.06, 0.02):
+            k.box(lace, "hips", P @ Matrix.Translation((0, -0.014, dz)), (0.14, 0.006, 0.01))
+    if sode:
+        for s in (1, -1):
+            x = "L" if s > 0 else "R"
+            P = T(0.27 * s, 0, 1.38) @ R(y=-12 * s)
+            k.box(armor, f"upper_arm.{x}", P, (0.04, 0.2, 0.2), bevel=0.01)
+            for dz in (-0.05, 0.03):
+                k.box(lace, f"upper_arm.{x}", P @ Matrix.Translation((0.022 * s, 0, dz)), (0.006, 0.19, 0.01))
+
+
+def kabuto(k, crest="Gold", shell="LacquerDark", crescent=True):
+    k.sphere(shell, "head", T(0, 0.01, 1.83), (0.15, 0.16, 0.12), seg=14)
+    for i, (r, z) in enumerate(((0.19, 1.78), (0.22, 1.73), (0.25, 1.68))):     # stepped neck guard
+        k.cyl(shell if i % 2 == 0 else "Lacquer", "head", T(0, 0.04, z), r - 0.02, r, 0.045, seg=14)
+    for s in (1, -1):
+        k.box(shell, "head", T(0.16 * s, -0.08, 1.8) @ R(z=-30 * s), (0.08, 0.02, 0.07), bevel=0.01)
+    if crescent:
+        k.prism(crest, "head", T(0, -0.13, 1.9), [(-0.22, 0.2), (-0.08, 0.05), (0, 0.02), (0.08, 0.05), (0.22, 0.2), (0.07, 0.09), (0, 0.07), (-0.07, 0.09)], 0.012)
+    k.sphere(crest, "head", T(0, -0.14, 1.9), (0.022, 0.012, 0.022), seg=8)
+
+
+def katana(k):
+    sword(k, slot_blade="Steel", slot_hilt="Gold", slot_grip="Silk", length=0.92, width=0.042)
+
+
+def samurai_pawn(k):
+    """Ashigaru: lacquered conical hat, simple laced armour, yari spear, clan banner on the back."""
+    plinth(k)
+    samurai_armor(k, sode=False)
+    face2(k, hair="Hair", brow="Hair")
+    k.cyl("LacquerDark", "head", T(0, 0.0, 1.88), 0.27, 0.0, 0.14, seg=16)
+    k.cyl("Lacquer", "head", T(0, 0.0, 1.82), 0.27, 0.27, 0.012, seg=16)
+    k.sphere("Gold", "head", T(0, -0.0, 1.95), (0.02, 0.02, 0.02), seg=6)
+    p = upright(k, "Wood", top=2.05)
+    k.cyl("Lacquer", "hand.R", T(p[0], p[1], p[2] - 0.02), 0.024, 0.024, 0.05, seg=6)
+    leaf_blade(k, "Steel", p, length=0.24, width=0.03)
+    back_flag(k, cloth="White", mark="Lacquer")
+
+
+def samurai_king(k):
+    """Daimyo: great-horned helm with a gold crescent, red war mask, gold-laced armour, war fan banner, katana."""
+    plinth(k)
+    samurai_armor(k, lace="Gold")
+    face2(k, brow="Hair")
+    # menpo: red lacquered mask over the lower face with a white moustache
+    k.box("Lacquer", "head", T(0, -0.1, 1.67), (0.18, 0.1, 0.11), bevel=0.03)
+    k.box("White", "head", T(0, -0.152, 1.69), (0.11, 0.015, 0.018), bevel=0.005)
+    k.box("Dark", "head", T(0, -0.152, 1.66), (0.06, 0.012, 0.008))
+    for s in (1, -1):
+        k.box("Lacquer", "head", T(0.09 * s, -0.08, 1.71) @ R(z=20 * s), (0.04, 0.06, 0.05))
+    kabuto(k)
+    for s in (1, -1):                                                       # tall side horns
+        M, L = along((0.12 * s, -0.08, 1.88), (0.26 * s, -0.12, 2.18)); k.box("Gold", "head", M, (0.03, 0.012, L), bevel=0.004)
+    back_flag(k, pole="Gold", cloth="Gold", mark="Lacquer", h=0.6)
+    katana(k)
+
+
+def samurai_queen(k):
+    """Onna-musha: laced armour over a white robe, white headband, high ponytail, naginata."""
+    plinth(k)
+    samurai_armor(k, armor="Lacquer", lace="White")
+    k.cyl("White", "hips", T(0, 0, 0.5), 0.29, 0.26, 0.5, seg=12)              # robe under the armour
+    face2(k, hair="Hair", brow="Hair", female=True)
+    k.cyl("White", "head", T(0, 0.01, 1.8), 0.128, 0.128, 0.03, seg=14)        # hachimaki
+    for s in (1, -1):
+        k.box("White", "head", T(0.03 * s, 0.14, 1.79) @ R(y=30 * s), (0.02, 0.008, 0.12))
+    for i in range(5):                                                       # high ponytail
+        k.sphere("Hair", "head", T(0, 0.1 + i * 0.02, 1.92 - i * 0.09), (0.045 - i * 0.004,) * 3, seg=8)
+    p = upright(k, "LacquerDark", top=1.95)
+    k.cyl("Gold", "hand.R", T(p[0], p[1], p[2]), 0.026, 0.026, 0.03, seg=8)
+    k.prism("Steel", "hand.R", T(p[0], p[1], p[2] + 0.01), [(0, 0), (0.035, 0.02), (0.045, 0.16), (0.0, 0.34), (0.01, 0.15)], 0.012)
+
+
+def samurai_bishop(k):
+    """Ninja: black wraps and hood, a slit for the eyes, sword on the back, shuriken in hand."""
+    plinth(k)
+    humanoid(k, legs="Ninja", boots="Ninja", tunic="Ninja", sleeve="Ninja", hands="Ninja", belt="NinjaBelt", buckle=None)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        for z in (0.2, 0.3, 0.4):
+            k.cyl("NinjaBelt", f"shin.{x}", T(0.12 * s, 0.01, z) @ R(x=10), 0.075, 0.075, 0.015, seg=8)
+        k.cyl("NinjaBelt", f"forearm.{x}", T(*mid(f"forearm.{x}")), 0.066, 0.066, 0.05, seg=8)
+    k.box("NinjaBelt", "chest", T(0, -0.1, 1.4) @ R(y=35), (0.04, 0.2, 0.45))   # cross strap
+    M, L = along((0, 0.0, 1.5), (0, 0, 1.62)); k.cyl("Ninja", "neck", M, 0.065, 0.065, L, seg=8)
+    k.sphere("Ninja", "head", T(0, 0.01, 1.77), (0.135, 0.145, 0.15), seg=12)
+    k.box("Skin", "head", T(0, -0.125, 1.76), (0.16, 0.03, 0.05), bevel=0.01)
+    for s in (1, -1):
+        k.box("Dark", "head", T(0.045 * s, -0.142, 1.76), (0.034, 0.01, 0.016))
+    k.box("Ninja", "head", T(0, 0.15, 1.8), (0.04, 0.05, 0.1))                 # hood knot
+    # sword on the back, hilt over the right shoulder
+    M, L = along((-0.18, 0.17, 1.0), (0.15, 0.17, 1.7)); k.box("Dark", "chest", M, (0.05, 0.03, L), bevel=0.008)
+    k.box("Gold", "chest", T(0.13, 0.17, 1.66) @ R(y=-25), (0.07, 0.04, 0.012))
+    M, L = along((0.14, 0.17, 1.67), (0.2, 0.17, 1.8)); k.cyl("NinjaBelt", "chest", M, 0.015, 0.015, L, seg=5)
+    # shuriken in the right hand, kunai at the belt
+    hx, hy, hz = mid("hand.R")
+    for a in (0, 90):
+        k.box("Steel", "hand.R", T(hx, hy - 0.06, hz) @ R(y=a + 45), (0.12, 0.006, 0.025))
+    k.cyl("Dark", "hand.R", T(hx, hy - 0.06, hz) @ R(x=90), 0.012, 0.012, 0.01, seg=6)
+    for x in (-0.14, -0.08):
+        k.cyl("Steel", "hips", T(x, -0.22, 0.92) @ R(x=180), 0.012, 0.0, 0.1, seg=4)
+
+
+def samurai_rook(k):
+    """Pagoda: three tiers with flared tiled roofs and upturned eaves, paper lanterns, a bronze cannon on the top deck."""
+    plinth(k)
+    Q = R(z=45)
+    k.cyl("Stone", "hips", T(0, 0, 0.05) @ Q, 0.46, 0.45, 0.1, seg=4)
+    tiers = ((0.1, 0.52, 0.31, "hips"), (0.66, 1.06, 0.25, "hips"), (1.2, 1.44, 0.2, "chest"))
+    for i, (z0, z1, hw, bone) in enumerate(tiers):
+        k.box("Wood", bone, T(0, 0, (z0 + z1) / 2), (2 * hw, 2 * hw, z1 - z0))
+        for s in (1, -1):                                                    # posts and lattice
+            for u in (-hw + 0.02, hw - 0.02):
+                k.box("Lacquer", bone, T(u, s * (hw + 0.004), (z0 + z1) / 2), (0.03, 0.012, z1 - z0))
+                k.box("Lacquer", bone, T(s * (hw + 0.004), u, (z0 + z1) / 2), (0.012, 0.03, z1 - z0))
+        k.box("White", bone, T(0, -hw - 0.006, (z0 + z1) / 2 + 0.02), (hw * 1.2, 0.006, (z1 - z0) * 0.55))
+        rb = "spine" if i == 1 else bone
+        rz = z1 + 0.06
+        k.cyl("Roof", rb, T(0, 0, rz) @ Q, hw * 1.41 + 0.2, hw * 1.41 - 0.02, 0.12, seg=4)
+        for sx in (1, -1):
+            for sy in (1, -1):
+                c = (hw + 0.13) * 0.98
+                k.cyl("Roof", rb, T(sx * c, sy * c, rz) @ R(x=-25 * sy, y=25 * sx), 0.035, 0.0, 0.16, seg=4)
+                k.sphere("Gold", rb, T(sx * c * 1.06, sy * c * 1.06, rz + 0.08), (0.016, 0.016, 0.016), seg=6)
+    k.box("Lacquer", "hips", T(0, -0.32, 0.2), (0.16, 0.02, 0.2))                 # doorway
+    for x in (-0.22, 0.22):                                                    # lanterns
+        k.cyl("Dark", "spine", T(x, -0.36, 1.1), 0.004, 0.004, 0.06, seg=4)
+        k.sphere("Lantern", "spine", T(x, -0.36, 1.03), (0.04, 0.04, 0.055), seg=8)
+    # top deck with a railing and a bronze cannon on the neck bone (it recoils in the bunker clips)
+    k.box("Wood", "chest", T(0, 0, 1.53), (0.42, 0.42, 0.03))
+    for s in (1, -1):
+        for u in (-0.18, 0.0, 0.18):
+            k.box("Lacquer", "chest", T(u, s * 0.2, 1.58), (0.02, 0.02, 0.07))
+            k.box("Lacquer", "chest", T(s * 0.2, u, 1.58), (0.02, 0.02, 0.07))
+    k.box("Wood", "neck", T(0, 0.04, 1.56), (0.12, 0.2, 0.06), bevel=0.01)
+    for s in (1, -1):
+        k.cyl("Wood", "neck", T(0.07 * s, 0.08, 1.55) @ R(y=90), 0.045, 0.045, 0.02, seg=10)
+    M, L = along((0, 0.1, 1.6), (0, -0.48, 1.6)); k.cyl("Bronze", "neck", M, 0.042, 0.03, L, seg=10)
+    for y in (0.05, -0.15, -0.45):
+        k.cyl("Bronze", "neck", T(0, y, 1.6) @ R(x=90), 0.05, 0.05, 0.025, seg=10)
+    M, L = along((0, 0.0, 1.5), (0, 0.0, 1.95)); k.cyl("Gold", "chest", M, 0.012, 0.004, L, seg=5)      # spire
+
+
+def samurai_knight(k):
+    """Mounted samurai: dark bay horse with red tassels, armoured rider with a crescent helm, banner and katana."""
+    plinth(k)
+    horse(k, coat="Horse", mane="Hair", hoof="Dark", tack="Lacquer")
+    for y, z in ((0.32, 1.02), (0.4, 0.95), (-0.3, 1.03)):                  # red tassels on the crupper and breast strap
+        for s in (1, -1):
+            k.cyl("Cord", "body", T(0.2 * s, y, z - 0.08), 0.02, 0.035, 0.12, seg=6)
+    k.box("Cord", "body", T(0, 0.3, 1.13), (0.44, 0.04, 0.02))
+    k.xf = RIDER
+    rider_legs(k, "Silk", "LacquerDark")
+    samurai_armor(k, legs=False)
+    face2(k, brow="Hair")
+    k.box("Lacquer", "head", T(0, -0.1, 1.67), (0.17, 0.1, 0.1), bevel=0.03)
+    kabuto(k)
+    back_flag(k, cloth="Lacquer", mark="White")
+    katana(k)
+    k.xf = Matrix()
+
+
+# ---------------------------------------------------------------- Spartans
+def spartan_body(k, legs=True, cloak="short"):
+    """Bare arms and legs, bronze muscle cuirass, crimson tunic, leather strips, bronze greaves, sandals, cloak."""
+    humanoid(k, legs="Skin", boots="Leather", tunic="Bronze", chest="Bronze", sleeve="Skin", hands="Skin",
+             skirt="Crimson", skirt_len=0.3, belt="Leather", buckle="Bronze", show_legs=legs)
+    if legs:
+        for s in (1, -1):
+            x = "L" if s > 0 else "R"
+            M, L = along((0.12 * s, -0.035, 0.14), (0.12 * s, -0.045, 0.55)); k.box("Bronze", f"shin.{x}", M, (0.12, 0.04, L), bevel=0.015)
+            for z in (0.08, 0.12):
+                k.cyl("Leather", f"foot.{x}", T(0.12 * s, -0.02, z), 0.062, 0.062, 0.015, seg=8)
+    for i in range(14):                                                       # pteruges
+        a = 2 * math.pi * (i + 0.5) / 14
+        k.box("Leather", "hips", T(0.25 * math.cos(a), 0.25 * math.sin(a), 0.86) @ R(z=math.degrees(a) + 90), (0.05, 0.015, 0.2))
+    for z, w in ((1.42, 0.3), (1.3, 0.2), (1.2, 0.18)):                     # muscle lines
+        k.box("BronzeDark", "chest", T(0, -0.142, z), (w, 0.008, 0.012))
+    k.box("BronzeDark", "chest", T(0, -0.142, 1.3), (0.012, 0.008, 0.26))
+    if cloak == "short":
+        cape(k, "Crimson", 0.48, 0.66, 1.5, 0.62, tilt=8)
+    elif cloak == "long":
+        cape(k, "Crimson", 0.52, 0.86, 1.5, 0.1, tilt=10)
+
+
+def corinthian(k, crest="Crimson", transverse=False, raised=False):
+    """Bronze helm with a T-slot face, cheek guards and a horsehair crest. raised=True wears it pushed up."""
+    lift = Matrix.Translation((0, 0.03, 0.1)) if raised else Matrix()
+    H = lambda x, y, z: lift @ T(x, y, z)
+    k.sphere("Bronze", "head", H(0, 0.01, 1.8), (0.15, 0.165, 0.165), seg=14)
+    if not raised:
+        k.box("Dark", "head", H(0, -0.158, 1.775), (0.15, 0.02, 0.028))
+        k.box("Dark", "head", H(0, -0.158, 1.7), (0.035, 0.02, 0.11))
+        for s in (1, -1):
+            k.box("Bronze", "head", H(0.075 * s, -0.12, 1.66) @ R(z=-12 * s), (0.06, 0.08, 0.12), bevel=0.02)
+    k.box("BronzeDark", "head", H(0, 0.0, 1.95), (0.03, 0.2, 0.05))
+    arc = [(-0.21, 0), (0.21, 0), (0.18, 0.13), (0.08, 0.19), (-0.08, 0.19), (-0.18, 0.13)]
+    M = H(0, 0.0, 1.96) if transverse else H(0, 0.0, 1.96) @ R(z=90)
+    k.prism(crest, "head", M, arc, 0.05)
+    if transverse:
+        k.prism("Gold", "head", M @ Matrix.Translation((0, 0, 0.005)), [(u * 1.02, v * 0.6) for u, v in arc], 0.056)
+
+
+def lambda_shield(k, mark="Crimson"):
+    SM = round_bronze_shield(k)
+    F = SM @ Matrix.Translation((0, -0.028, 0))
+    for s in (1, -1):  # each stroke runs from the apex (top centre) down and out
+        M = F @ Matrix.Translation((0.063 * s, 0, -0.016)) @ R(y=-25 * s)
+        k.box(mark, "forearm.L", M, (0.035, 0.006, 0.3))
+
+
+def spartan_pawn(k):
+    """Hoplite: Corinthian helm with a red crest, bronze cuirass, lambda shield, long spear."""
+    plinth(k)
+    spartan_body(k)
+    face2(k, beard="Hair", brow="Hair")
+    corinthian(k)
+    p = upright(k, "Wood", top=2.1, bottom=0.15)
+    k.cyl("Bronze", "hand.R", T(p[0], p[1], p[2] - 0.02), 0.022, 0.022, 0.04, seg=6)
+    leaf_blade(k, "Bronze", p, length=0.24, width=0.045)
+    lambda_shield(k)
+
+
+def spartan_king(k):
+    """Warlord: helm pushed up showing a black beard, transverse red-and-gold crest, floor-length cloak, short sword."""
+    plinth(k)
+    spartan_body(k, cloak="long")
+    face2(k, beard="Hair", hair="Hair", brow="Hair")
+    for s in (1, -1):
+        k.box("Hair", "head", T(0.04 * s, -0.11, 1.585), (0.05, 0.04, 0.07), bevel=0.015)
+    corinthian(k, transverse=True, raised=True)
+    k.sphere("Gold", "chest", T(0.2, -0.12, 1.5), (0.03, 0.015, 0.03), seg=8)          # cloak brooch
+    sword(k, slot_blade="Bronze", slot_hilt="Gold", slot_grip="Leather", length=0.62, width=0.075)
+    lambda_shield(k, mark="Gold")
+
+
+def spartan_queen(k):
+    """Champion: lion pelt over the helm and shoulders, bronze armour, shield and a long double-bladed spear."""
+    plinth(k)
+    spartan_body(k, cloak=None)
+    face2(k, beard="Hair", brow="Hair")
+    corinthian(k, crest="Crimson")
+    # lion pelt: head on the helm, paws over the shoulders, hide down the back
+    k.sphere("Lion", "head", T(0, 0.02, 1.95), (0.15, 0.17, 0.08), seg=12)
+    k.box("Lion", "head", T(0, -0.15, 1.93), (0.12, 0.08, 0.06), bevel=0.02)
+    k.sphere("LionMane", "head", T(0, 0.04, 1.9), (0.19, 0.17, 0.1), seg=12)
+    for s in (1, -1):
+        k.sphere("Lion", "head", T(0.1 * s, -0.04, 2.0), (0.035, 0.02, 0.035), seg=6)
+        k.box("Lion", "chest", T(0.12 * s, -0.12, 1.42) @ R(y=-20 * s), (0.06, 0.04, 0.24), bevel=0.02)
+    cape(k, "Lion", 0.46, 0.62, 1.55, 0.55, tilt=8)
+    p = upright(k, "Wood", top=2.1, bottom=0.05)
+    leaf_blade(k, "Bronze", p, length=0.26, width=0.05)
+    hx, hy, hz = mid("hand.R")
+    k.prism("Bronze", "hand.R", T(hx, hy - 0.01, 0.06) @ R(y=180), [(0, 0), (0.03, 0.05), (0, 0.14), (-0.03, 0.05)], 0.012)
+    lambda_shield(k)
+
+
+def spartan_bishop(k):
+    """Oracle: white linen robes with a gold girdle, laurel wreath, dark hair in a bun, staff topped with a fire bowl."""
+    plinth(k)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        k.box("Leather", f"foot.{x}", T(0.11 * s, -0.05, 0.04), (0.1, 0.22, 0.06), bevel=0.02)
+    k.cyl("Linen", "hips", T(0, 0, 0.56), 0.29, 0.2, 0.86, seg=14)
+    for i in range(8):                                                       # folds
+        a = 2 * math.pi * (i + 0.5) / 8
+        k.box("LinenDark", "hips", T(0.26 * math.cos(a), 0.26 * math.sin(a), 0.42) @ R(z=math.degrees(a) + 90) @ R(x=-6), (0.02, 0.02, 0.6))
+    k.box("Linen", "spine", T(0, 0, 1.13), (0.32, 0.22, 0.22), bevel=0.05)
+    k.box("Linen", "chest", T(0, 0, 1.35), (0.38, 0.24, 0.26), bevel=0.07)
+    k.cyl("Gold", "hips", T(0, 0, 1.02), 0.2, 0.2, 0.04, seg=12)
+    k.box("Crimson", "chest", T(0.06, -0.125, 1.32) @ R(y=30), (0.06, 0.01, 0.38))         # sash
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        k.sphere("Linen", f"upper_arm.{x}", T(0.2 * s, 0, 1.45), (0.085, 0.1, 0.08), seg=8)
+        M, L = along(*B[f"upper_arm.{x}"]); k.cyl("Skin", f"upper_arm.{x}", M, 0.048, 0.05, L, seg=8)
+        M, L = along(*B[f"forearm.{x}"]); k.cyl("Skin", f"forearm.{x}", M, 0.046, 0.04, L, seg=8)
+        k.torus("Gold", f"forearm.{x}", T(*mid(f"forearm.{x}")), 0.05, 0.008, su=10, sv=4)
+        k.box("Skin", f"hand.{x}", T(*mid(f"hand.{x}")), (0.07, 0.085, 0.095), bevel=0.02)
+    face2(k, hair="Hair", female=True, brow="Hair")
+    k.sphere("Hair", "head", T(0, 0.12, 1.8), (0.07, 0.06, 0.07), seg=8)                    # bun
+    for i in range(12):                                                                      # laurel wreath
+        a = 2 * math.pi * i / 12
+        k.sphere("Laurel", "head", T(0.13 * math.cos(a), 0.135 * math.sin(a) + 0.02, 1.84), (0.03, 0.02, 0.012), seg=6)
+    p = upright(k, "Wood", top=1.9, bottom=0.1)
+    k.cyl("Gold", "hand.R", T(p[0], p[1], p[2] + 0.04), 0.03, 0.08, 0.08, seg=10)
+    for i, (dx, dy, h) in enumerate(((0, 0, 0.2), (0.03, 0.02, 0.13), (-0.03, -0.01, 0.15), (0.0, -0.03, 0.11))):
+        k.cyl("Fire", "hand.R", T(p[0] + dx, p[1] + dy, p[2] + 0.08 + h / 2), 0.035, 0.0, h, seg=6)
+
+
+def spartan_rook(k):
+    """Watchtower: round marble tower ringed with columns and a painted frieze, hung with bronze shields; ballista on the roof."""
+    plinth(k)
+    k.cyl("MarbleDark", "hips", T(0, 0, 0.05), 0.4, 0.4, 0.1, seg=20)
+    k.cyl("MarbleDark", "hips", T(0, 0, 0.12), 0.38, 0.38, 0.05, seg=20)
+    k.cyl("Marble", "hips", T(0, 0, 0.6), 0.3, 0.29, 1.0, seg=20)
+    k.cyl("Marble", "spine", T(0, 0, 1.19), 0.29, 0.29, 0.18, seg=20)
+    for i in range(12):                                                       # colonnade
+        a = 2 * math.pi * (i + 0.5) / 12
+        x, y = 0.35 * math.cos(a), 0.35 * math.sin(a)
+        M, L = along((x, y, 0.15), (x, y, 1.0)); k.cyl("Marble", "hips", M, 0.035, 0.03, L, seg=8)
+        k.box("MarbleDark", "hips", T(x, y, 1.02), (0.08, 0.08, 0.04))
+    k.cyl("MarbleDark", "hips", T(0, 0, 1.07), 0.4, 0.4, 0.06, seg=20)
+    k.cyl("Crimson", "spine", T(0, 0, 1.17), 0.295, 0.295, 0.07, seg=20)                  # frieze
+    for i in range(10):
+        a = 2 * math.pi * i / 10
+        k.box("Gold", "spine", tangent(0.297, a, 1.17), (0.05, 0.01, 0.03))
+    k.box("Dark", "hips", T(0, -0.3, 0.32), (0.16, 0.02, 0.36))                             # doorway
+    k.box("Bronze", "hips", T(0, -0.305, 0.31), (0.13, 0.02, 0.32))
+    for a in (0.0, 0.5 * math.pi, math.pi):                                                 # hung shields
+        k.cyl("Bronze", "spine", tangent(0.31, a, 1.18) @ R(x=90), 0.075, 0.075, 0.02, seg=14)
+        k.box("Crimson", "spine", tangent(0.325, a, 1.18), (0.012, 0.006, 0.08))
+    k.cyl("MarbleDark", "chest", T(0, 0, 1.33), 0.29, 0.38, 0.1, seg=20)
+    k.cyl("Marble", "chest", T(0, 0, 1.43), 0.38, 0.38, 0.1, seg=20)
+    for i in range(8):
+        a = 2 * math.pi * (i + 0.5) / 8
+        k.box("Marble", "chest", tangent(0.345, a, 1.53), (0.13, 0.07, 0.1), bevel=0.008)
+    def firepot(p):
+        x, y, z = p
+        k.sphere("BronzeDark", "neck", T(x, y, z), (0.045, 0.045, 0.045), seg=8)
+        k.cyl("Fire", "neck", T(x, y, z + 0.06), 0.035, 0.0, 0.1, seg=6)
+    catapult(k, lambda M, L: k.box("Wood", "neck", M, (0.04, 0.035, L), bevel=0.006), "Bronze", firepot, "BronzeDark", "Wood")
+
+
+LION = beast_rig(body=((0, 0.36, 0.82), (0, -0.3, 0.9)), neck=((0, -0.28, 0.92), (0, -0.46, 1.04)),
+                 head=((0, -0.46, 1.04), (0, -0.74, 0.98)), jaw=((0, -0.52, 0.96), (0, -0.76, 0.9)),
+                 tail=((0, 0.42, 0.9), (0, 0.8, 0.7)),
+                 fl=((0.15, -0.24, 0.76), (0.15, -0.22, 0.4), (0.15, -0.26, 0.03)),
+                 bl=((0.14, 0.32, 0.8), (0.14, 0.42, 0.42), (0.14, 0.34, 0.03)))
+
+
+def spartan_knight(k):
+    """War Lion: great maned lion in a bronze chanfron and crimson saddle cloth, ridden by a hoplite with sword and shield."""
+    RB = {n: (h, t) for n, h, t, *_ in LION}
+    plinth(k)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        limb(k, "Lion", f"fl_up.{x}", RB, 0.1, 0.075)
+        limb(k, "Lion", f"fl_lo.{x}", RB, 0.07, 0.065)
+        k.sphere("Lion", f"bl_up.{x}", T(0.14 * s, 0.34, 0.74), (0.11, 0.15, 0.16), seg=10)
+        limb(k, "Lion", f"bl_up.{x}", RB, 0.09, 0.06)
+        limb(k, "Lion", f"bl_lo.{x}", RB, 0.06, 0.055)
+        for pre in ("fl", "bl"):
+            hx, hy, hz = RB[f"{pre}_lo.{x}"][1]
+            k.box("Lion", f"{pre}_lo.{x}", T(hx, hy - 0.03, hz + 0.035), (0.12, 0.16, 0.07), bevel=0.025)
+            for c in (-0.035, -0.012, 0.012, 0.035):
+                k.cyl("Bone", f"{pre}_lo.{x}", T(hx + c, hy - 0.11, hz + 0.02) @ R(x=100), 0.009, 0.0, 0.04, seg=4)
+    k.sphere("Lion", "body", T(0, 0.04, 0.86), (0.21, 0.44, 0.23), seg=14)
+    k.sphere("Lion", "body", T(0, -0.22, 0.92), (0.22, 0.22, 0.24), seg=12)
+    k.box("Crimson", "body", T(0, 0.08, 1.03), (0.46, 0.4, 0.2), bevel=0.04)
+    k.box("Gold", "body", T(0, 0.08, 0.93), (0.47, 0.41, 0.02))
+    k.box("Leather", "body", T(0, 0.1, 1.15), (0.3, 0.34, 0.05), bevel=0.015)
+    k.box("Leather", "body", T(0, 0.27, 1.2), (0.24, 0.04, 0.1), bevel=0.015)
+    # mane: a great ruff around the neck and head
+    k.sphere("LionMane", "neck_q", T(0, -0.42, 1.02), (0.26, 0.2, 0.27), seg=12)
+    for i in range(14):
+        a = 2 * math.pi * i / 14
+        k.cyl("LionMane", "head_q", T(0.2 * math.cos(a), -0.5, 1.03 + 0.2 * math.sin(a)) @ R(y=-math.degrees(a) + 90) @ R(x=-80), 0.05, 0.0, 0.13, seg=4)
+    k.sphere("Lion", "head_q", T(0, -0.58, 1.02), (0.13, 0.13, 0.13), seg=12)
+    M, L = along((0, -0.64, 0.98), (0, -0.78, 0.95)); k.box("LionLight", "head_q", M, (0.11, 0.09, L), bevel=0.03)
+    k.box("Dark", "head_q", T(0, -0.79, 0.98), (0.05, 0.02, 0.03), bevel=0.008)
+    k.box("Bronze", "head_q", T(0, -0.62, 1.1) @ R(x=-30), (0.1, 0.16, 0.02), bevel=0.008)
+    for s in (1, -1):
+        k.sphere("Dark", "head_q", T(0.055 * s, -0.69, 1.05), (0.014, 0.01, 0.012), seg=6)
+        k.sphere("Lion", "head_q", T(0.09 * s, -0.53, 1.13), (0.035, 0.02, 0.035), seg=6)
+        k.cyl("Bone", "head_q", T(0.03 * s, -0.77, 0.92) @ R(x=180), 0.009, 0.0, 0.045, seg=4)
+    M, L = along((0, -0.56, 0.93), (0, -0.78, 0.89)); k.box("LionLight", "jaw", M, (0.08, 0.04, L), bevel=0.012)
+    M, L = along(*RB["tail"]); k.cyl("Lion", "tail", M, 0.03, 0.022, L, seg=6)
+    k.sphere("LionMane", "tail", T(*RB["tail"][1]), (0.05, 0.05, 0.06), seg=8)
+    k.xf = RIDER
+    rider_legs(k, "Skin", "Leather")
+    spartan_body(k, legs=False)
+    face2(k, beard="Hair", brow="Hair")
+    corinthian(k)
+    sword(k, slot_blade="Bronze", slot_hilt="Gold", slot_grip="Leather", length=0.62, width=0.075)
+    lambda_shield(k)
+    k.xf = Matrix()
+
+
+# ---------------------------------------------------------------- Asgardians
+def asgard_body(k, legs=True, cloak=True, cloak_slot="Celestial"):
+    """Gold scale armour over sky-blue cloth, glowing rune lines, round pauldrons, a long cloak."""
+    humanoid(k, legs="Celestial", boots="GoldDark", tunic="Gold", chest="Gold", sleeve="Celestial", forearm="Gold",
+             hands="Leather", skirt="Celestial", skirt_len=0.42, belt="GoldDark", buckle="Glow", show_legs=legs)
+    for z in (1.42, 1.3, 1.18):                                               # glowing rune lines
+        k.box("Glow", "chest", T(0, -0.143, z), (0.22 - abs(z - 1.3) * 0.5, 0.006, 0.01))
+    k.box("Glow", "chest", T(0, -0.143, 1.3), (0.01, 0.006, 0.26))
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        k.sphere("Gold", f"upper_arm.{x}", T(0.24 * s, 0, 1.48), (0.13, 0.13, 0.09), seg=10, smooth=False)
+        k.torus("Glow", f"upper_arm.{x}", T(0.24 * s, 0, 1.45), 0.12, 0.008, su=14, sv=4)
+    if cloak:
+        cape(k, cloak_slot, 0.52, 0.8, 1.5, 0.25, tilt=9)
+
+
+def winged_helm(k, wings=0.14, slot="Gold"):
+    k.sphere(slot, "head", T(0, 0.01, 1.82), (0.15, 0.16, 0.13), seg=14)
+    k.cyl(slot, "head", T(0, 0.01, 1.79), 0.158, 0.158, 0.035, seg=14)
+    k.box("Glow", "head", T(0, -0.158, 1.79), (0.05, 0.008, 0.02))
+    for s in (1, -1):
+        for i in range(3):                                                    # layered feathers
+            k.prism("Feather", "head", T(0.15 * s, 0.02 + 0.02 * i, 1.82 + 0.02 * i) @ R(z=90 - 30 * s) @ R(y=-(30 + 12 * i)),
+                    [(0, 0), (wings * (1.0 - 0.2 * i), 0.03), (wings * (1.1 - 0.2 * i), 0.08), (0.02, 0.05)], 0.012)
+
+
+def big_wings(k):
+    """Valkyrie wings on the back: three layers of feathers per side."""
+    for s in (1, -1):
+        for i in range(4):
+            L = 0.55 - i * 0.1
+            k.prism("Feather", "chest", T(0.08 * s, 0.17 + 0.01 * i, 1.42 - 0.05 * i) @ R(z=0 if s > 0 else 180) @ R(y=-55 + 18 * i),
+                    [(0, 0), (L * 0.3, 0.06), (L, 0.04), (L * 0.95, -0.03), (L * 0.3, -0.06)], 0.015)
+        k.prism("Gold", "chest", T(0.08 * s, 0.165, 1.42) @ R(z=0 if s > 0 else 180) @ R(y=-55), [(0, 0.02), (0.3, 0.03), (0.3, 0.0), (0, -0.01)], 0.02)
+
+
+def glow_spear(k, top=2.1):
+    p = upright(k, "GoldDark", top=top, bottom=0.15)
+    k.cyl("Gold", "hand.R", T(p[0], p[1], p[2] - 0.02), 0.026, 0.026, 0.05, seg=6)
+    leaf_blade(k, "Glow", p, length=0.28, width=0.045)
+    for z in (1.3, 1.5, 1.7):
+        k.box("Glow", "hand.R", T(p[0], p[1] - 0.02, z), (0.01, 0.006, 0.05))
+
+
+def asgard_pawn(k):
+    """Einherjar: gold armour, small winged helm, glowing spear, gold-and-blue round shield."""
+    plinth(k)
+    asgard_body(k, cloak=False)
+    face2(k, beard="Blond", brow="Blond")
+    winged_helm(k)
+    glow_spear(k)
+    SM = T(0.44, -0.07, 1.02) @ R(z=37) @ R(x=-8)
+    k.cyl("Celestial", "forearm.L", SM @ R(x=90), 0.23, 0.23, 0.03, seg=18)
+    k.torus("Gold", "forearm.L", SM @ R(x=90), 0.23, 0.014, su=20, sv=4)
+    k.sphere("Gold", "forearm.L", SM @ Matrix.Translation((0, -0.03, 0)), (0.05, 0.035, 0.05), seg=10)
+    k.torus("Glow", "forearm.L", SM @ Matrix.Translation((0, -0.018, 0)) @ R(x=90), 0.13, 0.006, su=16, sv=4)
+
+
+def asgard_king(k):
+    """All-Father: one eye under a patch, long white beard, wide-winged crown helm, dark star-cloak, glowing spear, raven."""
+    plinth(k)
+    asgard_body(k, cloak_slot="Night")
+    for i in range(7):                                                         # stars on the cloak
+        k.sphere("Glow", "chest", T(-0.24 + i * 0.08, 0.22 + 0.01 * (i % 2), 1.3 - 0.25 * (i % 3)), (0.01, 0.006, 0.01), seg=4)
+    face2(k, hair="Beard", beard="Beard", brow="Beard")
+    k.box("Beard", "head", T(0, -0.1, 1.53), (0.17, 0.08, 0.2), bevel=0.04)
+    k.box("Dark", "head", T(0.047, -0.13, 1.755), (0.045, 0.012, 0.035), bevel=0.006)          # eye patch
+    M, L = along((-0.12, -0.08, 1.8), (0.13, -0.11, 1.72)); k.box("Dark", "head", M, (0.008, 0.008, L))
+    k.sphere("Glow", "head", T(-0.047, -0.131, 1.755), (0.012, 0.006, 0.01), seg=6)
+    winged_helm(k, wings=0.2)
+    for i in range(5):
+        a = math.radians(-60 + i * 30)
+        k.cyl("Gold", "head", T(0.15 * math.sin(a), -0.15 * math.cos(a) + 0.01, 1.9), 0.022, 0.0, 0.08, seg=4)
+    glow_spear(k, top=2.25)
+    rx, ry, rz = -0.2, 0.02, 1.56                                                # raven on the right shoulder
+    k.sphere("Raven", "chest", T(rx, ry, rz + 0.05), (0.05, 0.08, 0.05), seg=8)
+    k.sphere("Raven", "chest", T(rx, ry - 0.07, rz + 0.11), (0.035, 0.035, 0.035), seg=8)
+    k.cyl("Gold", "chest", T(rx, ry - 0.12, rz + 0.105) @ R(x=-95), 0.012, 0.0, 0.05, seg=4)
+    k.prism("Raven", "chest", T(rx, ry + 0.09, rz + 0.04) @ R(z=90) @ R(y=10), [(0, 0.02), (0.1, 0.0), (0, -0.02)], 0.06)
+
+
+def asgard_queen(k):
+    """Valkyrie: winged helm over blond braids, gold armour, great white wings, glowing sword, round shield."""
+    plinth(k)
+    asgard_body(k, cloak=False)
+    big_wings(k)
+    face2(k, hair="Blond", female=True, brow="Blond")
+    for s in (1, -1):
+        for i in range(6):
+            k.sphere("Blond", "chest", T(0.105 * s, -0.07 - 0.004 * i, 1.6 - i * 0.07), (0.034 - 0.002 * i,) * 3, seg=8)
+    winged_helm(k, wings=0.17)
+    sword(k, slot_blade="Silver", slot_hilt="Gold", slot_grip="Leather", length=0.9, width=0.06, glow="Glow")
+    SM = T(0.44, -0.07, 1.02) @ R(z=37) @ R(x=-8)
+    k.cyl("Silver", "forearm.L", SM @ R(x=90), 0.2, 0.2, 0.03, seg=18)
+    k.torus("Gold", "forearm.L", SM @ R(x=90), 0.2, 0.013, su=20, sv=4)
+    k.sphere("Gold", "forearm.L", SM @ Matrix.Translation((0, -0.03, 0)), (0.045, 0.03, 0.045), seg=10)
+
+
+def asgard_bishop(k):
+    """Thunderer: red-bearded storm god, bare arms, red cloak, short-hafted hammer crackling with lightning."""
+    plinth(k)
+    humanoid(k, legs="Celestial", boots="GoldDark", tunic="Silver", chest="Silver", sleeve="Skin", forearm="Skin",
+             hands="Leather", skirt="Celestial", skirt_len=0.34, belt="GoldDark", buckle="Glow")
+    for z in (1.42, 1.32, 1.22):
+        for x in (-0.12, 0.0, 0.12):
+            k.sphere("GoldDark", "chest", T(x, -0.143, z), (0.03, 0.01, 0.03), seg=6)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        M, L = along(*B[f"forearm.{x}"]); k.cyl("Leather", f"forearm.{x}", M @ Matrix.Translation((0, 0, 0.04)), 0.066, 0.06, L * 0.5, seg=8)
+        k.box("Silver", f"upper_arm.{x}", T(0.24 * s, 0, 1.49) @ R(y=-15 * s), (0.14, 0.18, 0.05), bevel=0.015)
+    cape(k, "Crimson", 0.54, 0.82, 1.5, 0.25, tilt=9)
+    face2(k, hair="Ginger", beard="Ginger", brow="Ginger")
+    k.box("Ginger", "head", T(0, -0.09, 1.57), (0.17, 0.09, 0.12), bevel=0.04)
+    for s in (1, -1):
+        k.box("Ginger", "head", T(0.13 * s, 0.05, 1.62), (0.04, 0.09, 0.26), bevel=0.015)
+    k.cyl("Silver", "head", T(0, 0.01, 1.82), 0.135, 0.135, 0.025, seg=14)
+    # hammer: short haft along the sword line, big square head, lightning around it
+    h = Vector(mid("hand.R", dy=-0.02))
+    d = Vector((0, -1, 0.55)).normalized()
+    P = lambda t: tuple(h + d * t)
+    M, L = along(P(-0.12), P(0.3)); k.cyl("Leather", "hand.R", M, 0.022, 0.022, L, seg=6)
+    Mh = T(*P(0.36)) @ d.to_track_quat("Z", "Y").to_matrix().to_4x4()
+    k.box("Silver", "hand.R", Mh, (0.14, 0.26, 0.14), bevel=0.02)
+    k.box("Glow", "hand.R", Mh, (0.15, 0.1, 0.15))
+    for i, (a, b) in enumerate(((20, 0.2), (130, 0.18), (250, 0.22))):
+        r = math.radians(a)
+        k.cyl("Lightning", "hand.R", Mh @ Matrix.Translation((0.12 * math.cos(r), 0.12 * math.sin(r), 0.05)) @ R(x=35, y=a), 0.012, 0.0, b, seg=4)
+
+
+def asgard_rook(k):
+    """Bifrost Gate: gold-and-stone tower wrapped in glowing rainbow bands, rune doors, a catapult hurling a star orb."""
+    plinth(k)
+    k.cyl("StoneDark", "hips", T(0, 0, 0.05), 0.41, 0.4, 0.1, seg=20)
+    k.cyl("Stone", "hips", T(0, 0, 0.6), 0.33, 0.3, 1.0, seg=20)
+    k.cyl("Stone", "spine", T(0, 0, 1.19), 0.3, 0.3, 0.18, seg=20)
+    for i, slot in enumerate(("RbRed", "RbYellow", "RbGreen", "RbBlue", "RbViolet")):
+        z = 0.4 + i * 0.14
+        r = 0.33 - z * 0.03 + 0.012
+        k.cyl(slot, "hips", T(0, 0, z), r, r, 0.05, seg=20)
+    k.cyl("Gold", "hips", T(0, 0, 1.08), 0.32, 0.32, 0.05, seg=20)
+    k.prism("Gold", "hips", T(0, -0.33, 0.0), [(-0.14, 0), (0.14, 0), (0.14, 0.26), (0, 0.38), (-0.14, 0.26)], 0.04)
+    k.prism("Glow", "hips", T(0, -0.355, 0.02), [(-0.1, 0), (0.1, 0), (0.1, 0.22), (0, 0.32), (-0.1, 0.22)], 0.01)
+    for z in (0.1, 0.18, 0.26):
+        k.box("Gold", "hips", T(0, -0.362, z), (0.006, 0.006, 0.05))
+    for a in (0.0, math.pi * 0.5, math.pi):
+        k.box("Glow", "spine", tangent(0.3, a, 1.19), (0.05, 0.01, 0.1))
+    k.cyl("Gold", "chest", T(0, 0, 1.33), 0.3, 0.4, 0.1, seg=20)
+    k.cyl("Stone", "chest", T(0, 0, 1.43), 0.4, 0.4, 0.1, seg=20)
+    for i in range(8):
+        a = 2 * math.pi * (i + 0.5) / 8
+        k.cyl("Gold", "chest", tangent(0.36, a, 1.56), 0.04, 0.0, 0.18, seg=4)
+    def star_orb(p):
+        x, y, z = p
+        k.sphere("Glow", "neck", T(x, y, z), (0.05, 0.05, 0.05), seg=8, smooth=False)
+        k.torus("RbViolet", "neck", T(x, y, z) @ R(x=60), 0.065, 0.006, su=12, sv=4)
+    catapult(k, lambda M, L: k.box("Gold", "neck", M, (0.04, 0.035, L), bevel=0.006), "Gold", star_orb, "GoldDark", "GoldDark")
+
+
+def asgard_knight(k):
+    """Sleipnir: the eight-legged grey horse with a glowing mane, gold chanfron, ridden by a gold-armoured warrior."""
+    plinth(k)
+    horse(k, coat="HorseGrey", mane="Glow", hoof="Gold", tack="GoldDark", eight=True)
+    k.box("Gold", "head_q", T(0, -0.62, 1.25) @ R(x=-45), (0.14, 0.03, 0.22), bevel=0.01)
+    k.cyl("Gold", "head_q", T(0, -0.55, 1.42) @ R(x=-20), 0.02, 0.0, 0.14, seg=5)
+    k.box("Celestial", "body", T(0, 0.1, 1.05), (0.46, 0.4, 0.12), bevel=0.03)
+    k.box("Gold", "body", T(0, 0.1, 0.99), (0.47, 0.41, 0.015))
+    k.xf = RIDER
+    rider_legs(k, "Celestial", "GoldDark")
+    asgard_body(k, legs=False)
+    face2(k, beard="Blond", brow="Blond")
+    winged_helm(k)
+    sword(k, slot_blade="Silver", slot_hilt="Gold", slot_grip="Leather", length=0.9, width=0.06, glow="Glow")
+    k.xf = Matrix()
+
+
+# ---------------------------------------------------------------- Machine Legion
+def robot_body(k, plate="Plate", frame="Gunmetal", glow="Glow", bulk=1.0, legs=True):
+    """Armour plates over a dark frame: piston legs, glowing chest core, vents, big shoulders."""
+    if legs:
+        for s in (1, -1):
+            x = "L" if s > 0 else "R"
+            k.sphere(frame, f"thigh.{x}", T(0.12 * s, 0, 0.96), (0.07, 0.07, 0.07), seg=8)
+            k.box(plate, f"thigh.{x}", T(0.12 * s, 0, 0.77), (0.16 * bulk, 0.17 * bulk, 0.34), bevel=0.03)
+            k.sphere(frame, f"shin.{x}", T(0.12 * s, -0.02, 0.56), (0.07, 0.07, 0.07), seg=8)
+            M, L = along((0.12 * s, 0.02, 0.14), (0.12 * s, 0.0, 0.52)); k.cyl(frame, f"shin.{x}", M, 0.04, 0.04, L, seg=6)
+            M, L = along((0.12 * s, -0.03, 0.18), (0.12 * s, -0.04, 0.5)); k.box(plate, f"shin.{x}", M, (0.13 * bulk, 0.06, L), bevel=0.015)
+            k.box(glow, f"shin.{x}", T(0.12 * s, -0.075, 0.36), (0.06, 0.008, 0.012))
+            k.box(frame, f"foot.{x}", T(0.12 * s, -0.05, 0.05), (0.15 * bulk, 0.28, 0.1), bevel=0.02)
+            k.box("Hazard", f"foot.{x}", T(0.12 * s, -0.19, 0.05), (0.14 * bulk, 0.02, 0.06))
+    k.box(frame, "hips", T(0, 0, 0.98), (0.32 * bulk, 0.22, 0.14), bevel=0.03)
+    k.cyl(frame, "spine", T(0, 0, 1.13), 0.11, 0.13, 0.22, seg=10)
+    for z in (1.06, 1.13, 1.2):
+        k.cyl("Plate", "spine", T(0, 0, z), 0.135, 0.135, 0.03, seg=10)
+    k.box(plate, "chest", T(0, 0, 1.37), (0.5 * bulk, 0.3, 0.32), bevel=0.06)
+    k.cyl(frame, "chest", T(0, -0.15, 1.37) @ R(x=90), 0.07, 0.07, 0.02, seg=12)
+    k.sphere(glow, "chest", T(0, -0.16, 1.37), (0.05, 0.02, 0.05), seg=10)
+    for s in (1, -1):
+        for z in (1.28, 1.32, 1.36):
+            k.box("Dark", "chest", T(0.16 * s * bulk, -0.152, z), (0.08, 0.006, 0.014))
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        k.sphere(plate, f"upper_arm.{x}", T(0.27 * s * bulk, 0, 1.47), (0.13 * bulk, 0.14, 0.11), seg=10, smooth=False)
+        k.box("Hazard", f"upper_arm.{x}", T(0.27 * s * bulk, -0.1, 1.5), (0.1, 0.02, 0.03))
+        M, L = along(*B[f"upper_arm.{x}"]); k.cyl(frame, f"upper_arm.{x}", M, 0.045, 0.045, L, seg=6)
+        k.sphere(frame, f"forearm.{x}", T(*B[f"forearm.{x}"][0]), (0.06, 0.06, 0.06), seg=8)
+        M, L = along(*B[f"forearm.{x}"]); k.box(plate, f"forearm.{x}", M, (0.11 * bulk, 0.12 * bulk, L), bevel=0.02)
+        k.box(frame, f"hand.{x}", T(*mid(f"hand.{x}")), (0.09, 0.1, 0.11), bevel=0.02)
+    M, L = along((0, 0, 1.5), (0, 0, 1.62)); k.cyl(frame, "neck", M, 0.05, 0.05, L, seg=8)
+
+
+def robot_head(k, plate="Plate", glow="Glow", antenna=True):
+    k.box(plate, "head", T(0, 0.0, 1.76), (0.21, 0.23, 0.2), bevel=0.04)
+    k.box("Dark", "head", T(0, -0.11, 1.77), (0.18, 0.02, 0.06), bevel=0.01)
+    k.box(glow, "head", T(0, -0.122, 1.77), (0.15, 0.006, 0.022))
+    k.box("Gunmetal", "head", T(0, -0.11, 1.68), (0.12, 0.02, 0.04))
+    for x in (-0.04, 0.0, 0.04):
+        k.box("Dark", "head", T(x, -0.122, 1.68), (0.012, 0.006, 0.03))
+    for s in (1, -1):
+        k.cyl("Gunmetal", "head", T(0.115 * s, 0, 1.76) @ R(y=90), 0.05, 0.05, 0.03, seg=10)
+    if antenna:
+        M, L = along((0.08, 0.04, 1.86), (0.1, 0.06, 2.02)); k.cyl("Gunmetal", "head", M, 0.008, 0.005, L, seg=4)
+        k.sphere(glow, "head", T(0.1, 0.06, 2.03), (0.015, 0.015, 0.015), seg=6)
+
+
+def energy_gun(k, size=1.0, twin=False):
+    """A blaster in the right hand, hanging muzzle-down at rest (levels on Shoot). Local -Y = muzzle."""
+    gx, gy, gz = mid("hand.R")
+    G = lambda dx, dy, dz: T(gx, gy, gz) @ R(x=90) @ Matrix.Translation((dx, dy, dz))
+    k.box("Gunmetal", "hand.R", G(0, -0.15 * size, 0.05), (0.07 * size, 0.32 * size, 0.09 * size), bevel=0.012)
+    k.box("Hazard", "hand.R", G(0.037 * size, -0.12 * size, 0.06), (0.006, 0.12, 0.03))
+    for i, dx in enumerate((-0.025, 0.025) if twin else (0.0,)):
+        k.cyl("Plate", "hand.R", G(dx * size, -0.38 * size, 0.06) @ R(x=90), 0.022 * size, 0.022 * size, 0.2 * size, seg=8)
+        k.cyl("Glow", "hand.R", G(dx * size, -0.485 * size, 0.06) @ R(x=90), 0.016 * size, 0.016 * size, 0.012, seg=8)
+    for y in (-0.2, -0.26):
+        k.box("Glow", "hand.R", G(0, y * size, 0.098 * size), (0.04 * size, 0.012, 0.006))
+    k.box("Gunmetal", "hand.R", G(0, 0.0, -0.035), (0.035, 0.045, 0.1), bevel=0.008)
+
+
+def machine_pawn(k):
+    """Drone: lean battle robot with a visor eye, hazard markings and a blaster."""
+    plinth(k)
+    robot_body(k)
+    robot_head(k)
+    energy_gun(k)
+
+
+def machine_king(k):
+    """Overlord: towering command robot with a crown of glowing spikes, armoured cape and an energy blade."""
+    plinth(k)
+    robot_body(k, plate="Chrome", bulk=1.15)
+    cape(k, "Gunmetal", 0.58, 0.86, 1.52, 0.2, tilt=9)
+    for s in (1, -1):
+        k.cyl("Chrome", "chest", T(0.32 * s, 0.0, 1.62) @ R(y=-20 * s), 0.04, 0.0, 0.22, seg=4)
+    robot_head(k, plate="Chrome", antenna=False)
+    for i in range(5):
+        a = math.radians(-60 + i * 30)
+        k.cyl("Glow" if i % 2 == 0 else "Chrome", "head", T(0.11 * math.sin(a), -0.11 * math.cos(a), 1.9), 0.022, 0.0, 0.13 if i == 2 else 0.09, seg=4)
+    k.cyl("Chrome", "head", T(0, 0, 1.87), 0.13, 0.13, 0.03, seg=12)
+    sword(k, slot_blade="Glow", slot_hilt="Chrome", slot_grip="Gunmetal", length=1.0, width=0.06)
+
+
+def machine_queen(k):
+    """Annihilator: heavy siege robot with shoulder missile pods and a twin-barrel arm cannon."""
+    plinth(k)
+    robot_body(k, bulk=1.3)
+    robot_head(k)
+    for s in (1, -1):                                                         # missile pods
+        k.box("Hazard", "chest", T(0.3 * s, 0.08, 1.66), (0.18, 0.22, 0.14), bevel=0.02)
+        for i in range(2):
+            for j in range(2):
+                k.cyl("Dark", "chest", T(0.3 * s + (i - 0.5) * 0.07, -0.032, 1.66 + (j - 0.5) * 0.06) @ R(x=90), 0.022, 0.022, 0.01, seg=8)
+                k.sphere("Glow", "chest", T(0.3 * s + (i - 0.5) * 0.07, -0.036, 1.66 + (j - 0.5) * 0.06), (0.012, 0.006, 0.012), seg=6)
+        k.box("HazardDark", "chest", T(0.3 * s, -0.031, 1.72), (0.18, 0.006, 0.015))
+    energy_gun(k, size=1.4, twin=True)
+
+
+def machine_bishop(k):
+    """Seeker: floating sensor robot with one great eye, a thruster for legs and a laser rod."""
+    plinth(k)
+    k.cyl("Glow", "root", Matrix.Translation((0, 0, 0.09)), 0.22, 0.22, 0.008, seg=20)
+    k.cyl("Gunmetal", "hips", T(0, 0, 0.7), 0.06, 0.2, 0.5, seg=10)
+    k.cyl("Plate", "hips", T(0, 0, 0.95), 0.22, 0.2, 0.08, seg=10)
+    k.cyl("Glow", "hips", T(0, 0, 0.4), 0.045, 0.0, 0.18, seg=8)
+    k.cyl("Glow", "hips", T(0, 0, 0.36) @ R(x=180), 0.07, 0.0, 0.14, seg=8)
+    k.torus("Hazard", "hips", T(0, 0, 0.62), 0.2, 0.015, su=20, sv=4)
+    robot_body(k, plate="Plate", legs=False)
+    k.sphere("Plate", "head", T(0, 0.0, 1.78), (0.15, 0.15, 0.15), seg=14)
+    k.cyl("Gunmetal", "head", T(0, -0.12, 1.78) @ R(x=90), 0.1, 0.1, 0.06, seg=14)
+    k.sphere("Glow", "head", T(0, -0.15, 1.78), (0.07, 0.03, 0.07), seg=12)
+    k.sphere("Dark", "head", T(0, -0.175, 1.78), (0.025, 0.01, 0.025), seg=8)
+    for s in (1, -1):
+        M, L = along((0.1 * s, 0.03, 1.9), (0.2 * s, 0.06, 2.08)); k.cyl("Gunmetal", "head", M, 0.008, 0.005, L, seg=4)
+        k.sphere("Glow", "head", T(0.2 * s, 0.06, 2.09), (0.014, 0.014, 0.014), seg=6)
+    p = upright(k, "Gunmetal", top=1.9, bottom=0.5, r=0.016)
+    k.sphere("Plate", "hand.R", T(*p), (0.04, 0.04, 0.04), seg=8)
+    k.cyl("Glow", "hand.R", T(p[0], p[1], p[2] + 0.08), 0.02, 0.0, 0.12, seg=6)
+
+
+def machine_rook(k):
+    """Turret: hexagonal steel tower with hazard bands, glowing vents, a radar dish and a twin cannon on the roof."""
+    plinth(k)
+    k.cyl("Gunmetal", "hips", T(0, 0, 0.05), 0.42, 0.42, 0.1, seg=6)
+    k.cyl("Plate", "hips", T(0, 0, 0.6), 0.34, 0.31, 1.0, seg=6)
+    k.cyl("Plate", "spine", T(0, 0, 1.19), 0.31, 0.31, 0.18, seg=6)
+    for i in range(12):                                                       # hazard band
+        a = 2 * math.pi * i / 12
+        k.box("Hazard" if i % 2 == 0 else "HazardDark", "hips", tangent(0.335, a + math.pi / 12, 0.2), (0.17, 0.02, 0.1))
+    for a in (math.pi * 1.5 - 0.6, math.pi * 1.5 + 0.6, 0.2, math.pi - 0.2, math.pi * 0.5):
+        for dz in (0.0, 0.05, 0.1):
+            k.box("Glow", "hips", tangent(0.325, a, 0.62 + dz), (0.14, 0.012, 0.018))
+    k.box("Dark", "hips", T(0, -0.31, 0.38), (0.2, 0.03, 0.3))                               # blast door
+    k.box("Hazard", "hips", T(0, -0.326, 0.38), (0.16, 0.01, 0.025))
+    k.cyl("Gunmetal", "hips", T(0, 0, 1.08), 0.33, 0.33, 0.05, seg=6)
+    k.cyl("Gunmetal", "chest", T(0, 0, 1.33), 0.31, 0.39, 0.1, seg=6)
+    k.cyl("Plate", "chest", T(0, 0, 1.43), 0.39, 0.39, 0.1, seg=6)
+    k.cyl("Hazard", "chest", T(0, 0, 1.48), 0.392, 0.392, 0.02, seg=6)
+    # radar dish on a mast at the back
+    M, L = along((0.2, 0.2, 1.48), (0.2, 0.2, 1.8)); k.cyl("Gunmetal", "chest", M, 0.02, 0.02, L, seg=6)
+    k.cyl("Plate", "chest", T(0.2, 0.2, 1.86) @ R(x=-60), 0.14, 0.03, 0.06, seg=12)
+    k.sphere("Glow", "chest", T(0.2, 0.17, 1.88), (0.02, 0.02, 0.02), seg=6)
+    # twin cannon on the neck bone (recoils in the bunker clips)
+    k.cyl("Gunmetal", "chest", T(0, 0, 1.5), 0.15, 0.15, 0.04, seg=12)
+    k.box("Plate", "neck", T(0, 0.03, 1.58), (0.24, 0.24, 0.14), bevel=0.03)
+    k.box("Glow", "neck", T(0, -0.092, 1.6), (0.18, 0.006, 0.02))
+    for s in (1, -1):
+        M, L = along((0.06 * s, -0.08, 1.57), (0.06 * s, -0.6, 1.57)); k.cyl("Gunmetal", "neck", M, 0.028, 0.024, L, seg=8)
+        k.cyl("Glow", "neck", T(0.06 * s, -0.6, 1.57) @ R(x=90), 0.02, 0.02, 0.01, seg=8)
+
+
+def machine_knight(k):
+    """Mech Hound: four-legged robot hunter with piston legs, a glowing visor, steel jaws and a back-mounted gun."""
+    RB = {n: (h, t) for n, h, t, *_ in WOLF}
+    plinth(k)
+    for s in (1, -1):
+        x = "L" if s > 0 else "R"
+        for pre in ("fl", "bl"):
+            up, lo = f"{pre}_up.{x}", f"{pre}_lo.{x}"
+            M, L = along(*RB[up]); k.box("Plate", up, M, (0.11, 0.13, L), bevel=0.02)
+            k.sphere("Gunmetal", lo, T(*RB[lo][0]), (0.06, 0.06, 0.06), seg=8)
+            M, L = along(*RB[lo]); k.cyl("Gunmetal", lo, M, 0.03, 0.03, L, seg=6)
+            M, L = along(*RB[lo]); k.cyl("Chrome", lo, M @ Matrix.Translation((0, 0, -L * 0.15)), 0.042, 0.042, L * 0.4, seg=6)
+            hx, hy, hz = RB[lo][1]
+            k.box("Gunmetal", lo, T(hx, hy - 0.03, hz + 0.035), (0.12, 0.17, 0.07), bevel=0.02)
+            k.box("Hazard", lo, T(hx, hy - 0.12, hz + 0.035), (0.11, 0.02, 0.04))
+    k.box("Plate", "body", T(0, -0.15, 0.92), (0.38, 0.36, 0.3), bevel=0.06)
+    k.box("Gunmetal", "body", T(0, 0.12, 0.88), (0.24, 0.3, 0.2), bevel=0.04)
+    k.box("Plate", "body", T(0, 0.32, 0.88), (0.3, 0.2, 0.24), bevel=0.05)
+    for i in range(5):
+        k.box("Hazard" if i % 2 else "HazardDark", "body", T(0, -0.25 + i * 0.13, 1.1 - 0.02 * i), (0.08, 0.08, 0.04), bevel=0.01)
+    for s in (1, -1):
+        for z in (0.86, 0.9, 0.94):
+            k.box("Glow", "body", T(0.19 * s, -0.14, z), (0.006, 0.18, 0.012))
+    # back-mounted gun
+    k.box("Gunmetal", "body", T(0, 0.05, 1.12), (0.12, 0.2, 0.08), bevel=0.015)
+    M, L = along((0, -0.05, 1.14), (0, -0.4, 1.14)); k.cyl("Plate", "body", M, 0.025, 0.022, L, seg=8)
+    k.cyl("Glow", "body", T(0, -0.4, 1.14) @ R(x=90), 0.018, 0.018, 0.01, seg=8)
+    # neck and head
+    M, L = along((0, -0.28, 0.95), (0, -0.48, 1.12)); k.cyl("Gunmetal", "neck_q", M, 0.08, 0.07, L, seg=8)
+    for t in (0.3, 0.7):
+        k.box("Plate", "neck_q", T(0, -0.28 - 0.2 * t, 1.0 + 0.17 * t) @ R(x=-40), (0.16, 0.08, 0.05), bevel=0.01)
+    k.box("Plate", "head_q", T(0, -0.6, 1.1), (0.2, 0.26, 0.14), bevel=0.035)
+    k.box("Dark", "head_q", T(0, -0.73, 1.12), (0.16, 0.02, 0.05), bevel=0.008)
+    k.box("Glow", "head_q", T(0, -0.742, 1.12), (0.13, 0.006, 0.02))
+    for s in (1, -1):
+        k.cyl("Plate", "head_q", T(0.07 * s, -0.5, 1.21) @ R(x=-25), 0.035, 0.0, 0.12, seg=4)
+        for i in range(3):
+            k.cyl("Chrome", "head_q", T(0.025 * s + 0.02 * (i - 1) * s, -0.72, 1.035) @ R(x=180), 0.008, 0.0, 0.04, seg=4)
+    M, L = along((0, -0.54, 0.99), (0, -0.8, 0.95)); k.box("Gunmetal", "jaw", M, (0.14, 0.05, L), bevel=0.012)
+    for x in (-0.04, 0.0, 0.04):
+        k.cyl("Chrome", "jaw", T(x, -0.77, 0.99), 0.008, 0.0, 0.04, seg=4)
+    M, L = along((0, 0.44, 0.92), (0, 0.72, 1.05)); k.cyl("Gunmetal", "tail", M, 0.015, 0.01, L, seg=5)
+    k.sphere("Glow", "tail", T(0, 0.73, 1.06), (0.022, 0.022, 0.022), seg=6)
+
+RIG_OF = {knight_knight: HORSE, undead_knight: WOLF, mafia_knight: CAR, marine_knight: JEEP, viking_knight: BEAR,
+          samurai_knight: HORSE, spartan_knight: LION, asgard_knight: HORSE, machine_knight: WOLF}
 
 
 def set_action(arm, act):
@@ -2708,10 +3645,38 @@ def main():
                     ("Vikings", "Onyx", viking_bishop, "Vikings_Bishop", 1.8)],
         "vikings_rook": [("Vikings", "Onyx", viking_rook, "Vikings_Rook", 0.0)],
         "vikings_knight": [("Vikings", "Onyx", viking_knight, "Vikings_Knight", 0.0)],
+        "samurai": [("Samurai", "Ivory", samurai_pawn, "Samurai_Pawn", -1.8),
+                ("Samurai", "Ivory", samurai_king, "Samurai_King", -0.6),
+                ("Samurai", "Ivory", samurai_queen, "Samurai_Queen", 0.6),
+                ("Samurai", "Ivory", samurai_bishop, "Samurai_Bishop", 1.8)],
+        "samurai_rook": [("Samurai", "Ivory", samurai_rook, "Samurai_Rook", 0.0)],
+        "samurai_knight": [("Samurai", "Ivory", samurai_knight, "Samurai_Knight", 0.0)],
+        "spartans": [("Spartans", "Onyx", spartan_pawn, "Spartans_Pawn", -1.8),
+                ("Spartans", "Onyx", spartan_king, "Spartans_King", -0.6),
+                ("Spartans", "Onyx", spartan_queen, "Spartans_Queen", 0.6),
+                ("Spartans", "Onyx", spartan_bishop, "Spartans_Bishop", 1.8)],
+        "spartans_rook": [("Spartans", "Onyx", spartan_rook, "Spartans_Rook", 0.0)],
+        "spartans_knight": [("Spartans", "Onyx", spartan_knight, "Spartans_Knight", 0.0)],
+        "asgard": [("Asgardians", "Ivory", asgard_pawn, "Asgard_Pawn", -1.8),
+                ("Asgardians", "Ivory", asgard_king, "Asgard_King", -0.6),
+                ("Asgardians", "Ivory", asgard_queen, "Asgard_Queen", 0.6),
+                ("Asgardians", "Ivory", asgard_bishop, "Asgard_Bishop", 1.8)],
+        "asgard_rook": [("Asgardians", "Ivory", asgard_rook, "Asgard_Rook", 0.0)],
+        "asgard_knight": [("Asgardians", "Ivory", asgard_knight, "Asgard_Knight", 0.0)],
+        "machines": [("Machines", "Onyx", machine_pawn, "Machines_Pawn", -1.8),
+                ("Machines", "Onyx", machine_king, "Machines_King", -0.6),
+                ("Machines", "Onyx", machine_queen, "Machines_Queen", 0.6),
+                ("Machines", "Onyx", machine_bishop, "Machines_Bishop", 1.8)],
+        "machines_rook": [("Machines", "Onyx", machine_rook, "Machines_Rook", 0.0)],
+        "machines_knight": [("Machines", "Onyx", machine_knight, "Machines_Knight", 0.0)],
     }
     kind_of = {"rooks": "tower", "mafia_rook": "tower", "knights": "beast", "mafia_knight": "vehicle",
                "marines_sniper": "sniper", "marines_rook": "bunker", "marines_knight": "vehicle",
-               "vikings_rook": "ship", "vikings_knight": "beast"}  # everything else is humanoid
+               "vikings_rook": "ship", "vikings_knight": "beast",
+               "samurai_rook": "bunker", "samurai_knight": "beast",
+               "spartans_rook": "tower", "spartans_knight": "beast",
+               "asgard_rook": "tower", "asgard_knight": "beast",
+               "machines_rook": "bunker", "machines_knight": "beast"}  # everything else is humanoid
     built = {g: [unit(*spec) for spec in specs] for g, specs in groups.items()}
     every = [a for arms in built.values() for a in arms]
     kinds = {kd: [g for g in built if kind_of.get(g, "human") == kd] for kd in CLIPSETS}
@@ -2737,6 +3702,18 @@ def main():
             "vikings": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Attack", 14), ("Behead", 23), ("Death", 46)],
             "vikings_rook": [("Idle", 0), ("Walk", 6), ("Attack", 8), ("Attack", 13), ("Death", 22), ("Death", 46)],
             "vikings_knight": [("Idle", 0), ("Walk", 0), ("Attack", 8), ("Attack", 14), ("Shoot", 8), ("Death", 46)],
+            "samurai": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Shoot", 10), ("Behead", 23), ("Death", 46)],
+            "samurai_rook": [("Idle", 0), ("Walk", 6), ("Attack", 8), ("Attack", 13), ("Death", 24), ("Death", 46)],
+            "samurai_knight": [("Idle", 0), ("Walk", 0), ("Attack", 8), ("Attack", 14), ("Shoot", 8), ("Death", 46)],
+            "spartans": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Shoot", 10), ("Behead", 23), ("Death", 46)],
+            "spartans_rook": [("Idle", 0), ("Walk", 6), ("Attack", 8), ("Attack", 13), ("Death", 24), ("Death", 46)],
+            "spartans_knight": [("Idle", 0), ("Walk", 0), ("Attack", 8), ("Attack", 14), ("Shoot", 8), ("Death", 46)],
+            "asgard": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Shoot", 10), ("Behead", 23), ("Death", 46)],
+            "asgard_rook": [("Idle", 0), ("Walk", 6), ("Attack", 8), ("Attack", 13), ("Death", 24), ("Death", 46)],
+            "asgard_knight": [("Idle", 0), ("Walk", 0), ("Attack", 8), ("Attack", 14), ("Shoot", 8), ("Death", 46)],
+            "machines": [("Idle", 0), ("Walk", 0), ("Attack", 9), ("Shoot", 10), ("Behead", 23), ("Death", 46)],
+            "machines_rook": [("Idle", 0), ("Walk", 6), ("Attack", 8), ("Attack", 13), ("Death", 24), ("Death", 46)],
+            "machines_knight": [("Idle", 0), ("Walk", 0), ("Attack", 8), ("Attack", 14), ("Shoot", 8), ("Death", 46)],
         }
     for kind, gs in kinds.items():
         arms = [a for g in gs for a in built[g]]

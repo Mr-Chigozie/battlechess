@@ -50,30 +50,54 @@ const UNITS = [
   { id: "undead-pawn", group: "Pawns", file: "export/Undead_Pawn.glb", name: "Skeleton", army: "Army of the Dead", side: "Onyx" },
   { id: "marines-pawn", group: "Pawns", file: "export/Marines_Pawn.glb", name: "Rifleman", army: "Marines", side: "Ivory" },
   { id: "vikings-pawn", group: "Pawns", file: "export/Vikings_Pawn.glb", name: "Raider", army: "Vikings", side: "Onyx" },
+  { id: "samurai-pawn", group: "Pawns", file: "export/Samurai_Pawn.glb", name: "Ashigaru", army: "Samurai Clans", side: "Ivory" },
+  { id: "spartans-pawn", group: "Pawns", file: "export/Spartans_Pawn.glb", name: "Hoplite", army: "Spartans", side: "Onyx" },
+  { id: "asgard-pawn", group: "Pawns", file: "export/Asgard_Pawn.glb", name: "Einherjar", army: "Asgardians", side: "Ivory" },
+  { id: "machines-pawn", group: "Pawns", file: "export/Machines_Pawn.glb", name: "Drone", army: "Machine Legion", side: "Onyx" },
   { id: "knights-king", group: "Kings", file: "export/Knights_King.glb", name: "King", army: "Order of Knights", side: "Ivory" },
   { id: "undead-king", group: "Kings", file: "export/Undead_King.glb", name: "Bone King", army: "Army of the Dead", side: "Onyx" },
   { id: "marines-king", group: "Kings", file: "export/Marines_King.glb", name: "Commander", army: "Marines", side: "Ivory" },
   { id: "vikings-king", group: "Kings", file: "export/Vikings_King.glb", name: "Jarl", army: "Vikings", side: "Onyx" },
+  { id: "samurai-king", group: "Kings", file: "export/Samurai_King.glb", name: "Daimyo", army: "Samurai Clans", side: "Ivory" },
+  { id: "spartans-king", group: "Kings", file: "export/Spartans_King.glb", name: "Warlord", army: "Spartans", side: "Onyx" },
+  { id: "asgard-king", group: "Kings", file: "export/Asgard_King.glb", name: "All-Father", army: "Asgardians", side: "Ivory" },
+  { id: "machines-king", group: "Kings", file: "export/Machines_King.glb", name: "Overlord", army: "Machine Legion", side: "Onyx" },
   { id: "mafia-king", group: "Kings", file: "export/Mafia_King.glb", name: "The Boss", army: "The Mafia", side: "Ivory" },
   { id: "knights-queen", group: "Queens", file: "export/Knights_Queen.glb", name: "Queen", army: "Order of Knights", side: "Ivory" },
   { id: "undead-queen", group: "Queens", file: "export/Undead_Queen.glb", name: "Wraith Queen", army: "Army of the Dead", side: "Onyx" },
   { id: "marines-queen", group: "Queens", file: "export/Marines_Queen.glb", name: "Heavy Gunner", army: "Marines", side: "Ivory" },
   { id: "vikings-queen", group: "Queens", file: "export/Vikings_Queen.glb", name: "Shieldmaiden", army: "Vikings", side: "Onyx" },
+  { id: "samurai-queen", group: "Queens", file: "export/Samurai_Queen.glb", name: "Onna-musha", army: "Samurai Clans", side: "Ivory" },
+  { id: "spartans-queen", group: "Queens", file: "export/Spartans_Queen.glb", name: "Champion", army: "Spartans", side: "Onyx" },
+  { id: "asgard-queen", group: "Queens", file: "export/Asgard_Queen.glb", name: "Valkyrie", army: "Asgardians", side: "Ivory" },
+  { id: "machines-queen", group: "Queens", file: "export/Machines_Queen.glb", name: "Annihilator", army: "Machine Legion", side: "Onyx" },
   { id: "mafia-queen", group: "Queens", file: "export/Mafia_Queen.glb", name: "Underboss", army: "The Mafia", side: "Ivory" },
   { id: "knights-bishop", group: "Bishops", file: "export/Knights_Bishop.glb", name: "Templar", army: "Order of Knights", side: "Ivory" },
   { id: "undead-bishop", group: "Bishops", file: "export/Undead_Bishop.glb", name: "Necromancer", army: "Army of the Dead", side: "Onyx" },
   { id: "marines-bishop", group: "Bishops", file: "export/Marines_Bishop.glb", name: "Sniper", army: "Marines", side: "Ivory" },
   { id: "vikings-bishop", group: "Bishops", file: "export/Vikings_Bishop.glb", name: "Seer", army: "Vikings", side: "Onyx" },
+  { id: "samurai-bishop", group: "Bishops", file: "export/Samurai_Bishop.glb", name: "Ninja", army: "Samurai Clans", side: "Ivory" },
+  { id: "spartans-bishop", group: "Bishops", file: "export/Spartans_Bishop.glb", name: "Oracle", army: "Spartans", side: "Onyx" },
+  { id: "asgard-bishop", group: "Bishops", file: "export/Asgard_Bishop.glb", name: "Thunderer", army: "Asgardians", side: "Ivory" },
+  { id: "machines-bishop", group: "Bishops", file: "export/Machines_Bishop.glb", name: "Seeker", army: "Machine Legion", side: "Onyx" },
   { id: "mafia-bishop", group: "Bishops", file: "export/Mafia_Bishop.glb", name: "Consigliere", army: "The Mafia", side: "Ivory" },
   { id: "knights-rook", group: "Rooks", file: "export/Knights_Rook.glb", name: "Keep", army: "Order of Knights", side: "Ivory" },
   { id: "undead-rook", group: "Rooks", file: "export/Undead_Rook.glb", name: "Crypt", army: "Army of the Dead", side: "Onyx" },
   { id: "marines-rook", group: "Rooks", file: "export/Marines_Rook.glb", name: "Bunker", army: "Marines", side: "Ivory" },
   { id: "vikings-rook", group: "Rooks", file: "export/Vikings_Rook.glb", name: "Longship", army: "Vikings", side: "Onyx" },
+  { id: "samurai-rook", group: "Rooks", file: "export/Samurai_Rook.glb", name: "Pagoda", army: "Samurai Clans", side: "Ivory" },
+  { id: "spartans-rook", group: "Rooks", file: "export/Spartans_Rook.glb", name: "Watchtower", army: "Spartans", side: "Onyx" },
+  { id: "asgard-rook", group: "Rooks", file: "export/Asgard_Rook.glb", name: "Bifrost Gate", army: "Asgardians", side: "Ivory" },
+  { id: "machines-rook", group: "Rooks", file: "export/Machines_Rook.glb", name: "Turret", army: "Machine Legion", side: "Onyx" },
   { id: "mafia-rook", group: "Rooks", file: "export/Mafia_Rook.glb", name: "Speakeasy", army: "The Mafia", side: "Ivory" },
   { id: "knights-knight", group: "Knights", file: "export/Knights_Knight.glb", name: "Paladin", army: "Order of Knights", side: "Ivory" },
   { id: "undead-knight", group: "Knights", file: "export/Undead_Knight.glb", name: "Dire Wolf", army: "Army of the Dead", side: "Onyx" },
   { id: "marines-knight", group: "Knights", file: "export/Marines_Knight.glb", name: "Jeep", army: "Marines", side: "Ivory" },
   { id: "vikings-knight", group: "Knights", file: "export/Vikings_Knight.glb", name: "War Bear", army: "Vikings", side: "Onyx" },
+  { id: "samurai-knight", group: "Knights", file: "export/Samurai_Knight.glb", name: "Samurai Cavalry", army: "Samurai Clans", side: "Ivory" },
+  { id: "spartans-knight", group: "Knights", file: "export/Spartans_Knight.glb", name: "War Lion", army: "Spartans", side: "Onyx" },
+  { id: "asgard-knight", group: "Knights", file: "export/Asgard_Knight.glb", name: "Sleipnir", army: "Asgardians", side: "Ivory" },
+  { id: "machines-knight", group: "Knights", file: "export/Machines_Knight.glb", name: "Mech Hound", army: "Machine Legion", side: "Onyx" },
   { id: "mafia-knight", group: "Knights", file: "export/Mafia_Knight.glb", name: "Getaway Car", army: "The Mafia", side: "Ivory" },
 ];
 const GROUPS = [...new Set(UNITS.map(u => u.group))];
@@ -162,17 +186,29 @@ function hookAttackReturn(entry) {
 
 function layout() {
   const shown = UNITS.filter(u => selection === "group:" + u.group || u.id === selection);
+  const portrait = innerWidth < innerHeight;
+  // Big groups go in rows (3 across on a phone, 5 on a wide screen), front row nearest the camera.
+  const cols = Math.min(shown.length, portrait ? 3 : 5);
+  const rows = Math.ceil(shown.length / cols);
+  const gapX = 1.3, gapZ = 1.6;
   shown.forEach((u, i) => {
     const e = loaded.get(u.id);
+    const r = Math.floor(i / cols), c = i % cols;
+    const inRow = Math.min(cols, shown.length - r * cols);  // centre a short last row
     e.root.visible = true;
-    e.root.position.set((i - (shown.length - 1) / 2) * 1.2, 0, 0);
+    e.root.position.set((c - (inRow - 1) / 2) * gapX, 0, ((rows - 1) / 2 - r) * gapZ);
   });
   for (const u of UNITS) if (!shown.includes(u)) loaded.get(u.id).root.visible = false;
-  const wide = shown.length > 1;
-  const portrait = innerWidth < innerHeight;
-  const dist = (wide ? 3.4 + shown.length * 1.0 : 3.6) * (portrait ? (wide ? 1.9 : 1.45) : 1);
-  controls.target.set(0, 1.05, 0);
-  camera.position.set(dist * 0.35, 1.6, dist);
+  // Fit the grid: wide enough for the columns, tall enough for the figures and the rows behind them.
+  const halfV = THREE.MathUtils.degToRad(camera.fov / 2);
+  const halfH = Math.atan(Math.tan(halfV) * innerWidth / innerHeight);
+  const fitW = (cols * gapX / 2 + 0.2) / Math.tan(halfH);
+  const fitH = (2.5 + (rows - 1) * 0.9) / 2 / Math.tan(halfV);
+  const dist = Math.max(fitW, fitH, 3.2) * (portrait ? 1.3 : 1.05) + (rows - 1) * gapZ / 2;
+  controls.maxDistance = Math.max(12, dist * 1.6);
+  // On a phone the chips cover the top of the screen, so aim higher to sit the figures lower.
+  controls.target.set(0, portrait ? 1.4 : 1.05, 0);
+  camera.position.set(dist * 0.3, 1.5 + rows * 0.5, dist);
   controls.update();
   const u = shown.length === 1 ? shown[0] : null;
   document.getElementById("info").innerHTML = u
