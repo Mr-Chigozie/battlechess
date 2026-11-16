@@ -544,7 +544,7 @@ const Stage = (() => {
   }
   const hideCaption = () => document.getElementById("kill-caption").classList.remove("show");
 
-  async function enterCinematic(A, V) {
+  async function enterCinematic(A, V, frame = {}) {
     cine.saved = { position: camera.position.clone(), target: controls.target.clone() };
     cine.active = true;
     hoverHandler(null, 0, 0);
@@ -552,8 +552,9 @@ const Stage = (() => {
     cine.target.copy(controls.target);
     document.body.classList.add("cinematic");
     const mid = A.clone().add(V).multiplyScalar(0.5);
-    const look = mid.clone().setY(0.55);
-    const shot = chooseShot(A, V, mid);
+    const tall = Math.max(1.2, frame.tall || 1.2);
+    const look = mid.clone().setY(Math.max(0.55, tall * 0.46) + (frame.behead ? 0.2 : 0));
+    const shot = chooseShot(A, V, mid, { tall, behead: !!frame.behead });
     const p0 = camera.position.clone();
     const t0 = cine.target.clone();
     await FX.tween(0.85, t => {
@@ -564,15 +565,19 @@ const Stage = (() => {
 
   // Try camera spots around the duel and keep the one where the fewest bystanders block the view,
   // preferring side-on angles and staying near the player's current side of the board.
-  function chooseShot(A, V, mid) {
+  function chooseShot(A, V, mid, { tall = 1.2, behead = false } = {}) {
     const dir = V.clone().sub(A).setY(0).normalize();
     const bystanders = units.flat().filter(Boolean).map(u => u.position.clone().setY(u.userData.height * 0.55));
-    const subjects = [A.clone().setY(0.5), V.clone().setY(0.5)];
-    // Portrait screens are narrow, so film over the attacker's shoulder (the duel runs up the screen)
+    const subjects = [A.clone().setY(tall * 0.42), V.clone().setY(tall * 0.42)];
+    // Portrait screens are narrow, so film from behind the attacker at an angle (the duel runs up the screen)
     // instead of side-on (where it would run across it and fall off the edges).
     const portrait = window.innerWidth / window.innerHeight < 0.9;
-    const distance = portrait ? Math.max(3.2, A.distanceTo(V) * 0.5 + 3) : Math.max(2.8, A.distanceTo(V) * 0.75 + 2);
-    const heights = portrait ? [1.9, 2.6] : [1.3, 2.1];
+    const reach = (portrait ? 0.9 : 1) * (tall / 1.2) * (behead ? 1.25 : 1);  // pull back for tall fighters, more for a flying head
+    const lift = (tall - 1.2) * 0.7 + (behead ? 0.35 : 0);
+    const distance = (portrait ? Math.max(3.2, A.distanceTo(V) * 0.5 + 3) : Math.max(2.8, A.distanceTo(V) * 0.75 + 2)) * reach;
+    // Phones look down more steeply, so the attacker's own back ranks drop out of the bottom of the frame.
+    const heights = (portrait ? [3.2, 4.0] : [1.3, 2.1]).map(h => h + lift);
+    const girth = 0.42 * Math.max(1, tall / 1.2);
     const current = camera.position.clone().sub(mid).setY(0).normalize();
     const blocked = (from, to) => {
       const seg = to.clone().sub(from);
@@ -580,8 +585,8 @@ const Stage = (() => {
       seg.normalize();
       return bystanders.filter(p => {
         const along = p.clone().sub(from).dot(seg);
-        if (along < 0.2 || along > len - 0.35) return false;
-        return from.clone().addScaledVector(seg, along).distanceTo(p) < 0.42;
+        if (along < 0 || along > len - 0.35) return false;
+        return from.clone().addScaledVector(seg, along).distanceTo(p) < girth;
       }).length;
     };
     let best = null;
@@ -592,8 +597,10 @@ const Stage = (() => {
       for (const height of heights) {
         const pos = mid.clone().addScaledVector(flat, distance).setY(height);
         const occluders = subjects.reduce((n, s) => n + blocked(pos, s), 0);
-        const framing = portrait ? (1 + flat.dot(dir)) * 3 : Math.abs(flat.dot(dir)) * 3;
-        const score = occluders * 10 + framing + (1 - flat.dot(current)) * 0.8 + (height === heights[1] ? 1.5 : 0);
+        // Portrait: about 45 degrees off the attacker's shoulder, so the attacker doesn't hide the victim.
+        const framing = portrait ? Math.abs(flat.dot(dir) + 0.7) * 3 : Math.abs(flat.dot(dir)) * 3;
+        const crowded = bystanders.filter(b => b.clone().setY(0).distanceTo(pos.clone().setY(0)) < 0.75).length;
+        const score = (occluders + crowded) * 10 + framing + (1 - flat.dot(current)) * 0.8 + (height === heights[1] ? 1.5 : 0);
         if (score < bestScore) {
           bestScore = score;
           best = pos;
@@ -704,7 +711,7 @@ const Stage = (() => {
     if (style === "slam") FX.shockwave(victim.position, color);
     victim.userData.dying = true;
     flashWhite(victim);
-    punchIn(0.12 + combo * 0.03);
+    punchIn(victim.userData.behead ? 0.04 : 0.12 + combo * 0.03);
     onImpact?.();
     const fallen = victim.position.clone();
     const spill = Terrain.fall(victimSq, fallen, ARMIES[victim.userData.army].look.blood);
@@ -938,7 +945,7 @@ const Stage = (() => {
 
     if (useCine) {
       showCaption(caption.who, "");
-      await enterCinematic(A, V);
+      await enterCinematic(A, V, { tall: Math.max(attacker.userData.height, victim.userData.height), behead: victim.userData.behead });
     }
     turnTo(victim, angleTo(V, A), 0.3).then(() => brace(victim));
     await turnTo(attacker, angleTo(A, V), 0.3);
