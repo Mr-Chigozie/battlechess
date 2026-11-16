@@ -4,6 +4,10 @@
 // An army's six models load the first time it takes the field; until then (or if a file fails) its units keep
 // the hand-built look from models3d.js. Each model plays its own clips through an AnimationMixer:
 // Idle, Walk, Attack, Shoot, Death, and Behead for the humanoids.
+//
+// Speed: a model arrives as 8-15 parts (one per colour). Each is merged once per side into two meshes, one
+// lit (colours stored per vertex) and one glowing, so a full board is ~64 draws instead of ~400. Pointer
+// picking uses an invisible cylinder per unit, because ray-testing an animated mesh poses every vertex on the CPU.
 const Units = (() => {
   const PREFIX = { knights: "Knights", undead: "Undead", machines: "Machines", samurai: "Samurai",
     asgardians: "Asgard", vikings: "Vikings", spartans: "Spartans", marines: "Marines" };
@@ -13,12 +17,20 @@ const Units = (() => {
   const HIT = 14 / 30;                         // seconds into the Attack clip when the blow lands
   const LOOPS = new Set(["Idle", "Walk"]);
   const ENDINGS = new Set(["Death", "Behead"]);
+  const KEEP = ["position", "normal", "skinIndex", "skinWeight"];
+
+  // Shared by every model. No reflections on the battlefield, so keep metal low or it reads as black.
+  const litMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.12 });
+  const glowMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+  const hitGeo = new THREE.CylinderGeometry(0.36, 0.36, 1, 10);
+  const hitMat = new THREE.MeshBasicMaterial();
+  const noRay = () => {};
 
   const loader = new GLTFLoader();
-  const models = new Map();    // "army/type" -> loaded glTF, or null if it could not load
-  const loading = new Map();   // army -> Promise
-  const teamMats = new Map();  // material uuid + side -> recoloured copy
-  const live = new Set();      // built units whose mixers we drive
+  const models = new Map();     // "army/type" -> loaded glTF, or null if it could not load
+  const loading = new Map();    // army -> Promise
+  const templates = new Map();  // "army/type/side" -> { scene, height }
+  const live = new Set();       // built units whose mixers we drive
 
   // Start (or reuse) the download of one army's six models.
   function preload(army) {
@@ -26,16 +38,7 @@ const Units = (() => {
     if (!loading.has(army)) {
       loading.set(army, Promise.all(Object.entries(PIECE).map(([type, piece]) =>
         loader.loadAsync(`art/export/${PREFIX[army]}_${piece}.glb`)
-          .then(gltf => {
-            // The battlefield has no reflections for metal to pick up, so full metal reads as black: tone it down.
-            gltf.scene.traverse(obj => {
-              if (!obj.isMesh || obj.material.userData.toned) return;
-              obj.material.metalness *= 0.35;
-              obj.material.roughness = Math.max(obj.material.roughness, 0.45);
-              obj.material.userData.toned = true;
-            });
-            models.set(`${army}/${type}`, gltf);
-          })
+          .then(gltf => models.set(`${army}/${type}`, gltf))
           .catch(error => {
             console.warn(`No model for ${army}/${type}; keeping the built-in look.`, error);
             models.set(`${army}/${type}`, null);
@@ -46,14 +49,46 @@ const Units = (() => {
 
   const ready = (army, type) => !!models.get(`${army}/${type}`);
 
-  function teamMaterial(material, color) {
-    const key = material.uuid + color;
-    if (!teamMats.has(key)) {
-      const copy = material.clone();
-      copy.color.setHex(TEAM[color]);
-      teamMats.set(key, copy);
+  // The model for one side with its parts merged (see the note at the top). Built once and cloned per unit.
+  function template(army, type, color) {
+    const key = `${army}/${type}/${color}`;
+    if (templates.has(key)) return templates.get(key);
+    const scene = SkeletonUtils.clone(models.get(`${army}/${type}`).scene);
+    const parts = [];
+    scene.traverse(obj => { if (obj.isSkinnedMesh) parts.push(obj); });
+    const sets = { lit: [], glow: [] };
+    for (const part of parts) {
+      const m = part.material;
+      const glows = m.emissiveIntensity > 0 && m.emissive && m.emissive.r + m.emissive.g + m.emissive.b > 0.01;
+      const tint = m.name.startsWith("Team_") ? new THREE.Color(TEAM[color]) : (glows ? m.emissive : m.color);
+      const geo = part.geometry.clone();
+      for (const name of Object.keys(geo.attributes)) if (!KEEP.includes(name)) geo.deleteAttribute(name);
+      const colors = new Float32Array(geo.attributes.position.count * 3);
+      for (let i = 0; i < colors.length; i += 3) { colors[i] = tint.r; colors[i + 1] = tint.g; colors[i + 2] = tint.b; }
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      sets[glows ? "glow" : "lit"].push(geo);
     }
-    return teamMats.get(key);
+    const merged = [];
+    for (const [kind, geos] of Object.entries(sets)) {
+      if (!geos.length) continue;
+      const geo = BufferGeometryUtils.mergeGeometries(geos, false);
+      if (!geo) { merged.length = 0; break; }  // parts that cannot merge: keep them as they are
+      const mesh = new THREE.SkinnedMesh(geo, kind === "glow" ? glowMat : litMat);
+      mesh.position.copy(parts[0].position);
+      mesh.quaternion.copy(parts[0].quaternion);
+      mesh.scale.copy(parts[0].scale);
+      mesh.bind(parts[0].skeleton, parts[0].bindMatrix);
+      merged.push(mesh);
+    }
+    if (merged.length) {
+      const host = parts[0].parent;
+      for (const part of parts) part.parent.remove(part);
+      for (const mesh of merged) host.add(mesh);
+    }
+    scene.updateMatrixWorld(true);
+    const entry = { scene, height: new THREE.Box3().setFromObject(scene).max.y * SCALE };
+    templates.set(key, entry);
+    return entry;
   }
 
   // glTF node names lose their dots ("hand.R" -> "handR").
@@ -61,14 +96,15 @@ const Units = (() => {
 
   function build(army, type, color) {
     const gltf = models.get(`${army}/${type}`);
-    const model = SkeletonUtils.clone(gltf.scene);
+    const { scene, height } = template(army, type, color);
+    const model = SkeletonUtils.clone(scene);
     model.scale.setScalar(SCALE);
     model.traverse(obj => {
       if (!obj.isMesh) return;
       obj.castShadow = true;
       obj.receiveShadow = true;
       obj.frustumCulled = false;  // the bind-pose bounds don't follow the animation
-      if (obj.material.name.startsWith("Team_")) obj.material = teamMaterial(obj.material, color);
+      obj.raycast = noRay;        // picked through the hit cylinder below
     });
     // Same shape as a hand-built unit: unit > actor (leans and topples) > body (bobs) > model.
     const unit = new THREE.Group();
@@ -77,6 +113,11 @@ const Units = (() => {
     unit.add(actor);
     actor.add(body);
     body.add(model);
+    const hit = new THREE.Mesh(hitGeo, hitMat);
+    hit.visible = false;          // never drawn, but still found by the raycaster
+    hit.scale.y = height;
+    hit.position.y = height / 2;
+    unit.add(hit);
     const mixer = new THREE.AnimationMixer(model);
     const actions = {};
     for (const clip of gltf.animations) actions[clip.name.split("|").pop()] = mixer.clipAction(clip);
@@ -84,8 +125,6 @@ const Units = (() => {
     const beast = (army === "undead" || army === "machines") && type === "n";
     const tip = bone(model, beast ? "head_q" : type === "r" ? "neck" : "hand.R") || model;
     const rig = { actor, body, baseY: 0, head: actions.Behead ? model : null, tip, mixer, actions, current: null };
-    unit.updateMatrixWorld(true);
-    const height = new THREE.Box3().setFromObject(unit).max.y;
     unit.userData = { army, type, color, rig, style: Models.attackStyle(army, type), height, model: true };
     // One-off clips (attacks, shots) settle back into idle; deaths hold their last frame.
     mixer.addEventListener("finished", event => {
