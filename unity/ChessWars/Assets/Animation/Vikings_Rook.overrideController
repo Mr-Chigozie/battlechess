@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Vikings_Rook
+  m_Controller: {fileID: 9100000, guid: 87cdd593defb61e4cb228985b6226132, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -8879903769197226446, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -965945003566337730, guid: 40fd81f8e269fe041851f6bbdc729b75, type: 3}
+  - m_OriginalClip: {fileID: -2946131261784083661, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -1713749842072775658, guid: 40fd81f8e269fe041851f6bbdc729b75, type: 3}
+  - m_OriginalClip: {fileID: -2003170502232078368, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -6839188447123392548, guid: 40fd81f8e269fe041851f6bbdc729b75, type: 3}
+  - m_OriginalClip: {fileID: -1277852243039275186, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: 3803620929787649978, guid: 40fd81f8e269fe041851f6bbdc729b75, type: 3}
+  - m_OriginalClip: {fileID: 5606079951882091606, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -8764506028901608789, guid: 40fd81f8e269fe041851f6bbdc729b75, type: 3}

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Mafia_Knight
+  m_Controller: {fileID: 9100000, guid: 87cdd593defb61e4cb228985b6226132, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -8879903769197226446, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: 2867422993577154499, guid: a2cd80b14bcfcca42a967b60a9d4e30e, type: 3}
+  - m_OriginalClip: {fileID: -2946131261784083661, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -5824785519092335182, guid: a2cd80b14bcfcca42a967b60a9d4e30e, type: 3}
+  - m_OriginalClip: {fileID: -2003170502232078368, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -5487421031638348159, guid: a2cd80b14bcfcca42a967b60a9d4e30e, type: 3}
+  - m_OriginalClip: {fileID: -1277852243039275186, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: 6843538221181567777, guid: a2cd80b14bcfcca42a967b60a9d4e30e, type: 3}
+  - m_OriginalClip: {fileID: 5606079951882091606, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -1886001970516653998, guid: a2cd80b14bcfcca42a967b60a9d4e30e, type: 3}

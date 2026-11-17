@@ -1,0 +1,24 @@
+# Unity project: generated folders (rebuilt by the editor) and local-only files
+ChessWars/[Ll]ibrary/
+ChessWars/[Tt]emp/
+ChessWars/[Oo]bj/
+ChessWars/[Bb]uild/
+ChessWars/[Bb]uilds/
+ChessWars/[Ll]ogs/
+ChessWars/[Uu]ser[Ss]ettings/
+ChessWars/[Mm]emoryCaptures/
+ChessWars/*.csproj
+ChessWars/*.sln
+ChessWars/*.slnx
+ChessWars/.vs/
+ChessWars/.vscode/
+ChessWars/*.apk
+ChessWars/*.aab
+ChessWars/*.keystore
+
+# .NET test project build output
+RulesTests/bin/
+RulesTests/obj/
+
+# Android build scratch (native build caches)
+ChessWars/.utmp/

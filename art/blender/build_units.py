@@ -11,7 +11,9 @@ from mathutils import Vector, Matrix, Euler
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.dirname(HERE)
-EXPORT = os.path.join(ART, "export")
+EXPORT = os.path.join(ART, "export")          # GLB files for the web game and the review page
+# FBX files go straight into the Unity project (Android app), so they are not kept twice in the repo.
+UNITY_CHARACTERS = os.path.join(os.path.dirname(ART), "unity", "ChessWars", "Assets", "Characters")
 PREVIEW = os.path.join(ART, "previews")
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 H0 = 0.08  # top of the plinth; the body stands on it
@@ -3496,7 +3498,8 @@ def unit(army, team, builder, name, x):
     return arm
 
 
-def export_fbx(arm, path):
+def export_fbx(arm, name):
+    """FBX into the Unity project, GLB into art/export."""
     for o in bpy.context.scene.objects:
         o.select_set(False)
     arm.select_set(True)
@@ -3505,12 +3508,12 @@ def export_fbx(arm, path):
     loc = arm.location.copy()
     arm.location = (0, 0, 0)
     bpy.ops.export_scene.fbx(
-        filepath=path, use_selection=True, object_types={"ARMATURE", "MESH"},
+        filepath=os.path.join(UNITY_CHARACTERS, name + ".fbx"), use_selection=True, object_types={"ARMATURE", "MESH"},
         add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=True,
         bake_anim_use_nla_strips=False, bake_anim_force_startend_keying=True,
         apply_scale_options="FBX_SCALE_ALL", axis_forward="-Z", axis_up="Y", mesh_smooth_type="FACE")
-    # GLB copy for the web review page (art/viewer.html)
-    bpy.ops.export_scene.gltf(filepath=os.path.splitext(path)[0] + ".glb", export_format="GLB",
+    # GLB copy for the web game (js/units3d.js) and the review page (art/viewer.html)
+    bpy.ops.export_scene.gltf(filepath=os.path.join(EXPORT, name + ".glb"), export_format="GLB",
                               use_selection=True, export_animations=True)
     arm.location = loc
 
@@ -3611,6 +3614,7 @@ def render_sheet(arms, acts, tag, shots):
 
 def main():
     os.makedirs(EXPORT, exist_ok=True)
+    os.makedirs(UNITY_CHARACTERS, exist_ok=True)
     os.makedirs(PREVIEW, exist_ok=True)
     clear()
     # Preview groups: units of a group stand side by side; groups are rendered separately.
@@ -3723,7 +3727,7 @@ def main():
         show_only(every, every)  # a render of an earlier group hides the rest, and hidden units export empty
         for arm in arms:
             set_action(arm, acts["Idle"])
-            export_fbx(arm, os.path.join(EXPORT, arm.name + ".fbx"))
+            export_fbx(arm, arm.name)
         if render:
             for g in gs:
                 if not only or g in only.split(","):  # --group takes a comma-separated list

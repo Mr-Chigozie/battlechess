@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Mafia_King
+  m_Controller: {fileID: 9100000, guid: 77e8de285372aaa4087c4863b20158f5, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -6231623529338087812, guid: 1b503bef358df5442b69144624f4a3f2, type: 3}
+    m_OverrideClip: {fileID: 3158162532952683190, guid: 4fe45ca6409779e4b954428715a203cd, type: 3}
+  - m_OriginalClip: {fileID: -2771649765952721082, guid: 1b503bef358df5442b69144624f4a3f2, type: 3}
+    m_OverrideClip: {fileID: -5912887338383132438, guid: 4fe45ca6409779e4b954428715a203cd, type: 3}
+  - m_OriginalClip: {fileID: -2370180446150484227, guid: 1b503bef358df5442b69144624f4a3f2, type: 3}
+    m_OverrideClip: {fileID: 291127284617949878, guid: 4fe45ca6409779e4b954428715a203cd, type: 3}
+  - m_OriginalClip: {fileID: 1721161433563121841, guid: 1b503bef358df5442b69144624f4a3f2, type: 3}
+    m_OverrideClip: {fileID: 8630660840392980949, guid: 4fe45ca6409779e4b954428715a203cd, type: 3}
+  - m_OriginalClip: {fileID: 3021758698597432135, guid: 1b503bef358df5442b69144624f4a3f2, type: 3}
+    m_OverrideClip: {fileID: 8215915748394088559, guid: 4fe45ca6409779e4b954428715a203cd, type: 3}
+  - m_OriginalClip: {fileID: 3538791728612081733, guid: 1b503bef358df5442b69144624f4a3f2, type: 3}
+    m_OverrideClip: {fileID: 7590054617819346248, guid: 4fe45ca6409779e4b954428715a203cd, type: 3}

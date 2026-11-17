@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Spartans_Rook
+  m_Controller: {fileID: 9100000, guid: 87cdd593defb61e4cb228985b6226132, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -8879903769197226446, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -3624070515743890506, guid: e6b81eac4f437b941b3f59716e11fa55, type: 3}
+  - m_OriginalClip: {fileID: -2946131261784083661, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: 5110878723766888375, guid: e6b81eac4f437b941b3f59716e11fa55, type: 3}
+  - m_OriginalClip: {fileID: -2003170502232078368, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -76077506188568780, guid: e6b81eac4f437b941b3f59716e11fa55, type: 3}
+  - m_OriginalClip: {fileID: -1277852243039275186, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: 8051144899404808382, guid: e6b81eac4f437b941b3f59716e11fa55, type: 3}
+  - m_OriginalClip: {fileID: 5606079951882091606, guid: d76533fa8e46e5644988e85232c81751, type: 3}
+    m_OverrideClip: {fileID: -8105901091834426718, guid: e6b81eac4f437b941b3f59716e11fa55, type: 3}
