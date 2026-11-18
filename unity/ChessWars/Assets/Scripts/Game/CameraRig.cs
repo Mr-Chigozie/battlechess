@@ -1,4 +1,6 @@
 // A cinematic orbit around the board, framed for the screen's shape, from the player's side.
+// Lives on the board's Cinemachine camera: it places that virtual camera, and the Cinemachine brain on the real
+// camera follows it (and blends to the kill-sequence cameras and back).
 // Drag with one finger to circle and tilt, pinch (or the mouse wheel) to zoom, double-tap empty space to reset.
 // A press that moves more than a few pixels is a drag, never a tap, so moving the camera never moves a unit.
 using UnityEngine;
@@ -6,7 +8,6 @@ using UnityEngine.InputSystem;
 
 namespace ChessWars.Game
 {
-    [RequireComponent(typeof(Camera))]
     public class CameraRig : MonoBehaviour
     {
         public char viewColor = 'w';
@@ -20,8 +21,10 @@ namespace ChessWars.Game
         Vector2 pressStart, last;
         float pinchStart, zoomAtPinch;
         bool pressing, pinching;
+        int settle;                                  // frames to wait before reading the press point
+        CameraShake shake;
 
-        void Awake() => cam = GetComponent<Camera>();
+        void Awake() => cam = Camera.main;
 
         void LateUpdate()
         {
@@ -44,7 +47,8 @@ namespace ChessWars.Game
 
         void Place()
         {
-            cam = cam != null ? cam : GetComponent<Camera>();
+            cam = cam != null ? cam : Camera.main;
+            if (cam == null) return;
             float aspect = cam.aspect;
             bool portrait = aspect < 0.8f;
             float elevation = Mathf.Clamp(BaseElevation(aspect) + pitch, MinPitch, MaxPitch);
@@ -58,6 +62,8 @@ namespace ChessWars.Game
             var target = flat * (portrait ? 0.6f : 0.3f) + Vector3.up * 0.4f;
             transform.position = target + (flat * Mathf.Cos(elevation) + Vector3.up * Mathf.Sin(elevation)) * distance;
             transform.LookAt(target);
+            if (shake == null) shake = GetComponent<CameraShake>();
+            if (shake != null) shake.Focus = target;
         }
 
         void Gestures()
@@ -95,10 +101,18 @@ namespace ChessWars.Game
             {
                 pressing = true;
                 PressWasDrag = false;
-                pressStart = last = pos;
+                settle = 2;
             }
             if (pressing && pointer.press.isPressed)
             {
+                // The pointer's position can lag the press by a frame (it still holds where the last touch ended),
+                // so the press point is taken once it has settled; otherwise that jump reads as a drag.
+                if (settle > 0)
+                {
+                    settle--;
+                    pressStart = last = pos;
+                    return;
+                }
                 if (!PressWasDrag && Vector2.Distance(pos, pressStart) > DragThreshold * (Screen.dpi > 0 ? Screen.dpi / 160f : 1f)) PressWasDrag = true;
                 if (PressWasDrag)
                 {

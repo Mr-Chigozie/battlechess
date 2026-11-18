@@ -73,7 +73,7 @@ namespace ChessWars.Game
             var ray = camera.ScreenPointToRay(screen);
             if (!new Plane(Vector3.up, Vector3.zero).Raycast(ray, out float distance)) return null;
             var p = ray.GetPoint(distance);
-            int col = Mathf.FloorToInt(p.x + 4f), row = Mathf.FloorToInt(p.z + 4f);
+            int col = Mathf.FloorToInt(4f - p.x), row = Mathf.FloorToInt(p.z + 4f);   // inverse of Armies.SquareToWorld
             return row >= 0 && row < 8 && col >= 0 && col < 8 ? new Vector2Int(col, row) : (Vector2Int?)null;
         }
     }

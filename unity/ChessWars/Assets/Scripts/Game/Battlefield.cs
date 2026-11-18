@@ -8,8 +8,8 @@ namespace ChessWars.Game
 {
     public class Battlefield : MonoBehaviour
     {
-        public Material skybox;      // Skybox/Procedural, tinted per theme
-        public Material lit;         // URP Lit template, copied per surface colour
+        public Material skybox;      // ChessWars/SkyGradient, coloured per theme
+        public Material lit;         // ChessWars/Toon template with stone/grass detail, copied per surface colour
         public Material particle;    // URP Particles/Unlit, soft additive dots
         public Light sun;
 
@@ -17,11 +17,13 @@ namespace ChessWars.Game
 
         static int Tier => QualitySettings.GetQualityLevel();   // 0 Low, 1 Medium, 2 High
 
-        Material Colored(Color c, float smoothness = 0.15f)
+        // A copy of the toon template in one colour; `grain` is the size of the stone/grass detail (0 = none).
+        Material Colored(Color c, float grain = 0.6f, float strength = 0.35f)
         {
             var m = new Material(lit);
             m.SetColor("_BaseColor", c);
-            m.SetFloat("_Smoothness", smoothness);
+            m.SetFloat("_DetailScale", grain);
+            m.SetFloat("_DetailStrength", grain > 0 ? strength : 0f);
             return m;
         }
 
@@ -39,13 +41,15 @@ namespace ChessWars.Game
 
         void Atmosphere(Theme theme)
         {
-            skybox.SetColor("_SkyTint", theme.Sky);
-            skybox.SetColor("_GroundColor", theme.Horizon);
-            skybox.SetFloat("_Exposure", theme.Exposure);
-            skybox.SetFloat("_AtmosphereThickness", 0.8f);
+            // Gradient sky (ChessWars/SkyGradient): sky above, a bright horizon band, the fog colour below, a sun glow.
+            skybox.SetColor("_Top", theme.Sky * theme.Exposure);
+            skybox.SetColor("_Horizon", theme.Horizon);
+            skybox.SetColor("_Bottom", theme.Fog);
+            skybox.SetVector("_SunDir", -sun.transform.forward);
+            skybox.SetColor("_SunColor", theme.Sun);
             RenderSettings.skybox = skybox;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = Color.Lerp(theme.Sky, Color.white, 0.45f);
+            RenderSettings.ambientSkyColor = Color.Lerp(theme.Sky, Color.white, 0.65f);
             RenderSettings.ambientEquatorColor = Color.Lerp(theme.Horizon, Color.gray, 0.3f);
             RenderSettings.ambientGroundColor = Color.Lerp(theme.Ground, Color.black, 0.4f);
             RenderSettings.fog = true;
@@ -78,7 +82,7 @@ namespace ChessWars.Game
         {
             var stone = Colored(theme.Platform);
             var darker = Colored(Color.Lerp(theme.Platform, Color.black, 0.25f));
-            var trim = Colored(theme.Trim, 0.35f);
+            var trim = Colored(theme.Trim, 1.2f, 0.25f);
             Block("Step upper", new Vector3(0, -0.32f, 0), new Vector3(9.7f, 0.5f, 9.7f), stone);
             Block("Step lower", new Vector3(0, -0.72f, 0), new Vector3(11.2f, 0.4f, 11.2f), darker);
             Block("Trim", new Vector3(0, -0.07f, 0), new Vector3(9.9f, 0.08f, 9.9f), trim);
@@ -100,7 +104,7 @@ namespace ChessWars.Game
             ground.transform.localPosition = new Vector3(0, -0.95f, 0);
             ground.transform.localScale = new Vector3(110f, 0.05f, 110f);
             DestroyImmediate(ground.GetComponent<Collider>());
-            ground.GetComponent<Renderer>().sharedMaterial = Colored(theme.Ground, 0.05f);
+            ground.GetComponent<Renderer>().sharedMaterial = Colored(theme.Ground, 0.12f, 0.45f);
             ground.isStatic = true;
         }
 

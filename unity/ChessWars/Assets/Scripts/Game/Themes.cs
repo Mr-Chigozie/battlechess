@@ -26,7 +26,7 @@ namespace ChessWars.Game
         {
             ["knights"] = new Theme { Name = "the Green Meadow", Light = H(0xd7dcae), Dark = H(0x5f7d3b), Sky = H(0x8ec5e8), Horizon = H(0xdfeedd), Ground = H(0x5d7d3c), Fog = H(0xbcd8e8), Platform = H(0x8a8274), Trim = H(0x5a3e28), Weather = Weather.Pollen,
                 Props = new[] { "TreeRound", "TreeRound", "TreeRound", "RockGrey", "Banner" } },
-            ["undead"] = new Theme { Name = "the Barrow Fields", Light = H(0x9a978a), Dark = H(0x3b3f36), Sky = H(0x1b2420), Horizon = H(0x3a4a3e), Ground = H(0x2c302a), Fog = H(0x2a3a30), Platform = H(0x4a4c46), Trim = H(0x2a2c28), Weather = Weather.Ash, SunIntensity = 0.9f, Sun = H(0xb8d8c8), Exposure = 0.9f,
+            ["undead"] = new Theme { Name = "the Barrow Fields", Light = H(0xb4b2a2), Dark = H(0x454a3f), Sky = H(0x1b2420), Horizon = H(0x3a4a3e), Ground = H(0x2c302a), Fog = H(0x2a3a30), Platform = H(0x4a4c46), Trim = H(0x2a2c28), Weather = Weather.Ash, SunIntensity = 1.1f, Sun = H(0xb8d8c8), Exposure = 0.9f,
                 Props = new[] { "Tombstone", "Tombstone", "TombstoneCross", "TreeDead", "RockDark" } },
             ["vikings"] = new Theme { Name = "the Frozen Fjord", Light = H(0xe8eef2), Dark = H(0x7d93a3), Sky = H(0x8796a3), Horizon = H(0xd8e2e8), Ground = H(0xdde6ea), Fog = H(0xa9b4bb), Platform = H(0x6e7a84), Trim = H(0x4e3420), Weather = Weather.Snow,
                 Props = new[] { "TreePineSnow", "TreePineSnow", "TreePine", "RockSnow" } },

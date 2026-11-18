@@ -43,7 +43,55 @@ namespace ChessWars.Game
 
         public static string PrefabName(string army, char type) => $"{All[army].ModelPrefix}_{Pieces[type]}";
 
-        // Square (row, col) sits at world (col - 3.5, 0, row - 3.5), as in the web game: Ivory's home rows are at +z.
-        public static Vector3 SquareToWorld(int row, int col) => new Vector3(col - 3.5f, 0f, row - 3.5f);
+        // How each unit kills, as the web game's Models.attackStyle (js/models3d.js) works it out for the models:
+        // strike, thrust, charge, slam, shoot, spell, beam or lightning. The Mafia exists only here so far.
+        static readonly Dictionary<string, string> StyleTable = new Dictionary<string, string>
+        {
+            ["knights"] = "k:strike q:strike r:slam b:spell n:charge p:strike",
+            ["undead"] = "k:strike q:spell r:slam b:spell n:charge p:strike",
+            ["marines"] = "k:strike q:shoot r:shoot b:shoot n:charge p:shoot",
+            ["vikings"] = "k:strike q:strike r:slam b:spell n:charge p:strike",
+            ["samurai"] = "k:strike q:strike r:shoot b:spell n:charge p:strike",
+            ["spartans"] = "k:thrust q:thrust r:slam b:spell n:charge p:thrust",
+            ["asgardians"] = "k:thrust q:strike r:beam b:lightning n:charge p:strike",
+            ["machines"] = "k:shoot q:shoot r:shoot b:shoot n:charge p:shoot",
+            ["mafia"] = "k:strike q:shoot r:shoot b:shoot n:charge p:strike",
+        };
+
+        public static string Style(string army, char type)
+        {
+            foreach (var entry in StyleTable[army].Split(' '))
+                if (entry[0] == type) return entry.Substring(2);
+            return "strike";
+        }
+
+        // Heavy guns fire one big round instead of a burst: the Marines' tank and the Speakeasy's barrel catapult.
+        public static bool HeavyGun(string army, char type) => type == 'r' && (army == "marines" || army == "mafia");
+
+        static readonly Dictionary<string, string[]> Verbs = new Dictionary<string, string[]>
+        {
+            ["strike"] = new[] { "cuts down", "cleaves through", "strikes down", "hews down" },
+            ["thrust"] = new[] { "runs through", "impales", "skewers" },
+            ["charge"] = new[] { "tramples", "rides down", "smashes through" },
+            ["slam"] = new[] { "crushes", "flattens", "pulverises" },
+            ["shoot"] = new[] { "guns down", "blasts apart", "riddles" },
+            ["spell"] = new[] { "unmakes", "incinerates", "withers" },
+            ["beam"] = new[] { "disintegrates", "vaporises", "burns away" },
+            ["lightning"] = new[] { "smites", "thunderstrikes", "reduces to cinders" },
+        };
+
+        public static string KillVerb(string style)
+        {
+            var verbs = Verbs.TryGetValue(style, out var v) ? v : Verbs["strike"];
+            return verbs[Random.Range(0, verbs.Length)];
+        }
+
+        public static readonly Dictionary<char, int> Value = new Dictionary<char, int> { ['p'] = 1, ['n'] = 3, ['b'] = 3, ['r'] = 5, ['q'] = 9, ['k'] = 0 };
+        public static readonly string[] StreakNames = { null, null, "Double Kill", "Triple Kill", "Rampage", "Massacre", "Unstoppable", "Godlike" };
+
+        // Square (row, col) sits at world (3.5 - col, 0, row - 3.5); Ivory's home rows are at +z, as in the web game.
+        // Unity's axes are left-handed where three.js's are right-handed, so x runs the other way here: without the
+        // flip the whole board would be a mirror image (a-file on Ivory's right, the light square in the wrong corner).
+        public static Vector3 SquareToWorld(int row, int col) => new Vector3(3.5f - col, 0f, row - 3.5f);
     }
 }
