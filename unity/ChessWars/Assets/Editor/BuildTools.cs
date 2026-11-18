@@ -318,6 +318,60 @@ namespace ChessWars.EditorTools
             Object.DestroyImmediate(tex);
         }
 
+        // A portrait of each army's King for the army cards: three-quarter view, transparent background, written to
+        // Assets/Resources/Portraits/<army id>.png. -executeMethod ChessWars.EditorTools.BuildTools.Portraits
+        [MenuItem("Chess Wars/Render army portraits")]
+        public static void Portraits()
+        {
+            const string folder = "Assets/Resources/Portraits";
+            const int size = 384;
+            EditorSceneManager.OpenScene(ScenePath);
+            Directory.CreateDirectory(folder);
+            ShaderUtil.allowAsyncCompilation = false;
+            Shader.SetGlobalFloat("_CW_OutlineScale", 1f);
+            var cam = Camera.main;
+            cam.GetComponent<UniversalAdditionalCameraData>().renderPostProcessing = false;   // post would flatten the alpha
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0, 0, 0, 0);
+            cam.fieldOfView = 30f;
+            var root = new GameObject("Portrait").transform;
+            bool warmed = false;
+            foreach (var id in Armies.All.Keys)
+            {
+                var unit = UnitView.Spawn(id, 'k', 'w', 0, 0, root);
+                unit.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0, 24f, 0));   // the models face +Z
+                float h = unit.Height;
+                var look = new Vector3(0, h * 0.56f, 0);
+                cam.transform.position = look + new Vector3(0.35f, 0.18f, 1f).normalized * h * 1.85f;
+                cam.transform.LookAt(look);
+                var rt = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
+                cam.targetTexture = rt;
+                cam.aspect = 1f;
+                if (!warmed) { cam.Render(); warmed = true; }   // the first frame renders before materials are ready
+                cam.Render();
+                RenderTexture.active = rt;
+                var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                tex.ReadPixels(new Rect(0, 0, size, size), 0, 0);
+                tex.Apply();
+                string path = $"{folder}/{id}.png";
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+                RenderTexture.active = null;
+                cam.targetTexture = null;
+                Object.DestroyImmediate(rt);
+                Object.DestroyImmediate(tex);
+                Object.DestroyImmediate(unit.gameObject);
+                AssetDatabase.ImportAsset(path);
+                var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+                importer.textureType = TextureImporterType.Default;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = false;
+                importer.maxTextureSize = 512;
+                importer.SaveAndReimport();
+            }
+            Object.DestroyImmediate(root.gameObject);
+            Debug.Log($"[BuildTools] portraits written to {folder}");
+        }
+
         public static void BuildAndroid()
         {
             Directory.CreateDirectory("Builds");

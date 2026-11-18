@@ -12,6 +12,8 @@ namespace ChessWars.Game
     {
         public char viewColor = 'w';
         public bool PressWasDrag { get; private set; }
+        /// <summary>Degrees per second to circle the board on its own (the title screen); 0 to stop.</summary>
+        public float Spin;
 
         const float DragThreshold = 14f;            // pixels before a press counts as a drag
         const float MinPitch = 0.42f, MaxPitch = 1.35f;
@@ -28,7 +30,8 @@ namespace ChessWars.Game
 
         void LateUpdate()
         {
-            Gestures();
+            if (Spin != 0f) yaw += Spin * Time.unscaledDeltaTime;
+            else Gestures();
             Place();
         }
 

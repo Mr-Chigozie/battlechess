@@ -39,20 +39,27 @@ namespace ChessWars.Game
         List<Move> targets = new List<Move>();
         Move lastMove;
         bool lastWasCapture, anyCapture;
-        bool busy;
-        string status = "";
-        float lastEmptyTap = -1f;
+        bool busy, aiThinking, gameOver;
+        float lastEmptyTap = -1f, lastFury;
+        string furyNews, furyNewsText;
         Fx fx;
         KillHud hud;
         KillCam killCam;
+        BattleHud ui;
+        readonly List<UnitView> roster = new List<UnitView>();        // every unit alive, for the badges
+        readonly List<char?> captures = new List<char?>();            // per move: the type taken, if any
+        MainMenu menu;
+        bool attract;                                                  // the title-screen backdrop
+        Theme builtTheme;
+
+        static readonly string[] Ranks = { "", "Recruit", "Veteran", "Warlord" };
+        static readonly (float min, string name)[] FuryNames = { (0.75f, "Inferno"), (0.45f, "Burning"), (0.2f, "Clash"), (0f, "Calm") };
+
+        static bool LoadSetting(string key, bool fallback) => PlayerPrefs.GetInt("cw." + key, fallback ? 1 : 0) == 1;
 
         void Start()
         {
             Application.targetFrameRate = 60;
-            // The battle is fought in the opponent's world (as in the web game's story mode).
-            var theme = Themes.For(aiColor == 'b' ? blackArmy : whiteArmy);
-            battlefield.Build(theme);
-            board.Build(theme);
             // Glow and colour grading cost fill rate: off on the Low tier for cheap phones.
             var camData = Camera.main.GetComponent<UniversalAdditionalCameraData>();
             if (camData != null) camData.renderPostProcessing = QualitySettings.GetQualityLevel() > 0;
@@ -61,14 +68,101 @@ namespace ChessWars.Game
             fx = Fx.Create(battlefield.particle, transform);
             hud = KillHud.Create();
             killCam = KillCam.Create(cameraRig);
+            ui = BattleHud.Create(hud);
+            ui.Units = () => roster;
+            cinematics = LoadSetting("cinematics", true);
+            blood = LoadSetting("blood", false);
+            ui.SetSetting("cinematics", cinematics);
+            ui.SetSetting("blood", blood);
+            ui.SetSetting("badges", LoadSetting("badges", true));
+            ui.SettingChanged += (key, on) =>
+            {
+                PlayerPrefs.SetInt("cw." + key, on ? 1 : 0);
+                if (key == "cinematics") cinematics = on;
+                if (key == "blood") blood = on;
+            };
+            ui.ViewPressed += () => cameraRig.viewColor = cameraRig.viewColor == 'w' ? 'b' : 'w';
+            ui.NewGamePressed += NewGame;
+            ui.MainMenuPressed += ShowTitle;
+            menu = MainMenu.Create();
+            menu.Battle += (mine, theirs, side, rank) =>
+            {
+                // Ivory moves first; the computer takes the other side.
+                Begin(side == 'w' ? mine : theirs, side == 'w' ? theirs : mine, side == 'w' ? 'b' : 'w', rank, false);
+            };
+            ShowTitle();
+        }
+
+        // The title screen: the player's last matchup stands ready on its battlefield while the camera circles.
+        void ShowTitle()
+        {
+            Begin(menu.Army, menu.Enemy, 'b', 2, true);
+            menu.Show(0);
+        }
+
+        /// <summary>Set up a battle. The world is the computer's army's homeland, as in the web game's story mode.
+        /// `attract` is the title-screen backdrop: no turns, no HUD, the camera circling.</summary>
+        void Begin(string white, string black, char computer, int depth, bool attract)
+        {
+            whiteArmy = white;
+            blackArmy = black;
+            aiColor = computer;
+            aiDepth = depth;
+            this.attract = attract;
+            var theme = Themes.For(computer == 'b' ? black : white);
+            if (theme != builtTheme)
+            {
+                battlefield.Build(theme);
+                builtTheme = theme;
+            }
+            board.Build(theme, computer == 'b' ? 'w' : 'b');
+            ui.Hidden = attract;
+            cameraRig.Spin = attract ? 5f : 0f;
+            cameraRig.ResetView();
             NewGame();
+        }
+
+        void Track(UnitView unit)
+        {
+            roster.RemoveAll(u => u == null);
+            roster.Add(unit);
+        }
+
+        // ---------------------------------------------------------------- HUD
+
+        void UpdateTurn(string over = null)
+        {
+            bool check = !gameOver && Rules.Rules.IsInCheck(pos, pos.Turn);
+            string text = over
+                ?? (aiThinking ? $"{SideName(pos.Turn)} is plotting…" : $"{SideName(pos.Turn)} to move{(check ? " — check!" : "")}");
+            ui.SetTurn(text, aiThinking, check);
+        }
+
+        // Battle fury, as the web game's tension(): climbs with material lost, recent bloodshed, checks and streaks.
+        void UpdateFury()
+        {
+            float lost = 0;
+            int recent = 0;
+            for (int i = 0; i < captures.Count; i++)
+                if (captures[i] is char t)
+                {
+                    lost += Armies.Value[t];
+                    if (i >= captures.Count - 6) recent++;
+                }
+            float check = Rules.Rules.IsInCheck(pos, pos.Turn) ? 0.2f : 0f;
+            float fury = Mathf.Min(1f, lost / 40f + recent * 0.07f + check + Mathf.Max(streak['w'], streak['b']) * 0.06f);
+            ui.SetFury(fury, FuryNames.First(f => fury >= f.min).name);
+            // Announced once the move's own narration has had its moment.
+            if (fury >= 0.75f && lastFury < 0.75f) { furyNews = "Inferno"; furyNewsText = "The whole field is ablaze. Only one army will walk out of this fire."; }
+            else if (fury >= 0.45f && lastFury < 0.45f) { furyNews = "The board burns"; furyNewsText = "Fire spreads across the battlefield. This is war."; }
+            lastFury = fury;
         }
 
         public void NewGame()
         {
             StopAllCoroutines();
             Time.timeScale = 1f;
-            busy = false;
+            busy = aiThinking = gameOver = false;
             if (killCam.Active || hud.Cinematic) { StartCoroutine(killCam.Exit()); hud.SetCinematic(false); }
             if (unitRoot != null) Destroy(unitRoot.gameObject);
             unitRoot = new GameObject("Units").transform;
@@ -78,18 +172,28 @@ namespace ChessWars.Game
             streak['w'] = streak['b'] = 0;
             lastMove = null;
             lastWasCapture = anyCapture = false;
+            roster.Clear();
+            captures.Clear();
+            lastFury = 0;
+            furyNews = null;
             for (int row = 0; row < 8; row++)
                 for (int col = 0; col < 8; col++)
+                {
                     units[row, col] = pos.Board[row, col] is Piece p
                         ? UnitView.Spawn(p.Color == 'w' ? whiteArmy : blackArmy, p.Type, p.Color, row, col, unitRoot)
                         : null;
+                    if (units[row, col] != null) roster.Add(units[row, col]);
+                }
             cameraRig.viewColor = aiColor == 'w' ? 'b' : 'w';
             cameraRig.Fit();
             selected = null;
             targets.Clear();
             board.ClearMarkers();
-            status = $"{ArmyName('w')} to move";
-            if (pos.Turn == aiColor) StartCoroutine(AiTurn());
+            ui.SetTitle("Skirmish", $"{ArmyName('w')} vs {ArmyName('b')} · {Ranks[aiDepth]}");
+            ui.Narrate("The opening", $"{SideName('w')} faces {SideName('b')} on {Themes.For(aiColor == 'b' ? blackArmy : whiteArmy).Name}. Tap a unit to give orders. Drag to look around, pinch to zoom.");
+            UpdateTurn();
+            UpdateFury();
+            if (!attract && pos.Turn == aiColor) StartCoroutine(AiTurn());
         }
 
         string ArmyName(char color) => Armies.All[color == 'w' ? whiteArmy : blackArmy].Name;
@@ -104,9 +208,13 @@ namespace ChessWars.Game
 
         void Update()
         {
+            if (attract || menu.Open) return;
+            // The phone's back button opens (or closes) the battle menu.
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame && !killCam.Active) ui.ToggleMenu();
             // Act on release, and only for a tap: a press that turned into a drag was moving the camera.
             var pointer = Pointer.current;
             if (pointer == null || !pointer.press.wasReleasedThisFrame || cameraRig.PressWasDrag || killCam.Active) return;
+            if (ui.Blocks(pointer.position.ReadValue())) return;   // a HUD button, or the menu
             var square = PickSquare(pointer.position.ReadValue());
             if (square == null)
             {
@@ -139,6 +247,10 @@ namespace ChessWars.Game
             {
                 selected = new Vector2Int(col, row);
                 targets = Rules.Rules.LegalMoves(pos, row, col);
+                string unit = Armies.All[p.Color == 'w' ? whiteArmy : blackArmy].Units[p.Type];
+                ui.Narrate($"{SideName(p.Color)} {unit}", targets.Count > 0
+                    ? $"Moves like a {Armies.Pieces[p.Type].ToLowerInvariant()}. {targets.Count} order{(targets.Count == 1 ? "" : "s")} available."
+                    : $"The {unit} has nowhere to go.");
             }
             else
             {
@@ -178,6 +290,7 @@ namespace ChessWars.Game
             units[victimRow, move.ToCol] = null;
             var dest = Armies.SquareToWorld(move.ToRow, move.ToCol);
             bool check = Rules.Rules.IsInCheck(pos, pos.Turn);
+            captures.Add(victim != null ? victim.Type : (char?)null);
 
             if (victim != null)
             {
@@ -206,15 +319,37 @@ namespace ChessWars.Game
                 units[move.FromRow, rookTo] = rook;
                 rook.FaceHome();
             }
-            if (result.MovingPiece.Type == 'p' && (move.ToRow == 0 || move.ToRow == 7))
-                yield return Promote(attacker, promotion);
+            bool promoted = result.MovingPiece.Type == 'p' && (move.ToRow == 0 || move.ToRow == 7);
+            if (promoted) yield return Promote(attacker, promotion);
 
             string key = Rules.Rules.PositionKey(pos);
             seen[key] = seen.TryGetValue(key, out int n) ? n + 1 : 1;
             ShowMarkers(move);
             busy = false;
+            UpdateFury();
             if (CheckGameOver(key)) yield break;
+
+            // The narrator reports the move (captures were already told as they happened), as the web game does.
+            var army = Armies.All[attacker.Army];
+            string to = Rules.Rules.Algebraic(move.ToRow, move.ToCol);
+            if (check) ui.Narrate("Check", $"The {SideName(pos.Turn)} {KingName(pos.Turn)} is under attack!");
+            else if (promoted) ui.Narrate("A new champion", $"The {army.Units['p']} rises as a {army.Units[promotion]} on {to}.");
+            else if (move.Castle != Castle.None) ui.Narrate("The line holds", $"The {army.Units['k']} retreats behind the {army.Units['r']}.");
+            else if (victim == null) ui.Narrate("Orders carried out", $"{SideName(attacker.Color)} {army.Units[attacker.Type]} advances to {to}.");
+            if (furyNews != null)
+            {
+                StartCoroutine(NarrateLater(2.5f, furyNews, furyNewsText));
+                furyNews = null;
+            }
             if (pos.Turn == aiColor) yield return AiTurn();
+        }
+
+        string KingName(char color) => Armies.All[color == 'w' ? whiteArmy : blackArmy].Units['k'];
+
+        IEnumerator NarrateLater(float seconds, string label, string text)
+        {
+            yield return new WaitForSeconds(seconds);
+            ui.Narrate(label, text);
         }
 
         // ---------------------------------------------------------------- the kill sequence
@@ -338,6 +473,7 @@ namespace ChessWars.Game
             StartCoroutine(victim.FlashWhite());
             if (killCam.Active) killCam.PunchIn(behead ? 0.04f : 0.12f + level * 0.03f);
             hud.ShowCaption(who, line);
+            ui.Narrate(combo != null ? combo.Title : "Battle", line);
             if (combo != null) hud.ShowCombo(combo.Title, combo.Tags, combo.Level);
             if (blood) fx.Burst(hit, Armies.All[victim.Army].Blood, 16, 2.4f, 0.9f, 0.6f);
             // Reel from the blow, then fall.
@@ -394,6 +530,7 @@ namespace ChessWars.Game
             Destroy(pawn.gameObject);
             var queen = UnitView.Spawn(pawn.Army, promotion, pawn.Color, pawn.Row, pawn.Col, unitRoot);
             units[pawn.Row, pawn.Col] = queen;
+            Track(queen);
             var scale = queen.transform.localScale;
             for (float t = 0; t < 1; t += Time.deltaTime / 0.5f)
             {
@@ -421,27 +558,43 @@ namespace ChessWars.Game
         bool CheckGameOver(string key)
         {
             bool inCheck = Rules.Rules.IsInCheck(pos, pos.Turn);
+            string enemyKing = $"{SideName(pos.Turn)} {KingName(pos.Turn)}";
             if (Rules.Rules.AllLegalMoves(pos, pos.Turn).Count == 0)
             {
-                status = inCheck ? $"Checkmate! {ArmyName(Rules.Rules.Opponent(pos.Turn))} wins." : "Stalemate. A draw.";
-                if (inCheck) StartCoroutine(Checkmate(pos.Turn));
-                busy = true;
+                gameOver = busy = true;
+                if (inCheck)
+                {
+                    var winner = Rules.Rules.Opponent(pos.Turn);
+                    ui.Narrate("Checkmate", $"The {enemyKing} is trapped. {SideName(winner)} claims the board.");
+                    UpdateTurn($"{SideName(winner)} wins");
+                    StartCoroutine(Checkmate(pos.Turn));
+                }
+                else
+                {
+                    ui.Narrate("Draw", "Stalemate. Neither side can make a legal move.");
+                    UpdateTurn("Draw");
+                }
                 return true;
             }
-            if (seen[key] >= 3 || pos.Halfmove >= 100 || Rules.Rules.HasInsufficientMaterial(pos))
+            string draw = seen[key] >= 3 ? "The same position has come up three times. The battle is a draw."
+                : pos.Halfmove >= 100 ? "Fifty moves with no capture or pawn move. The battle is a draw."
+                : Rules.Rules.HasInsufficientMaterial(pos) ? "Neither side has enough left to force checkmate." : null;
+            if (draw != null)
             {
-                status = "A draw.";
-                busy = true;
+                gameOver = busy = true;
+                ui.Narrate("Draw", draw);
+                UpdateTurn("Draw");
                 return true;
             }
-            status = $"{ArmyName(pos.Turn)} to move{(inCheck ? " - CHECK!" : "")}";
+            UpdateTurn();
             return false;
         }
 
         // The search runs off the main thread so the board keeps animating on slow phones.
         IEnumerator AiTurn()
         {
-            busy = true;
+            busy = aiThinking = true;
+            UpdateTurn();
             var snapshot = pos.Clone();
             var counts = new Dictionary<string, int>(seen);
             int depth = aiDepth;
@@ -449,21 +602,9 @@ namespace ChessWars.Game
             var search = Task.Run(() => Ai.ChooseMove(snapshot, depth, counts, new System.Random(seed).NextDouble));
             yield return new WaitForSeconds(0.4f);
             while (!search.IsCompleted) yield return null;
-            busy = false;
+            busy = aiThinking = false;
+            UpdateTurn();
             if (search.Result != null) yield return Play(search.Result);
-        }
-
-        // A plain status line and restart button until the real interface is built; hidden during a kill.
-        void OnGUI()
-        {
-            if (hud != null && hud.Cinematic) return;
-            float scale = Screen.height / 900f;
-            var style = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * scale), alignment = TextAnchor.MiddleCenter };
-            style.normal.textColor = Color.white;
-            GUI.Label(new Rect(0, 10 * scale, Screen.width, 40 * scale), status, style);
-            var button = new GUIStyle(GUI.skin.button) { fontSize = Mathf.RoundToInt(18 * scale) };
-            if (GUI.Button(new Rect(Screen.width - 150 * scale, Screen.height - 60 * scale, 140 * scale, 50 * scale), "New game", button))
-                NewGame();
         }
     }
 }

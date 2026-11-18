@@ -17,6 +17,7 @@ namespace ChessWars.Game
         public char Color { get; private set; }
         public int Row, Col;
         public bool HasBehead { get; private set; }
+        public bool Dying { get; private set; }             // falling: no badge, no longer a target
         public float Height { get; private set; } = 1.2f;   // top of the model above the board
         public string Style => Armies.Style(Army, Type);
 
@@ -176,6 +177,7 @@ namespace ChessWars.Game
         {
             var fx = Fx.I;
             var army = Armies.All[Army];
+            Dying = true;
             behead &= HasBehead;
             Play(behead ? "Behead" : "Death", 0.08f);
             var spot = Center;
