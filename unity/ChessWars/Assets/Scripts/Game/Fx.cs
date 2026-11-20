@@ -157,6 +157,171 @@ namespace ChessWars.Game
             Destroy(line.gameObject);
         }
 
+        // ---------------------------------------------------------------- weapon effects for the kill moves
+
+        /// <summary>
+        /// A blade's trail: a bright arc sweeping around `center` in the plane of `forward` and `side`, from
+        /// `fromDeg` to `toDeg` (0 is straight ahead, +90 is `side`), with a tapering tail, then fading.
+        /// </summary>
+        public void SlashArc(Vector3 center, Vector3 forward, Vector3 side, float radius, float fromDeg, float toDeg, Color color, float width = 0.09f, float seconds = 0.12f) =>
+            StartCoroutine(SlashRoutine(center, forward.normalized, side.normalized, radius, fromDeg, toDeg, color, width, seconds));
+
+        IEnumerator SlashRoutine(Vector3 center, Vector3 forward, Vector3 side, float radius, float fromDeg, float toDeg, Color color, float width, float seconds)
+        {
+            const int n = 20;
+            var line = Line("Slash", color, width, n);
+            line.widthCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);           // thin tail, full head
+            var gradient = new Gradient();
+            var core = Color.Lerp(Color.white, color, 0.35f);
+            gradient.SetKeys(new[] { new GradientColorKey(color, 0), new GradientColorKey(core, 1) },
+                             new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, 1) });
+            line.colorGradient = gradient;
+            float span = Mathf.Min(150f, Mathf.Abs(toDeg - fromDeg));
+            float sign = Mathf.Sign(toDeg - fromDeg);
+            Vector3 At(float deg) => center + (forward * Mathf.Cos(deg * Mathf.Deg2Rad) + side * Mathf.Sin(deg * Mathf.Deg2Rad)) * radius;
+            // Degrees measured along the swing: 0 at `fromDeg`, `sweep` at `toDeg`.
+            float sweep = Mathf.Abs(toDeg - fromDeg);
+            float Deg(float along) => fromDeg + sign * along;
+            const float fade = 0.2f;
+            for (float t = 0; t < seconds + fade; t += Time.deltaTime)
+            {
+                // The head sweeps across in `seconds`, then the tail catches it up and the trail is gone.
+                float head = sweep * Mathf.Clamp01(t / seconds);
+                float tail = Mathf.Max(0f, head - span);
+                if (t > seconds) tail = Mathf.Lerp(tail, head, (t - seconds) / fade);
+                for (int i = 0; i < n; i++) line.SetPosition(i, At(Deg(Mathf.Lerp(tail, head, i / (n - 1f)))));
+                yield return null;
+            }
+            Destroy(line.gameObject);
+        }
+
+        /// <summary>Three parallel claw rakes across a point, slanted by `tilt` degrees.</summary>
+        public void ClawMarks(Vector3 at, Vector3 toward, float tilt, Color color)
+        {
+            var forward = toward.normalized;
+            var side = Quaternion.AngleAxis(tilt, forward) * Vector3.Cross(Vector3.up, forward);
+            var spread = Vector3.Cross(forward, side).normalized;
+            for (int i = -1; i <= 1; i++)
+                SlashArc(at - forward * 0.35f + spread * i * 0.09f, forward, side, 0.35f, -55f, 55f, color, 0.05f, 0.09f);
+        }
+
+        /// <summary>A gun's flash: a hot white-yellow bloom and a few sparks out of the barrel.</summary>
+        public void MuzzleFlash(Vector3 at, Vector3 dir, Color color, float size = 1f)
+        {
+            Glow(at, Color.white, 0.22f * size, 0.05f);
+            Glow(at + dir * 0.06f, color, 0.4f * size, 0.07f);
+            for (int i = 0; i < 4; i++)
+                Emit(sparks, at, (dir + Random.insideUnitSphere * 0.4f).normalized * (2f + Random.value * 2f), 0.05f * size, 0.12f, color);
+        }
+
+        /// <summary>A spent brass case flicked out of the side of the gun.</summary>
+        public void Casing(Vector3 at, Vector3 side) =>
+            Emit(sparks, at, (side + Vector3.up * 0.8f + Random.insideUnitSphere * 0.2f) * 1.6f, 0.06f, 0.7f, Armies.Hex(0xd8a640));
+
+        /// <summary>An explosion: fireball, sparks, a ring across the ground and a cloud of dust.</summary>
+        public void Explosion(Vector3 at, Color color, float size = 1f)
+        {
+            Glow(at, Color.white, 0.9f * size, 0.12f);
+            Glow(at, Armies.Hex(0xffb347), 1.4f * size, 0.3f);
+            for (int i = 0; i < 6; i++) Glow(at + Random.insideUnitSphere * 0.3f * size, Color.Lerp(color, Armies.Hex(0xff6a1a), 0.5f), 0.6f * size, 0.45f, Random.onUnitSphere * 0.8f);
+            Burst(at, Armies.Hex(0xffd27a), Mathf.RoundToInt(40 * size), 4.5f * size, 1.3f, 0.8f);
+            Burst(at, color, 20, 3f, 1f, 0.6f);
+            Shockwave(new Vector3(at.x, 0, at.z), Armies.Hex(0xffa23a));
+            Dust(new Vector3(at.x, 0.1f, at.z), 18);
+            Shake(0.35f * size);
+        }
+
+        /// <summary>A laser sight: a thin red line that flickers on the target until `Hide` is called.</summary>
+        public LineRenderer Laser(Vector3 from, Vector3 to, Color color)
+        {
+            var line = Line("Laser", color, 0.012f, 2);
+            line.SetPosition(0, from);
+            line.SetPosition(1, to);
+            return line;
+        }
+
+        /// <summary>Gathers energy into a point: sparks drawn inwards and a glow that swells, over `seconds`.</summary>
+        public IEnumerator ChargeUp(System.Func<Vector3> at, Color color, float seconds)
+        {
+            for (float t = 0; t < seconds; t += Time.deltaTime)
+            {
+                var p = at();
+                float k = t / seconds;
+                Glow(p, Color.Lerp(color, Color.white, k * 0.6f), 0.08f + 0.35f * k, 0.06f);
+                if (Random.value < 0.7f)
+                {
+                    var from = p + Random.onUnitSphere * 0.6f;
+                    Emit(glows, from, (p - from) / 0.3f, 0.06f, 0.3f, color);
+                }
+                yield return null;
+            }
+        }
+
+        public enum Shot { Tracer, Bolt, Sniper, Orb, Shell, Missile, Shuriken }
+
+        /// <summary>Anything fired at a target, by kind: tracers, blaster bolts, a sniper round, a magic orb,
+        /// a smoking shell or missile on a high arc, or a spinning shuriken. Finishes when it arrives.</summary>
+        public IEnumerator Fire(Shot kind, Vector3 from, Vector3 to, Color color)
+        {
+            float dist = Vector3.Distance(from, to);
+            float speed = kind switch { Shot.Sniper => 45f, Shot.Tracer => 24f, Shot.Bolt => 16f, Shot.Shuriken => 11f, Shot.Orb => 6f, _ => 5f };
+            float arc = kind switch { Shot.Orb => 0.35f, Shot.Shell => 1.3f, Shot.Missile => 2f, _ => 0f };
+            float seconds = Mathf.Max(0.05f, dist / speed + (arc > 1f ? 0.25f : 0f));
+            var dir = (to - from).normalized;
+            LineRenderer streak = null;
+            if (kind == Shot.Tracer || kind == Shot.Bolt || kind == Shot.Sniper)
+                streak = Line("Round", kind == Shot.Bolt ? color : Color.Lerp(color, Color.white, 0.6f), kind == Shot.Sniper ? 0.03f : kind == Shot.Bolt ? 0.06f : 0.035f, 2);
+            else if (kind == Shot.Shuriken)
+            {
+                streak = Line("Shuriken", Armies.Hex(0xd8dde3), 0.03f, 8);
+                streak.loop = true;
+            }
+            var last = from;
+            for (float t = 0; t < 1; t += Time.deltaTime / seconds)
+            {
+                var p = Vector3.Lerp(from, to, t) + Vector3.up * Mathf.Sin(t * Mathf.PI) * arc;
+                var heading = (p - last).sqrMagnitude > 1e-6f ? (p - last).normalized : dir;
+                switch (kind)
+                {
+                    case Shot.Tracer:
+                    case Shot.Bolt:
+                    case Shot.Sniper:
+                        float length = kind == Shot.Sniper ? 0.9f : kind == Shot.Bolt ? 0.28f : 0.32f;
+                        streak.SetPosition(0, p - heading * length);
+                        streak.SetPosition(1, p);
+                        if (kind == Shot.Bolt) Glow(p, color, 0.16f, 0.05f);
+                        break;
+                    case Shot.Orb:
+                        Glow(p, Color.white, 0.16f, 0.08f);
+                        Glow(p, color, 0.36f, 0.35f);
+                        break;
+                    case Shot.Shell:
+                    case Shot.Missile:
+                        Glow(p, Armies.Hex(0xffd27a), kind == Shot.Missile ? 0.18f : 0.14f, 0.05f);
+                        if (kind == Shot.Missile) Glow(p - heading * 0.12f, Armies.Hex(0xff7a2a), 0.22f, 0.12f);
+                        Emit(dust, p - heading * 0.1f, Random.insideUnitSphere * 0.15f, 0.12f, 0.7f, new Color(0.6f, 0.6f, 0.58f, 0.45f));
+                        break;
+                    case Shot.Shuriken:
+                    {
+                        // A four-pointed star spinning flat in the direction of flight.
+                        var a = Vector3.Cross(Vector3.up, heading).normalized;
+                        var b = Vector3.Cross(heading, a).normalized;
+                        float spin = t * seconds * 40f;
+                        for (int i = 0; i < 8; i++)
+                        {
+                            float ang = spin + i * Mathf.PI / 4;
+                            float r = i % 2 == 0 ? 0.09f : 0.03f;
+                            streak.SetPosition(i, p + (a * Mathf.Cos(ang) + heading * Mathf.Sin(ang)) * r);
+                        }
+                        break;
+                    }
+                }
+                last = p;
+                yield return null;
+            }
+            if (streak != null) Destroy(streak.gameObject);
+        }
+
         /// <summary>A tracer round (fast, straight) or a magic orb (slower, arcing, trailing glow) flying at a target.</summary>
         public IEnumerator Projectile(Vector3 from, Vector3 to, Color color, bool tracer)
         {

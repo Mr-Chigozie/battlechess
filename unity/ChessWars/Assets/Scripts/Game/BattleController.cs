@@ -13,7 +13,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace ChessWars.Game
 {
-    public class BattleController : MonoBehaviour
+    public partial class BattleController : MonoBehaviour
     {
         public BoardView board;
         public CameraRig cameraRig;
@@ -82,7 +82,7 @@ namespace ChessWars.Game
                 if (key == "blood") blood = on;
             };
             ui.ViewPressed += () => cameraRig.viewColor = cameraRig.viewColor == 'w' ? 'b' : 'w';
-            ui.NewGamePressed += NewGame;
+            ui.NewGamePressed += () => NewGame();
             ui.MainMenuPressed += ShowTitle;
             menu = MainMenu.Create();
             menu.Battle += (mine, theirs, side, rank) =>
@@ -90,7 +90,63 @@ namespace ChessWars.Game
                 // Ivory moves first; the computer takes the other side.
                 Begin(side == 'w' ? mine : theirs, side == 'w' ? theirs : mine, side == 'w' ? 'b' : 'w', rank, false);
             };
-            ShowTitle();
+            if (KillTest() is string test) RunKillTest(test);
+            else ShowTitle();
+        }
+
+        // ---------------------------------------------------------------- kill test (development)
+        // Launch straight into one capture, to look at a kill move without playing a game to it:
+        //   adb shell am start -n com.chesswars.game/com.unity3d.player.UnityPlayerGameActivity -e killtest marines:b>knights:p
+        // White's attacker takes Black's victim on e5.
+
+        static string KillTest()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+                using var intent = activity.Call<AndroidJavaObject>("getIntent");
+                return intent.Call<string>("getStringExtra", "killtest");
+            }
+            catch (System.Exception) { return null; }
+#else
+            return null;
+#endif
+        }
+
+        void RunKillTest(string test)
+        {
+            var sides = test.Split('>');
+            var a = sides[0].Split(':');
+            var v = sides[1].Split(':');
+            char type = a[1][0];
+            Begin(a[0], v[0], 'b', 1, false);
+            menu.Hide();
+            // Where each piece stands to take e5 (row 3, col 4).
+            var from = type switch { 'p' => (4, 3), 'n' => (5, 3), 'b' => (5, 2), 'k' => (4, 4), _ => (6, 4) };
+            var board = new char[8, 8];
+            board[7, 7] = 'K';
+            board[0, 0] = 'k';
+            board[from.Item1, from.Item2] = char.ToUpperInvariant(type);
+            board[3, 4] = v[1][0];
+            var fen = new System.Text.StringBuilder();
+            for (int r = 0; r < 8; r++)
+            {
+                int empty = 0;
+                for (int c = 0; c < 8; c++)
+                {
+                    if (board[r, c] == '\0') { empty++; continue; }
+                    if (empty > 0) { fen.Append(empty); empty = 0; }
+                    fen.Append(board[r, c]);
+                }
+                if (empty > 0) fen.Append(empty);
+                if (r < 7) fen.Append('/');
+            }
+            fen.Append(" w - - 0 1");
+            Setup(Rules.Rules.FromFen(fen.ToString()));
+            var move = Rules.Rules.LegalMoves(pos, from.Item1, from.Item2).FirstOrDefault(m => m.ToRow == 3 && m.ToCol == 4);
+            if (move != null) StartCoroutine(Play(move));
         }
 
         // The title screen: the player's last matchup stands ready on its battlefield while the camera circles.
@@ -158,7 +214,9 @@ namespace ChessWars.Game
             lastFury = fury;
         }
 
-        public void NewGame()
+        public void NewGame() => Setup(Rules.Rules.InitialPosition());
+
+        void Setup(Position start)
         {
             StopAllCoroutines();
             Time.timeScale = 1f;
@@ -166,7 +224,7 @@ namespace ChessWars.Game
             if (killCam.Active || hud.Cinematic) { StartCoroutine(killCam.Exit()); hud.SetCinematic(false); }
             if (unitRoot != null) Destroy(unitRoot.gameObject);
             unitRoot = new GameObject("Units").transform;
-            pos = Rules.Rules.InitialPosition();
+            pos = start;
             seen.Clear();
             seen[Rules.Rules.PositionKey(pos)] = 1;
             streak['w'] = streak['b'] = 0;
@@ -362,11 +420,14 @@ namespace ChessWars.Game
             dir.y = 0;
             dir.Normalize();
             string style = attacker.Style;
+            var kind = KindOf(attacker);
+            var finisher = PickFinisher(attacker, kind);
             var color = Armies.All[attacker.Army].Magic;
-            bool behead = blood && style == "strike" && victim.HasBehead;
+            // Heads come off (with Blood on) to a spinning or passing blade, or a sniper's round.
+            bool behead = blood && victim.HasBehead && (kind == Kill.Sniper || finisher == Finisher.Spin || finisher == Finisher.DashThrough);
             bool cine = cinematics;
             string who = $"{SideName(attacker.Color)} {UnitName(attacker)}  vs  {SideName(victim.Color)} {UnitName(victim)}";
-            string line = $"The {UnitName(attacker)} {Armies.KillVerb(style)} the {UnitName(victim)}!";
+            string line = $"The {UnitName(attacker)} {VerbFor(kind, finisher, style)} the {UnitName(victim)}!";
             int level = combo?.Level ?? 0;
 
             if (cine)
@@ -378,83 +439,8 @@ namespace ChessWars.Game
             StartCoroutine(victim.TurnTowards(A, 0.3f));
             yield return attacker.TurnTowards(V, 0.3f);
 
-            Coroutine finishing = null;   // anything still running after impact (a beam) that must end first
-            switch (style)
-            {
-                case "strike":
-                    yield return attacker.Travel(V - dir * 0.62f);
-                    StartCoroutine(attacker.StrikeIn(0.46f));
-                    yield return new WaitForSeconds(0.34f);
-                    yield return attacker.Nudge(dir, 0.14f, 0.12f, true);
-                    break;
-                case "thrust":
-                    yield return attacker.Travel(V - dir * 0.72f);
-                    StartCoroutine(attacker.StrikeIn(0.52f));
-                    yield return new WaitForSeconds(0.2f);
-                    yield return attacker.Nudge(dir, -0.12f, 0.22f);
-                    yield return attacker.Nudge(dir, 0.34f, 0.1f, true);
-                    break;
-                case "charge":
-                {
-                    // Back up a step, then charge home.
-                    yield return attacker.Nudge(dir, -0.25f, 0.35f);
-                    float run = 0.2f + Vector3.Distance(A, V) * 0.16f;
-                    StartCoroutine(attacker.StrikeIn(run));
-                    yield return attacker.Travel(V - dir * 0.45f, seconds: run, accelerate: true, walk: false, turn: false);
-                    break;
-                }
-                case "slam":
-                    // Leap high and come down on top of the victim.
-                    StartCoroutine(attacker.StrikeIn(1.0f));
-                    yield return new WaitForSeconds(0.3f);
-                    yield return attacker.Travel(V, arc: 1.7f, seconds: 0.7f, walk: false, turn: false);
-                    break;
-                case "shoot":
-                {
-                    bool heavy = Armies.HeavyGun(attacker.Army, attacker.Type);
-                    attacker.Play("Shoot");
-                    // The sniper has to get down on his belly first.
-                    yield return new WaitForSeconds(0.2f + (attacker.Army == "marines" && attacker.Type == 'b' ? 0.6f : 0f));
-                    int shots = heavy ? 1 : 4;
-                    for (int i = 0; i < shots; i++)
-                    {
-                        var tip = attacker.Tip;
-                        fx.Burst(tip, Armies.Hex(0xffd27a), 8, 1.4f, 0.7f, 0.18f);
-                        var flight = StartCoroutine(fx.Projectile(tip, victim.Center, heavy ? Armies.Hex(0xffa23a) : color, !heavy));
-                        StartCoroutine(attacker.Nudge(dir, heavy ? -0.15f : -0.03f, 0.06f));
-                        if (i == shots - 1) yield return flight;
-                        else yield return new WaitForSeconds(0.1f);
-                    }
-                    break;
-                }
-                case "spell":
-                    attacker.Play("Shoot");
-                    yield return new WaitForSeconds(0.35f);
-                    for (int i = 0; i < 3; i++)
-                    {
-                        fx.Burst(attacker.Tip, color, 8, 0.8f, 0.8f, 0.3f);
-                        yield return new WaitForSeconds(0.12f);
-                    }
-                    yield return fx.Projectile(attacker.Tip, victim.Center, color, false);
-                    break;
-                case "beam":
-                    attacker.Play("Shoot");
-                    for (int i = 0; i < 3; i++)
-                    {
-                        fx.Burst(attacker.Tip, color, 8, 0.8f, 0.8f, 0.3f);
-                        yield return new WaitForSeconds(0.12f);
-                    }
-                    finishing = StartCoroutine(fx.Beam(attacker.Tip, victim.Center, color, 0.9f));
-                    yield return new WaitForSeconds(0.35f);
-                    break;
-                case "lightning":
-                    attacker.Play("Shoot");
-                    yield return new WaitForSeconds(0.4f);
-                    hud.Flash(0.5f);
-                    StartCoroutine(fx.Lightning(attacker.Tip, victim.Center, color, 4));
-                    yield return fx.Lightning(V + Vector3.up * 7f, victim.Center, color, 5);
-                    break;
-            }
+            yield return KillMove(kind, finisher, attacker, victim, dir, color);
+            var finishing = killFinishing;   // anything still running after impact (a beam) that must end first
 
             // Impact.
             float holdUntil = 0f;
@@ -476,8 +462,15 @@ namespace ChessWars.Game
             ui.Narrate(combo != null ? combo.Title : "Battle", line);
             if (combo != null) hud.ShowCombo(combo.Title, combo.Tags, combo.Level);
             if (blood) fx.Burst(hit, Armies.All[victim.Army].Blood, 16, 2.4f, 0.9f, 0.6f);
-            // Reel from the blow, then fall.
-            yield return victim.Nudge(dir, 0.16f + (style == "slam" || style == "charge" ? 0.12f : 0f), 0.16f);
+            if (killExplode) fx.Explosion(hit, color, kind == Kill.Heavy ? 1f : 0.7f);
+            if (killHeadshot)
+            {
+                var head = victim.transform.position + Vector3.up * victim.Height * 0.85f;
+                fx.Burst(head, blood ? Armies.All[victim.Army].Blood : Color.white, 20, 2.6f, 0.9f, 0.6f);
+            }
+            // Reel from the blow (or get blown off its feet), then fall.
+            if (killLaunch) yield return victim.Launch(dir, kind == Kill.Heavy ? 0.9f : 0.45f, kind == Kill.Heavy ? 0.8f : 0.5f);
+            else yield return victim.Nudge(dir, killPush + (style == "slam" ? 0.12f : 0f), 0.16f);
             var dying = StartCoroutine(victim.Die(behead, level));
 
             // Let the death play out before the victor steps in.

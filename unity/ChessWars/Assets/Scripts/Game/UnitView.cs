@@ -145,6 +145,66 @@ namespace ChessWars.Game
             transform.position = from + dir * distance;
         }
 
+        /// <summary>Freeze (0) or speed up the current animation, e.g. to hold the sniper's aim.</summary>
+        public void SetAnimSpeed(float speed)
+        {
+            if (animator != null) animator.speed = speed;
+        }
+
+        /// <summary>The sniper's barrel when lying prone: low and well out in front.</summary>
+        public Vector3 ProneTip => transform.position + transform.forward * Height * 0.62f + Vector3.up * Height * 0.12f;
+
+        /// <summary>A full turn on the spot (a spinning slash).</summary>
+        public IEnumerator Spin(float seconds)
+        {
+            var from = transform.rotation;
+            for (float t = 0; t < 1; t += Time.deltaTime / seconds)
+            {
+                transform.rotation = from * Quaternion.Euler(0, 360f * (1 - (1 - t) * (1 - t)), 0);
+                yield return null;
+            }
+            transform.rotation = from;
+        }
+
+        /// <summary>Up and back down where it stands (an overhead leap).</summary>
+        public IEnumerator Hop(float height, float seconds)
+        {
+            var from = transform.position;
+            for (float t = 0; t < 1; t += Time.deltaTime / seconds)
+            {
+                transform.position = from + Vector3.up * Mathf.Sin(t * Mathf.PI) * height;
+                yield return null;
+            }
+            transform.position = from;
+        }
+
+        /// <summary>Shaken side to side in a beast's jaws.</summary>
+        public IEnumerator Shake(float seconds)
+        {
+            var from = transform.rotation;
+            for (float t = 0; t < seconds; t += Time.deltaTime)
+            {
+                transform.rotation = from * Quaternion.Euler(Mathf.Sin(t * 38f) * 6f, Mathf.Sin(t * 31f) * 18f, 0);
+                yield return null;
+            }
+            transform.rotation = from;
+        }
+
+        /// <summary>Blown off its feet: thrown back and up, tumbling, and down again.</summary>
+        public IEnumerator Launch(Vector3 dir, float height, float distance, float seconds = 0.55f)
+        {
+            var from = transform.position;
+            var spin = transform.rotation;
+            var axis = Vector3.Cross(Vector3.up, dir).normalized;
+            for (float t = 0; t < 1; t += Time.deltaTime / seconds)
+            {
+                transform.position = from + dir * distance * t + Vector3.up * Mathf.Sin(t * Mathf.PI) * height;
+                transform.rotation = Quaternion.AngleAxis(-70f * t, axis) * spin;
+                yield return null;
+            }
+            transform.position = from + dir * distance;
+        }
+
         /// <summary>Lights up white for a moment on the hit (its own renderers only, so its comrades don't flash).</summary>
         public IEnumerator FlashWhite()
         {
