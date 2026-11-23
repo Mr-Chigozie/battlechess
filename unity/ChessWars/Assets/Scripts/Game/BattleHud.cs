@@ -15,14 +15,15 @@ namespace ChessWars.Game
     {
         public Func<IEnumerable<UnitView>> Units;   // every unit standing on the board
         public bool ShowBadges = true;
-        public event Action ViewPressed, NewGamePressed, MainMenuPressed;
+        public event Action ViewPressed, NewGamePressed, MainMenuPressed, TauntPressed;
         public bool Hidden;          // the title screen is up: no HUD at all
         public bool MenuOpen => menuOpen;
         public event Action<string, bool> SettingChanged;
 
         RectTransform safe, badgeLayer, menu;
         CanvasGroup group, narration;
-        Text title, sub, banner, furyLabel, narrLabel, narrText;
+        Text title, sub, banner, furyLabel, narrLabel, narrText, clocks;
+        RectTransform tauntButton, newGameButton, mainMenuButton;
         Image bannerFrame;
         readonly List<RectTransform> blockers = new List<RectTransform>();
         readonly List<Image> badges = new List<Image>();
@@ -92,6 +93,13 @@ namespace ChessWars.Game
             furyBar = fill;
             furyLabel = Label(Node("Fury label", safe, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-170, -286), new Vector2(170, -250)), Sans, 20, Muted, TextAnchor.MiddleCenter);
 
+            // Online battles: both clocks under the fury meter, and a battle-cry button.
+            clocks = Label(Node("Clocks", safe, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-400, -336), new Vector2(400, -290)), Sans, 28, Ink, TextAnchor.MiddleCenter);
+            clocks.gameObject.SetActive(false);
+            tauntButton = Button("Taunt", safe, new Vector2(0, 1), new Vector2(0, 1), "Taunt", () => TauntPressed?.Invoke());
+            tauntButton.SetOffsets(new Vector2(24, -228), new Vector2(184, -150));
+            tauntButton.gameObject.SetActive(false);
+
             // The narrator, bottom: a gold rule on the left, a small caps label and an italic line.
             var narr = Node("Narration", safe, new Vector2(0, 0), new Vector2(1, 0), new Vector2(24, 24), new Vector2(-24, 190));
             narration = narr.gameObject.AddComponent<CanvasGroup>();
@@ -129,9 +137,9 @@ namespace ChessWars.Game
                 toggleMarks[key] = mark;
                 y -= 108;
             }
-            Button("New game", menu, new Vector2(0, 0), new Vector2(1, 0), "New game", () => { ToggleMenu(); NewGamePressed?.Invoke(); }, true)
+            newGameButton = Button("New game", menu, new Vector2(0, 0), new Vector2(1, 0), "New game", () => { ToggleMenu(); NewGamePressed?.Invoke(); }, true)
                 .SetOffsets(new Vector2(24, 132), new Vector2(-24, 224));
-            Button("Main menu", menu, new Vector2(0, 0), new Vector2(1, 0), "Main menu", () => { ToggleMenu(); MainMenuPressed?.Invoke(); })
+            mainMenuButton = Button("Main menu", menu, new Vector2(0, 0), new Vector2(1, 0), "Main menu", () => { ToggleMenu(); MainMenuPressed?.Invoke(); })
                 .SetOffsets(new Vector2(24, 24), new Vector2(-24, 116));
             menu.gameObject.SetActive(false);
         }
@@ -165,6 +173,18 @@ namespace ChessWars.Game
             narrText.text = text;
             narratedAt = Time.unscaledTime;
         }
+
+        /// <summary>Online battles: clocks and battle cries on; the menu's New game becomes the battle's options
+        /// (draw, resign, report) and Main menu becomes the War Room.</summary>
+        public void SetOnline(bool on)
+        {
+            clocks.gameObject.SetActive(on);
+            tauntButton.gameObject.SetActive(on);
+            newGameButton.Find("Text").GetComponent<Text>().text = on ? "Draw · Resign · Report" : "New game";
+            mainMenuButton.Find("Text").GetComponent<Text>().text = on ? "War room" : "Main menu";
+        }
+
+        public void SetClocks(string text) => clocks.text = text;
 
         public void SetSetting(string key, bool on)
         {

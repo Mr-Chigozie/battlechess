@@ -87,8 +87,9 @@ namespace ChessWars.Game
                 if (key == "music") Sfx.MusicOn = on;
             };
             ui.ViewPressed += () => cameraRig.viewColor = cameraRig.viewColor == 'w' ? 'b' : 'w';
-            ui.NewGamePressed += () => NewGame();
-            ui.MainMenuPressed += ShowTitle;
+            // In an online battle the menu's two buttons are the battle's options and the way back to the War Room.
+            ui.NewGamePressed += () => { if (online != null) OnlineOptions(); else NewGame(); };
+            ui.MainMenuPressed += () => { if (online != null) LeaveOnline(); else ShowTitle(); };
             menu = MainMenu.Create();
             menu.Battle += (mine, theirs, side, rank) =>
             {
@@ -96,6 +97,7 @@ namespace ChessWars.Game
                 Sfx.Play("drums");
                 Begin(side == 'w' ? mine : theirs, side == 'w' ? theirs : mine, side == 'w' ? 'b' : 'w', rank, false);
             };
+            InitOnline();
             if (KillTest() is string test) RunKillTest(test);
             else ShowTitle();
         }
@@ -197,6 +199,12 @@ namespace ChessWars.Game
         void UpdateTurn(string over = null)
         {
             bool check = !gameOver && Rules.Rules.IsInCheck(pos, pos.Turn);
+            if (online != null)
+            {
+                bool waiting = pos.Turn != online.Mine;
+                ui.SetTurn(over ?? (waiting ? $"{online.Opponent} is thinking…" : $"Your move{(check ? " — check!" : "")}"), over == null && waiting, check);
+                return;
+            }
             string text = over
                 ?? (aiThinking ? $"{SideName(pos.Turn)} is plotting…" : $"{SideName(pos.Turn)} to move{(check ? " — check!" : "")}");
             ui.SetTurn(text, aiThinking, check);
@@ -245,6 +253,8 @@ namespace ChessWars.Game
             captures.Clear();
             lastFury = 0;
             furyNews = null;
+            plyPlayed = 0;
+            playedMoves.Clear();
             for (int row = 0; row < 8; row++)
                 for (int col = 0; col < 8; col++)
                 {
@@ -262,7 +272,7 @@ namespace ChessWars.Game
             ui.Narrate("The opening", $"{SideName('w')} faces {SideName('b')} on {Themes.For(aiColor == 'b' ? blackArmy : whiteArmy).Name}. Tap a unit to give orders. Drag to look around, pinch to zoom.");
             UpdateTurn();
             UpdateFury();
-            if (!attract && pos.Turn == aiColor) StartCoroutine(AiTurn());
+            if (!attract && online == null && pos.Turn == aiColor) StartCoroutine(AiTurn());
         }
 
         string ArmyName(char color) => Armies.All[color == 'w' ? whiteArmy : blackArmy].Name;
@@ -277,7 +287,12 @@ namespace ChessWars.Game
 
         void Update()
         {
-            if (attract || menu.Open) return;
+            if (online != null)
+            {
+                PumpRemote();
+                UpdateClocks();
+            }
+            if (attract || menu.Open || onlineUi.Open || onlineUi.CardOpen) return;
             // The phone's back button opens (or closes) the battle menu.
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame && !killCam.Active) ui.ToggleMenu();
             // Act on release, and only for a tap: a press that turned into a drag was moving the camera.
@@ -346,8 +361,14 @@ namespace ChessWars.Game
             }
         }
 
-        IEnumerator Play(Move move, char promotion = 'q')
+        IEnumerator Play(Move move, char promotion = 'q', bool remote = false)
         {
+            if (online != null)
+            {
+                if (!remote) SendMove(move, promotion, plyPlayed);
+                plyPlayed++;
+                playedMoves.Add(move);
+            }
             busy = true;
             selected = null;
             targets.Clear();
@@ -397,7 +418,11 @@ namespace ChessWars.Game
             ShowMarkers(move);
             busy = false;
             UpdateFury();
-            if (CheckGameOver(key)) yield break;
+            if (CheckGameOver(key))
+            {
+                if (online != null) OnlineBoardEnd();
+                yield break;
+            }
 
             // The narrator reports the move (captures were already told as they happened), as the web game does.
             var army = Armies.All[attacker.Army];
@@ -415,7 +440,7 @@ namespace ChessWars.Game
                 StartCoroutine(NarrateLater(2.5f, furyNews, furyNewsText));
                 furyNews = null;
             }
-            if (pos.Turn == aiColor) yield return AiTurn();
+            if (online == null && pos.Turn == aiColor) yield return AiTurn();
         }
 
         string KingName(char color) => Armies.All[color == 'w' ? whiteArmy : blackArmy].Units['k'];

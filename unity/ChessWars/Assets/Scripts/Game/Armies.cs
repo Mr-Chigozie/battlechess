@@ -36,6 +36,22 @@ namespace ChessWars.Game
             ["mafia"] = Make("mafia", "The Mafia", "Mafia", "The Boss", "Underboss", "Speakeasy", "Consigliere", "Getaway Car", "Soldier", 0xc9a24a, 0x7e0b0b),
         };
 
+        /// <summary>Each army's battle cries for online play: the same lines as js/armies.js (the server only accepts these).</summary>
+        public static readonly Dictionary<string, string[]> Taunts = new Dictionary<string, string[]>
+        {
+            ["marines"] = new[] { "Semper fi. Let's see what you've got.", "You can call it a retreat. We call it a tactical adjustment.", "Eyes up. The next move is ours." },
+            ["undead"] = new[] { "You cannot outlast what is already dead.", "The grave has room for one more king.", "We have all the time in the world." },
+            ["knights"] = new[] { "A noble move. Now answer mine.", "The crown is guarded. Are you sure?", "Courage is admirable. Checkmate is better." },
+            ["asgardians"] = new[] { "The Nine Realms have seen better generals than you.", "Thunder answers every insult.", "Ragnarök comes early for your king." },
+            ["vikings"] = new[] { "The ravens are already circling.", "A fine move. Shame it will not save you.", "Valhalla is watching this board." },
+            ["samurai"] = new[] { "The blade is drawn only once.", "Patience is the sharpest sword.", "Your castle is paper. Our resolve is steel." },
+            ["spartans"] = new[] { "Come and take them.", "Return with your shield, or on it.", "Our walls are made of men." },
+            ["machines"] = new[] { "Probability of your victory: 0.03%.", "Your move has been predicted and logged.", "Resistance is computationally inefficient." },
+        };
+
+        /// <summary>Armies the server knows (The Mafia is offline-only for now).</summary>
+        public static bool Online(string id) => Taunts.ContainsKey(id);
+
         public static readonly Dictionary<char, string> Pieces = new Dictionary<char, string>
         {
             ['p'] = "Pawn", ['n'] = "Knight", ['b'] = "Bishop", ['r'] = "Rook", ['q'] = "Queen", ['k'] = "King"

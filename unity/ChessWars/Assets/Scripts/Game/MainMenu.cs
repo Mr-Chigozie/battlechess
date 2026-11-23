@@ -1,6 +1,6 @@
 // The front end, over the live battlefield: the title screen (as the web game's: "Every capture is a battle",
 // CHESS WARS, the lede), then a two-step skirmish setup: choose your army, then choose your enemy, your side and
-// the computer's rank. Built in code on the shared Ui pieces. Story and Online are shown as coming soon.
+// the computer's rank. Built in code on the shared Ui pieces. Story is shown as coming soon; Online opens the War Room (OnlineUi).
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -15,6 +15,8 @@ namespace ChessWars.Game
     {
         /// <summary>Start a skirmish: (player's army, enemy army, player's colour, computer depth 1-3).</summary>
         public event Action<string, string, char, int> Battle;
+        /// <summary>The Online battle button.</summary>
+        public event Action OnlinePressed;
 
         static readonly string[] Order = { "knights", "undead", "vikings", "samurai", "spartans", "asgardians", "marines", "machines", "mafia" };
         static readonly string[] RankNames = { "", "Recruit", "Veteran", "Warlord" };
@@ -90,9 +92,8 @@ namespace ChessWars.Game
             story.SetOffsets(new Vector2(-320, -60), new Vector2(320, 60));
             Style(story, false, false);
             y -= 0.075f;
-            var online = Button("Online", title, new Vector2(0.5f, y), new Vector2(0.5f, y), "Online battle  ·  coming soon", () => { });
+            var online = Button("Online", title, new Vector2(0.5f, y), new Vector2(0.5f, y), "Online battle", () => OnlinePressed?.Invoke());
             online.SetOffsets(new Vector2(-320, -60), new Vector2(320, 60));
-            Style(online, false, false);
         }
 
         void BuildPick(RectTransform safe)

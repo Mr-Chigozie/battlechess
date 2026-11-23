@@ -419,12 +419,16 @@ namespace ChessWars.EditorTools
         public static void BuildAndroid()
         {
             Directory.CreateDirectory("Builds");
+            PlayerSettings.Android.forceInternetPermission = true;   // online play
+            // CW_DEV=1: a development build, which may talk plain HTTP to a test server (see Server.Address).
+            bool dev = System.Environment.GetEnvironmentVariable("CW_DEV") == "1";
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.DevelopmentOnly;
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = new[] { ScenePath },
-                locationPathName = "Builds/ChessWars.apk",
+                locationPathName = dev ? "Builds/ChessWars-dev.apk" : "Builds/ChessWars.apk",
                 target = BuildTarget.Android,
-                options = BuildOptions.None
+                options = dev ? BuildOptions.Development : BuildOptions.None
             });
             var s = report.summary;
             Debug.Log($"[BuildTools] Android build {s.result}: {s.outputPath} ({s.totalSize / (1024f * 1024f):0.0} MB) in {s.totalTime}, {s.totalErrors} errors");

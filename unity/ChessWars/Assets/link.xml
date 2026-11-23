@@ -1,5 +1,5 @@
-<!-- Keeps engine types that are only created at run time (by GameObject.CreatePrimitive), so code stripping
-     in Android builds doesn't remove them. -->
+<!-- Keeps code that is only reached at run time from being stripped out of Android (IL2CPP) builds:
+     engine types created by GameObject.CreatePrimitive, and the networking online play uses (Online/SocketIo.cs). -->
 <linker>
   <assembly fullname="UnityEngine.PhysicsModule">
     <type fullname="UnityEngine.MeshCollider" preserve="all" />
@@ -7,4 +7,9 @@
     <type fullname="UnityEngine.SphereCollider" preserve="all" />
     <type fullname="UnityEngine.CapsuleCollider" preserve="all" />
   </assembly>
+  <assembly fullname="System">
+    <namespace fullname="System.Net.WebSockets" preserve="all" />
+  </assembly>
+  <assembly fullname="System.Net.WebSockets" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="System.Net.WebSockets.Client" preserve="all" ignoreIfMissing="1" />
 </linker>
