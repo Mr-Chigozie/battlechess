@@ -318,6 +318,50 @@ namespace ChessWars.EditorTools
             Object.DestroyImmediate(tex);
         }
 
+        // Every synthesised sound (Synth.cs) as WAV files, to listen to outside the game: Builds/Sounds, or the folder
+        // in the CW_SOUND_DIR environment variable. -executeMethod ChessWars.EditorTools.BuildTools.ExportSounds
+        [MenuItem("Chess Wars/Export sounds")]
+        public static void ExportSounds()
+        {
+            string folder = System.Environment.GetEnvironmentVariable("CW_SOUND_DIR");
+            if (string.IsNullOrEmpty(folder)) folder = "Builds/Sounds";
+            Directory.CreateDirectory(folder);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var effects = Synth.Effects();
+            var (calm, drums) = Synth.Music();
+            var fire = Synth.Fire();
+            Debug.Log($"Sounds made in {watch.ElapsedMilliseconds} ms");
+            foreach (var kv in effects)
+                for (int i = 0; i < kv.Value.Length; i++)
+                    Wav($"{folder}/{kv.Key}{(kv.Value.Length > 1 ? "-" + (i + 1) : "")}.wav", kv.Value[i], Synth.SfxRate);
+            Wav($"{folder}/music-calm.wav", calm, Synth.LoopRate);
+            Wav($"{folder}/music-drums.wav", drums, Synth.LoopRate);
+            var both = new float[calm.Length];
+            for (int i = 0; i < both.Length; i++) both[i] = calm[i] * 0.6f + drums[i] * 0.6f;
+            Wav($"{folder}/music-battle.wav", both, Synth.LoopRate);
+            Wav($"{folder}/fire.wav", fire, Synth.LoopRate);
+            foreach (var army in Themes.All.Keys) Wav($"{folder}/ambience-{army}.wav", Synth.Ambience(army), Synth.LoopRate);
+            Debug.Log($"Sounds written to {Path.GetFullPath(folder)}");
+        }
+
+        static void Wav(string path, float[] data, int rate)
+        {
+            using var w = new BinaryWriter(File.Create(path));
+            w.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
+            w.Write(36 + data.Length * 2);
+            w.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt "));
+            w.Write(16);
+            w.Write((short)1);
+            w.Write((short)1);
+            w.Write(rate);
+            w.Write(rate * 2);
+            w.Write((short)2);
+            w.Write((short)16);
+            w.Write(System.Text.Encoding.ASCII.GetBytes("data"));
+            w.Write(data.Length * 2);
+            foreach (var x in data) w.Write((short)Mathf.Clamp(Mathf.RoundToInt(x * 32767f), -32768, 32767));
+        }
+
         // A portrait of each army's King for the army cards: three-quarter view, transparent background, written to
         // Assets/Resources/Portraits/<army id>.png. -executeMethod ChessWars.EditorTools.BuildTools.Portraits
         [MenuItem("Chess Wars/Render army portraits")]

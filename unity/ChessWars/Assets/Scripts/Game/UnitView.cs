@@ -111,13 +111,22 @@ namespace ChessWars.Game
             var from = transform.position;
             if (seconds <= 0) seconds = arc > 0 ? 0.55f + Vector3.Distance(from, to) * 0.08f : 0.25f + Vector3.Distance(from, to) * 0.38f;
             if (walk) Play("Walk");
+            if (arc > 0.3f) Sfx.Play("whoosh", from, 0.7f);
+            float nextStep = 0f;
             for (float t = 0; t < 1; t += Time.deltaTime / seconds)
             {
                 float k = accelerate ? t * t : t;
                 transform.position = Vector3.Lerp(from, to, k) + Vector3.up * Mathf.Sin(k * Mathf.PI) * arc;
+                // Footfalls while walking.
+                if (walk && arc <= 0 && t * seconds >= nextStep)
+                {
+                    Sfx.Play("step", transform.position, Type == 'r' || Type == 'k' ? 1f : 0.75f);
+                    nextStep += 0.27f;
+                }
                 yield return null;
             }
             transform.position = to;
+            if (arc > 0.3f) Sfx.Play("land", to, 0.8f);
             if (walk) Play("Idle");
         }
 
@@ -193,6 +202,7 @@ namespace ChessWars.Game
         /// <summary>Blown off its feet: thrown back and up, tumbling, and down again.</summary>
         public IEnumerator Launch(Vector3 dir, float height, float distance, float seconds = 0.55f)
         {
+            Sfx.Play("whoosh", transform.position, 0.6f, 0.8f);
             var from = transform.position;
             var spin = transform.rotation;
             var axis = Vector3.Cross(Vector3.up, dir).normalized;
@@ -241,6 +251,12 @@ namespace ChessWars.Game
             behead &= HasBehead;
             Play(behead ? "Behead" : "Death", 0.08f);
             var spot = Center;
+            switch (Army)
+            {
+                case "undead": Sfx.Play("soul", spot); break;
+                case "samurai": Sfx.Play("chime", spot, 0.8f); break;
+                case "machines": Sfx.Play("sparks", spot); break;
+            }
             if (behead) fx.Burst(transform.position + Vector3.up * Height * 0.78f, army.Blood, 24, 1.9f, 0.9f, 0.8f);
             switch (Army)
             {
@@ -258,6 +274,7 @@ namespace ChessWars.Game
                     }
                     fx.Shockwave(transform.position, Armies.Hex(0xffa23a));
                     fx.Burst(Center, Armies.Hex(0xff7a2a), 30, 3f, 1.2f, 0.7f);
+                    Sfx.Play("explode", Center, 0.6f, 1.2f);
                     Fx.Shake(0.25f + combo * 0.05f);
                     break;
                 case "samurai":
@@ -268,6 +285,7 @@ namespace ChessWars.Game
             }
             yield return new WaitForSeconds(0.9f);
             fx.Dust(transform.position + Vector3.up * 0.1f, 12);
+            Sfx.Play(Army == "asgardians" ? "ascend" : "fall", transform.position);
             Fx.Shake(0.08f);
             if (Army == "asgardians")
             {

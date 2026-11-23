@@ -229,6 +229,7 @@ namespace ChessWars.Game
             Shockwave(new Vector3(at.x, 0, at.z), Armies.Hex(0xffa23a));
             Dust(new Vector3(at.x, 0.1f, at.z), 18);
             Shake(0.35f * size);
+            Sfx.Play("explode", at, Mathf.Clamp(size, 0.6f, 1f), size < 0.9f ? 1.12f : 1f);
         }
 
         /// <summary>A laser sight: a thin red line that flickers on the target until `Hide` is called.</summary>
@@ -243,6 +244,7 @@ namespace ChessWars.Game
         /// <summary>Gathers energy into a point: sparks drawn inwards and a glow that swells, over `seconds`.</summary>
         public IEnumerator ChargeUp(System.Func<Vector3> at, Color color, float seconds)
         {
+            Sfx.Play("charge", at(), 1f, 0.8f / seconds);
             for (float t = 0; t < seconds; t += Time.deltaTime)
             {
                 var p = at();

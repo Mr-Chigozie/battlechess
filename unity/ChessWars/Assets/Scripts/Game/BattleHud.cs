@@ -111,13 +111,13 @@ namespace ChessWars.Game
 
         void BuildMenu()
         {
-            menu = Node("Menu panel", safe, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-520, -808), new Vector2(-24, -132));
+            menu = Node("Menu panel", safe, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-520, -1024), new Vector2(-24, -132));
             Fill(menu, ButtonLine, true);
             Fill(Node("Fill", menu, Vector2.zero, Vector2.one, new Vector2(2, 2), new Vector2(-2, -2)), new Color(0.07f, 0.08f, 0.065f, 0.96f));
             var heading = Label(Node("Heading", menu, new Vector2(0, 1), Vector2.one, new Vector2(28, -84), new Vector2(-28, -20)), Serif, 36, GoldLight, TextAnchor.MiddleLeft);
             heading.text = "Battle settings";
             float y = -100;
-            foreach (var (key, caption) in new[] { ("cinematics", "Cinematic kills"), ("badges", "Piece icons"), ("blood", "Blood") })
+            foreach (var (key, caption) in new[] { ("cinematics", "Cinematic kills"), ("badges", "Piece icons"), ("blood", "Blood"), ("sound", "Sound"), ("music", "Music") })
             {
                 var row = Button(key, menu, new Vector2(0, 1), new Vector2(1, 1), "", () => Toggle(key));
                 row.SetOffsets(new Vector2(24, y - 92), new Vector2(-24, y));

@@ -81,9 +81,10 @@ namespace ChessWars.Game
 
         // ---------------------------------------------------------------- small hits before the killing blow
 
-        void MiniHit(UnitView v, Vector3 dir, Color color, float push = 0.07f)
+        void MiniHit(UnitView v, Vector3 dir, Color color, float push = 0.07f, string sound = "slice")
         {
             var at = v.Center;
+            Sfx.Play(sound, at);
             fx.Burst(at, color, 10, 2f, 0.7f, 0.3f);
             fx.Burst(at, Color.white, 5, 1.6f, 0.6f, 0.2f);
             if (blood) fx.Burst(at, Armies.All[v.Army].Blood, 8, 1.8f, 0.8f, 0.4f);
@@ -99,6 +100,7 @@ namespace ChessWars.Game
             var forward = a.transform.forward;
             var side = Quaternion.AngleAxis(tilt, forward) * a.transform.right;
             var center = a.transform.position + Vector3.up * a.Height * 0.55f;
+            Sfx.Play(width >= 0.18f ? "bigswish" : "swish", center);
             fx.SlashArc(center, forward, side, radius, from, to, Color.Lerp(Color.white, color, 0.45f), width, seconds);
         }
 
@@ -147,12 +149,16 @@ namespace ChessWars.Game
                             yield return Wait(0.12f);
                             fx.Shockwave(v.transform.position, color);
                             fx.Dust(v.transform.position + Vector3.up * 0.1f, 10);
+                            Sfx.Play("slam", v.transform.position, 0.55f, 1.2f);
                             break;
                         default:
                             // Dash-through: one stroke on the way past; the victim stands a heartbeat, then falls.
                             a.Play("Attack", 0.04f, UnitView.AttackHit - 0.08f);
+                            Sfx.Play("bigswish", a.Center, 1f, 1.15f);
                             yield return a.Travel(V + dir * 0.8f, seconds: 0.12f, walk: false, turn: false);
                             fx.Cut(v.Center, Quaternion.LookRotation(dir).eulerAngles.y + 90f);
+                            Sfx.Play("slice", v.Center);
+                            Sfx.Play("clang", v.Center, 0.5f, 1.3f);
                             fx.Burst(v.Center, Color.white, 14, 2.6f, 0.7f, 0.3f);
                             Fx.Shake(0.12f);
                             yield return new WaitForSecondsRealtime(0.45f);
@@ -168,14 +174,16 @@ namespace ChessWars.Game
                         StartCoroutine(a.StrikeIn(0.12f));
                         yield return a.Nudge(dir, 0.12f, 0.08f, true);
                         StartCoroutine(fx.Beam(a.Center + dir * 0.2f, v.Center, Color.Lerp(Color.white, color, 0.4f), 0.12f));
-                        MiniHit(v, dir, color, 0.05f);
+                        MiniHit(v, dir, color, 0.05f, "stab");
                         yield return a.Nudge(dir, -0.12f, 0.12f);
                         yield return Wait(0.08f);
                     }
                     // Draw back, then drive it home.
                     yield return a.Nudge(dir, -0.15f, 0.2f);
+                    Sfx.Play("whoosh", a.Center, 0.8f, 1.3f);
                     StartCoroutine(a.StrikeIn(0.12f));
                     yield return a.Nudge(dir, 0.45f, 0.12f, true);
+                    Sfx.Play("stab", v.Center, 1f, 0.85f);
                     killPush = 0.4f;
                     break;
 
@@ -183,24 +191,29 @@ namespace ChessWars.Game
                 {
                     var claw = Color.Lerp(Color.white, color, 0.5f);
                     // Stalk in, pounce, rake left, rake right, then maul.
+                    Sfx.Play("growl", a.Center);
                     if (dist > 1.6f) yield return a.Travel(V - dir * 1.3f, seconds: 0.2f + dist * 0.2f);
+                    Sfx.Play("roar", a.Center);
                     StartCoroutine(a.StrikeIn(0.45f));
                     yield return a.Travel(V - dir * 0.55f, arc: 0.7f, seconds: 0.45f, walk: false, turn: false);
                     fx.Dust(a.transform.position + Vector3.up * 0.1f, 8);
                     fx.ClawMarks(v.Center, dir, -50f, claw);
-                    MiniHit(v, dir, color);
+                    Sfx.Play("land", a.transform.position, 0.6f);
+                    MiniHit(v, dir, color, sound: "claw");
                     yield return Wait(0.2f);
                     StartCoroutine(a.StrikeIn(0.14f));
                     yield return Wait(0.14f);
                     fx.ClawMarks(v.Center, dir, 50f, claw);
-                    MiniHit(v, dir, color);
+                    MiniHit(v, dir, color, sound: "claw");
                     yield return Wait(0.14f);
                     StartCoroutine(v.Shake(0.45f));
+                    Sfx.Play("growl", v.Center, 1f, 1.2f);
                     StartCoroutine(a.Nudge(dir, 0.15f, 0.1f));
                     for (int i = 0; i < 3; i++)
                     {
                         fx.Burst(v.Center, blood ? Armies.All[v.Army].Blood : color, 6, 1.6f, 0.7f, 0.3f);
                         Fx.Shake(0.06f);
+                        Sfx.Play("hit", v.Center, 0.5f, 1.3f);
                         yield return Wait(0.13f);
                     }
                     StartCoroutine(a.StrikeIn(0.12f));
@@ -213,6 +226,7 @@ namespace ChessWars.Game
                 {
                     yield return a.Nudge(dir, -0.25f, 0.35f);
                     float run = 0.2f + dist * 0.16f;
+                    Sfx.Play("gallop", a.Center, 1f, Mathf.Clamp(0.75f / run, 0.9f, 1.6f));
                     StartCoroutine(a.StrikeIn(run));
                     yield return a.Travel(V - dir * 0.45f, seconds: run, accelerate: true, walk: false, turn: false);
                     killLaunch = true;
@@ -222,6 +236,7 @@ namespace ChessWars.Game
                 case Kill.Slam:
                     StartCoroutine(a.StrikeIn(1.0f));
                     yield return Wait(0.3f);
+                    Sfx.Play("whoosh", a.Center, 1f, 0.8f);
                     yield return a.Travel(V, arc: 1.7f, seconds: 0.7f, walk: false, turn: false);
                     break;
 
@@ -240,7 +255,9 @@ namespace ChessWars.Game
                         var tip = a.Tip;
                         var target = v.Center + Random.insideUnitSphere * 0.08f;
                         fx.MuzzleFlash(tip, dir, flash);
+                        Sfx.Play(bolts ? "blaster" : spray ? "tommy" : "gun", tip);
                         if (!bolts) fx.Casing(tip - dir * 0.1f, a.transform.right);
+                        if (!bolts && i % 2 == 0) Sfx.Play("casing", tip, 1f, 1f, 0.3f);
                         last = StartCoroutine(Round(bolts ? Fx.Shot.Bolt : Fx.Shot.Tracer, tip, target, color, v, dir, i == shots - 1));
                         StartCoroutine(a.Nudge(dir, -0.015f, 0.04f));
                         Fx.Shake(0.03f);
@@ -261,6 +278,7 @@ namespace ChessWars.Game
                     {
                         var tip = a.Tip + Vector3.up * 0.1f;
                         fx.MuzzleFlash(tip, dir, Armies.Hex(0xffb347), 1.8f);
+                        Sfx.Play(missiles ? "missile" : "cannon", tip);
                         fx.Dust(tip, 6);
                         StartCoroutine(a.Nudge(dir, -0.12f, 0.08f));
                         Fx.Shake(0.15f);
@@ -281,6 +299,7 @@ namespace ChessWars.Game
                     a.SetAnimSpeed(0f);
                     var head = v.transform.position + Vector3.up * v.Height * 0.85f;
                     var laser = fx.Laser(a.ProneTip, head, red);
+                    var hum = Sfx.Play("laser", head);
                     if (killCam.Active) killCam.PunchIn(0.08f);
                     for (float t = 0; t < 1.0f; t += Time.deltaTime)
                     {
@@ -290,23 +309,29 @@ namespace ChessWars.Game
                         yield return null;
                     }
                     Destroy(laser.gameObject);
+                    if (hum != null) hum.Stop();
                     a.SetAnimSpeed(1f);
                     yield return Wait(0.1f);
                     fx.MuzzleFlash(a.ProneTip, dir, Armies.Hex(0xffd27a), 2f);
+                    Sfx.Play("sniper", a.ProneTip);
                     Fx.Shake(0.22f);
                     fx.Hitstop(0.02f, 0.25f, 0.45f);   // bullet time for the round's flight
                     yield return fx.Fire(Fx.Shot.Sniper, a.ProneTip, head, color);
                     fx.Burst(head, Color.white, 16, 2.8f, 0.8f, 0.4f);
+                    Sfx.Play("bullethit", head, 1f, 0.8f);
                     killHeadshot = true;
                     killPush = 0.35f;
                     yield return Wait(0.3f);
                     fx.Casing(a.ProneTip - dir * 0.3f, a.transform.right);   // work the bolt
+                    Sfx.Play("bolt", a.ProneTip);
+                    Sfx.Play("casing", a.ProneTip, 1f, 0.9f, 0.35f);
                     break;
                 }
 
                 case Kill.Spell:
                     a.Play("Shoot");
                     yield return fx.ChargeUp(() => a.Tip, color, 0.7f);
+                    Sfx.Play("orb", a.Tip);
                     yield return fx.Fire(Fx.Shot.Orb, a.Tip, v.Center, color);
                     killExplode = true;
                     break;
@@ -318,6 +343,7 @@ namespace ChessWars.Game
                     Coroutine last = null;
                     for (int i = 0; i < 3; i++)
                     {
+                        Sfx.Play("shuriken", a.Tip);
                         last = StartCoroutine(Round(Fx.Shot.Shuriken, a.Tip, v.Center + Random.insideUnitSphere * 0.1f, color, v, dir, i == 2));
                         yield return Wait(0.13f);
                     }
@@ -328,6 +354,7 @@ namespace ChessWars.Game
                 case Kill.Beam:
                     a.Play("Shoot");
                     yield return fx.ChargeUp(() => a.Tip, color, 0.45f);
+                    Sfx.Play("zap", a.Tip);
                     killFinishing = StartCoroutine(fx.Beam(a.Tip, v.Center, color, 0.9f));
                     yield return Wait(0.35f);
                     break;
@@ -336,6 +363,8 @@ namespace ChessWars.Game
                     a.Play("Shoot");
                     yield return fx.ChargeUp(() => a.Tip, color, 0.4f);
                     hud.Flash(0.5f);
+                    Sfx.Play("thunder", v.Center);
+                    Sfx.Play("zap", a.Tip, 0.6f, 1.3f);
                     StartCoroutine(fx.Lightning(a.Tip, v.Center, color, 4));
                     yield return fx.Lightning(V + Vector3.up * 7f, v.Center, color, 5);
                     break;
@@ -347,6 +376,7 @@ namespace ChessWars.Game
         {
             yield return fx.Fire(shot, from, to, color);
             if (killing) yield break;
+            Sfx.Play(shot == Fx.Shot.Shuriken ? "thunk" : "bullethit", to);
             fx.Burst(to, shot == Fx.Shot.Bolt ? color : Armies.Hex(0xffd27a), 5, 1.5f, 0.5f, 0.2f);
             if (blood) fx.Burst(to, Armies.All[v.Army].Blood, 4, 1.2f, 0.7f, 0.3f);
             StartCoroutine(v.Nudge(dir, 0.035f, 0.05f));

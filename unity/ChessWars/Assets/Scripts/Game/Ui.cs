@@ -98,7 +98,7 @@ namespace ChessWars.Game
             var text = Label(Node("Text", r, Vector2.zero, Vector2.one), Sans, 30, primary ? Armies.Hex(0xfff4d6) : Armies.Hex(0xe0dccd), TextAnchor.MiddleCenter);
             text.text = caption;
             var button = r.gameObject.AddComponent<UnityEngine.UI.Button>();
-            button.onClick.AddListener(() => onClick());
+            button.onClick.AddListener(() => { Sfx.Play("click"); onClick(); });
             return r;
         }
 

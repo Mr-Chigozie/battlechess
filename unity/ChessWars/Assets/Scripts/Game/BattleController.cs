@@ -66,6 +66,7 @@ namespace ChessWars.Game
             // Ink outlines cost a second pass per model: off on the Low tier.
             Shader.SetGlobalFloat("_CW_OutlineScale", QualitySettings.GetQualityLevel() > 0 ? 1f : 0f);
             fx = Fx.Create(battlefield.particle, transform);
+            Sfx.Create(transform);
             hud = KillHud.Create();
             killCam = KillCam.Create(cameraRig);
             ui = BattleHud.Create(hud);
@@ -75,11 +76,15 @@ namespace ChessWars.Game
             ui.SetSetting("cinematics", cinematics);
             ui.SetSetting("blood", blood);
             ui.SetSetting("badges", LoadSetting("badges", true));
+            ui.SetSetting("sound", Sfx.SoundOn = LoadSetting("sound", true));
+            ui.SetSetting("music", Sfx.MusicOn = LoadSetting("music", true));
             ui.SettingChanged += (key, on) =>
             {
                 PlayerPrefs.SetInt("cw." + key, on ? 1 : 0);
                 if (key == "cinematics") cinematics = on;
                 if (key == "blood") blood = on;
+                if (key == "sound") Sfx.SoundOn = on;
+                if (key == "music") Sfx.MusicOn = on;
             };
             ui.ViewPressed += () => cameraRig.viewColor = cameraRig.viewColor == 'w' ? 'b' : 'w';
             ui.NewGamePressed += () => NewGame();
@@ -88,6 +93,7 @@ namespace ChessWars.Game
             menu.Battle += (mine, theirs, side, rank) =>
             {
                 // Ivory moves first; the computer takes the other side.
+                Sfx.Play("drums");
                 Begin(side == 'w' ? mine : theirs, side == 'w' ? theirs : mine, side == 'w' ? 'b' : 'w', rank, false);
             };
             if (KillTest() is string test) RunKillTest(test);
@@ -166,6 +172,8 @@ namespace ChessWars.Game
             aiDepth = depth;
             this.attract = attract;
             var theme = Themes.For(computer == 'b' ? black : white);
+            Sfx.Ambience(Themes.All.ContainsKey(computer == 'b' ? black : white) ? (computer == 'b' ? black : white) : "knights");
+            Sfx.InBattle = !attract;
             if (theme != builtTheme)
             {
                 battlefield.Build(theme);
@@ -208,6 +216,7 @@ namespace ChessWars.Game
             float check = Rules.Rules.IsInCheck(pos, pos.Turn) ? 0.2f : 0f;
             float fury = Mathf.Min(1f, lost / 40f + recent * 0.07f + check + Mathf.Max(streak['w'], streak['b']) * 0.06f);
             ui.SetFury(fury, FuryNames.First(f => fury >= f.min).name);
+            Sfx.Fury = fury;
             // Announced once the move's own narration has had its moment.
             if (fury >= 0.75f && lastFury < 0.75f) { furyNews = "Inferno"; furyNewsText = "The whole field is ablaze. Only one army will walk out of this fire."; }
             else if (fury >= 0.45f && lastFury < 0.45f) { furyNews = "The board burns"; furyNewsText = "Fire spreads across the battlefield. This is war."; }
@@ -221,6 +230,8 @@ namespace ChessWars.Game
             StopAllCoroutines();
             Time.timeScale = 1f;
             busy = aiThinking = gameOver = false;
+            Sfx.Duck = false;
+            Sfx.InBattle = !attract;
             if (killCam.Active || hud.Cinematic) { StartCoroutine(killCam.Exit()); hud.SetCinematic(false); }
             if (unitRoot != null) Destroy(unitRoot.gameObject);
             unitRoot = new GameObject("Units").transform;
@@ -304,6 +315,7 @@ namespace ChessWars.Game
             if (pos.Board[row, col] is Piece p && p.Color == pos.Turn)
             {
                 selected = new Vector2Int(col, row);
+                Sfx.Play("select", units[row, col]?.Center);
                 targets = Rules.Rules.LegalMoves(pos, row, col);
                 string unit = Armies.All[p.Color == 'w' ? whiteArmy : blackArmy].Units[p.Type];
                 ui.Narrate($"{SideName(p.Color)} {unit}", targets.Count > 0
@@ -390,7 +402,11 @@ namespace ChessWars.Game
             // The narrator reports the move (captures were already told as they happened), as the web game does.
             var army = Armies.All[attacker.Army];
             string to = Rules.Rules.Algebraic(move.ToRow, move.ToCol);
-            if (check) ui.Narrate("Check", $"The {SideName(pos.Turn)} {KingName(pos.Turn)} is under attack!");
+            if (check)
+            {
+                ui.Narrate("Check", $"The {SideName(pos.Turn)} {KingName(pos.Turn)} is under attack!");
+                Sfx.Play("check");
+            }
             else if (promoted) ui.Narrate("A new champion", $"The {army.Units['p']} rises as a {army.Units[promotion]} on {to}.");
             else if (move.Castle != Castle.None) ui.Narrate("The line holds", $"The {army.Units['k']} retreats behind the {army.Units['r']}.");
             else if (victim == null) ui.Narrate("Orders carried out", $"{SideName(attacker.Color)} {army.Units[attacker.Type]} advances to {to}.");
@@ -434,6 +450,8 @@ namespace ChessWars.Game
             {
                 hud.SetCinematic(true);
                 hud.ShowCaption(who, "");
+                Sfx.Duck = true;
+                Sfx.Play("cine");
                 yield return killCam.Enter(A, V, Mathf.Max(attacker.Height, victim.Height), behead, AllUnits());
             }
             StartCoroutine(victim.TurnTowards(A, 0.3f));
@@ -446,6 +464,10 @@ namespace ChessWars.Game
             float holdUntil = 0f;
             var hit = victim.Center;
             fx.Hitstop(0.09f + level * 0.03f, level > 0 ? 0.28f : 1f, level > 0 ? 0.6f + level * 0.25f : 0f);
+            Sfx.Play("kill", hit);
+            if (behead) Sfx.Play("slice", hit, 0.8f);
+            if (style == "slam") Sfx.Play("slam", hit);
+            if (level > 0) Sfx.Play("slowmo", hit, 0.6f + 0.1f * Mathf.Min(level, 4));
             if (level > 0)
             {
                 fx.Burst(hit, Color.white, 20 + level * 10, 4f, 1.2f, 0.8f);
@@ -460,7 +482,11 @@ namespace ChessWars.Game
             if (killCam.Active) killCam.PunchIn(behead ? 0.04f : 0.12f + level * 0.03f);
             hud.ShowCaption(who, line);
             ui.Narrate(combo != null ? combo.Title : "Battle", line);
-            if (combo != null) hud.ShowCombo(combo.Title, combo.Tags, combo.Level);
+            if (combo != null)
+            {
+                hud.ShowCombo(combo.Title, combo.Tags, combo.Level);
+                Sfx.Play("combo" + Mathf.Clamp(combo.Level, 1, 5), delay: 0.05f);
+            }
             if (blood) fx.Burst(hit, Armies.All[victim.Army].Blood, 16, 2.4f, 0.9f, 0.6f);
             if (killExplode) fx.Explosion(hit, color, kind == Kill.Heavy ? 1f : 0.7f);
             if (killHeadshot)
@@ -484,6 +510,7 @@ namespace ChessWars.Game
             yield return attacker.TurnTowards(dest + (attacker.Color == 'w' ? Vector3.back : Vector3.forward), 0.22f);
             attacker.FaceHome();
             attacker.Play("Idle");
+            Sfx.Duck = false;
             if (cine)
             {
                 hud.SetCinematic(false);
@@ -517,6 +544,7 @@ namespace ChessWars.Game
             var color = Armies.All[pawn.Army].Magic;
             var at = pawn.transform.position;
             var ray = StartCoroutine(fx.Beam(at + Vector3.up * 8f, at + Vector3.up * 0.1f, color, 1.1f));
+            Sfx.Play("promote", at);
             yield return new WaitForSeconds(0.45f);
             fx.Burst(pawn.Center, color, 40, 2.5f);
             hud.Flash(0.35f);
@@ -542,9 +570,13 @@ namespace ChessWars.Game
             var king = AllUnits().FirstOrDefault(u => u.Type == 'k' && u.Color == loser);
             if (king == null) yield break;
             Fx.Shake(0.25f);
+            Sfx.InBattle = false;
+            // Victory or defeat, from the player's side of the board.
+            Sfx.Play(loser == aiColor ? "fanfare" : "defeat");
             king.Play("Death", 0.1f);
             yield return new WaitForSeconds(1.2f);
             fx.Dust(king.transform.position + Vector3.up * 0.1f, 14);
+            Sfx.Play("fall", king.Center);
             hud.Flash(0.4f);
         }
 
@@ -565,6 +597,8 @@ namespace ChessWars.Game
                 else
                 {
                     ui.Narrate("Draw", "Stalemate. Neither side can make a legal move.");
+                    Sfx.InBattle = false;
+                    Sfx.Play("drums");
                     UpdateTurn("Draw");
                 }
                 return true;
@@ -576,6 +610,8 @@ namespace ChessWars.Game
             {
                 gameOver = busy = true;
                 ui.Narrate("Draw", draw);
+                Sfx.InBattle = false;
+                Sfx.Play("drums");
                 UpdateTurn("Draw");
                 return true;
             }
