@@ -26,6 +26,7 @@ namespace ChessWars.Game
             public int SeenOffer = -1;
             public double LastTauntAt;
             public bool ResultShown;
+            public string Taunt;
         }
 
         OnlineGame online;
@@ -78,6 +79,22 @@ namespace ChessWars.Game
                     ("Later", onlineUi.HideCard, false));
             };
             ui.TauntPressed += TauntCard;
+            // Invite links open the app (see Editor/AndroidLinks.cs): when it starts, or while it's running.
+            Application.deepLinkActivated += OpenLink;
+        }
+
+        void OpenLink(string url)
+        {
+            if (string.IsNullOrEmpty(url) || Server.InviteCode(url) == null) return;
+            if (online != null && !gameOver)
+            {
+                onlineUi.ShowToast("Finish this battle first, then open the invite again (or paste it in the War Room).");
+                return;
+            }
+            if (online != null) LeaveOnline();
+            menu.Hide();
+            ui.Hidden = true;
+            onlineUi.OpenLink(url);
         }
 
         void JoinOnline(string id)
@@ -218,6 +235,12 @@ namespace ChessWars.Game
         // Your rival's next move, once the board is free.
         void PumpRemote()
         {
+            if (online != null && online.Taunt != null && !busy)
+            {
+                ui.Narrate($"{online.Opponent} says", $"“{online.Taunt}”");
+                Sfx.Play("select");
+                online.Taunt = null;
+            }
             if (online == null || busy || gameOver || plyPlayed >= online.Moves.Count) return;
             var m = online.Moves[plyPlayed];
             var legal = Match(pos, m);
@@ -244,8 +267,7 @@ namespace ChessWars.Game
             if (taunt != null && taunt.Long("by") != server.Me?.Id && taunt.Num("at") > online.LastTauntAt)
             {
                 online.LastTauntAt = taunt.Num("at");
-                ui.Narrate($"{online.Opponent} says", $"“{taunt.Str("text")}”");
-                Sfx.Play("select");
+                online.Taunt = taunt.Str("text");   // shown once the board is still, so a move's news doesn't bury it
             }
 
             // A draw offered.
@@ -318,8 +340,7 @@ namespace ChessWars.Game
             if (guest) buttons.Add(("Keep your record (create account)", () => { onlineUi.HideCard(); LeaveOnline(); onlineUi.ShowUpgrade(); }, true));
             buttons.Add(("War room", () => { onlineUi.HideCard(); LeaveOnline(); }, !guest));
             buttons.Add(("Look at the board", onlineUi.HideCard, false));
-            var me = server.Me;
-            onlineUi.ShowCard("Online battle", title, new[] { line, me != null ? $"Your record: {me.Wins + (outcome == "win" ? 1 : 0)} wins · {me.Losses + (outcome == "loss" ? 1 : 0)} losses · {me.Draws + (outcome == "draw" ? 1 : 0)} draws" : "" }, buttons.ToArray());
+            onlineUi.ShowCard("Online battle", title, new[] { line, reason == "aborted" ? "" : "The result is on your record in the War Room." }, buttons.ToArray());
         }
 
         /// <summary>Back to the War Room. The battle stays open on the server to resume later.</summary>

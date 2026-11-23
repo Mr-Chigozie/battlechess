@@ -157,6 +157,14 @@ function build() {
 </script>`));
   });
 
+  // ---- Android App Links: proves the app may open this server's invite links (see config.androidCerts)
+  app.get("/.well-known/assetlinks.json", (req, res) => {
+    res.json([{
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: { namespace: "android_app", package_name: config.androidPackage, sha256_cert_fingerprints: config.androidCerts }
+    }]);
+  });
+
   app.use((req, res) => res.status(404).json({ error: "not-found" }));
   return app;
 }

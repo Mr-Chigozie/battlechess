@@ -55,7 +55,13 @@ namespace ChessWars.Game
             BuildCard(topSafe);
             BuildToast(topSafe);
             Hide();
-            server.Changed += () => { if (RoomOpen) RenderRoom(); };
+            server.Changed += () =>
+            {
+                // Signed in (just now, or last time's sign-in confirmed): on to the War Room.
+                if (Open && auth.gameObject.activeSelf && server.SignedIn && (mode == "guest" || mode == "login" || mode == "register")) ShowRoom();
+                else if (RoomOpen) RenderRoom();
+                TryPendingInvite();
+            };
             server.Toast += ShowToast;
         }
 
@@ -68,6 +74,27 @@ namespace ChessWars.Game
             group.blocksRaycasts = true;
             if (server.SignedIn) ShowRoom();
             else ShowAuth("guest");
+        }
+
+        string pendingInvite;   // from a link the app was opened with, waiting for the player to be signed in
+
+        /// <summary>An invite link the app was opened with (https://…/i/CODE or chesswars://invite/CODE): sign in
+        /// first if needed (a guest name is enough), then the challenge card.</summary>
+        public void OpenLink(string url)
+        {
+            var code = Server.InviteCode(url);
+            if (code == null) return;
+            pendingInvite = code;
+            Show();
+            TryPendingInvite();
+        }
+
+        void TryPendingInvite()
+        {
+            if (pendingInvite == null || !server.SignedIn || !RoomOpen) return;
+            var code = pendingInvite;
+            pendingInvite = null;
+            OpenInvite(code);
         }
 
         public void Hide()
@@ -250,6 +277,7 @@ namespace ChessWars.Game
             if (m == "upgrade" && server.Me != null) fName.text = server.Me.Name;
             authNote.text = m switch
             {
+                "guest" when pendingInvite != null => "A friend has challenged you! Pick a commander name and an army to answer as a guest, or sign in.",
                 "guest" => "Pick a commander name and an army and you're in: no email needed. You can keep your record with an account later.",
                 "register" => "An account keeps your record and lets you sign in on any phone or on the web.",
                 "upgrade" => "Add an email and password and your wins and losses stay with you.",
@@ -428,6 +456,7 @@ namespace ChessWars.Game
             room.gameObject.SetActive(true);
             server.RefreshLobby();
             RenderRoom();
+            TryPendingInvite();
         }
 
         void ChangeArmy(int step)
@@ -744,7 +773,13 @@ namespace ChessWars.Game
         /// <summary>A pop-up card: a small heading, a title, a few lines, and a column of buttons.</summary>
         public void ShowCard(string eyebrow, string title, string[] lines, params (string label, Action action, bool primary)[] buttons)
         {
-            for (int i = cardPanel.childCount - 1; i >= 2; i--) Destroy(cardPanel.GetChild(i).gameObject);
+            // Clear the last card (everything but the panel's fill). Detach first: Destroy waits for the frame's end.
+            for (int i = cardPanel.childCount - 1; i >= 1; i--)
+            {
+                var old = cardPanel.GetChild(i).gameObject;
+                old.transform.SetParent(null, false);
+                Destroy(old);
+            }
             Text Line(string text, Font font, int size, Color color, FontStyle style = FontStyle.Normal)
             {
                 var t = Label(Node("Line", cardPanel, Vector2.zero, Vector2.one), font, size, color, TextAnchor.MiddleCenter, style);
@@ -769,7 +804,15 @@ namespace ChessWars.Game
             cardLayer.SetAsLastSibling();
         }
 
-        public void HideCard() => cardLayer.gameObject.SetActive(false);
+        public void HideCard()
+        {
+            if (cardLayer.gameObject.activeSelf) cardClosedAt = Time.unscaledTime;
+            cardLayer.gameObject.SetActive(false);
+        }
+
+        float cardClosedAt = -10f;
+        /// <summary>A card is up, or was just tapped away (that same tap mustn't also land on the board).</summary>
+        public bool CardBlocking => CardOpen || Time.unscaledTime - cardClosedAt < 0.3f;
 
         void BuildToast(RectTransform safe)
         {

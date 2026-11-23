@@ -99,7 +99,11 @@ namespace ChessWars.Game
             };
             InitOnline();
             if (KillTest() is string test) RunKillTest(test);
-            else ShowTitle();
+            else
+            {
+                ShowTitle();
+                if (!string.IsNullOrEmpty(Application.absoluteURL)) OpenLink(Application.absoluteURL);
+            }
         }
 
         // ---------------------------------------------------------------- kill test (development)
@@ -292,7 +296,7 @@ namespace ChessWars.Game
                 PumpRemote();
                 UpdateClocks();
             }
-            if (attract || menu.Open || onlineUi.Open || onlineUi.CardOpen) return;
+            if (attract || menu.Open || onlineUi.Open || onlineUi.CardBlocking) return;
             // The phone's back button opens (or closes) the battle menu.
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame && !killCam.Active) ui.ToggleMenu();
             // Act on release, and only for a tap: a press that turned into a drag was moving the camera.
@@ -314,9 +318,17 @@ namespace ChessWars.Game
         Vector2Int? PickSquare(Vector2 screen)
         {
             var cam = Camera.main;
+            var ground = BoardView.SquareAt(cam, screen);
             if (Physics.Raycast(cam.ScreenPointToRay(screen), out var hit, 100f) && hit.collider.GetComponentInParent<UnitView>() is UnitView unit)
+            {
+                // A unit standing in front of a square the selected unit can move to (taller models hide the
+                // squares behind them): the order wins, unless the unit itself is one of the targets.
+                bool unitIsTarget = targets.Any(m => m.ToRow == unit.Row && m.ToCol == unit.Col);
+                bool groundIsTarget = ground is Vector2Int g && targets.Any(m => m.ToRow == g.y && m.ToCol == g.x);
+                if (groundIsTarget && !unitIsTarget) return ground;
                 return new Vector2Int(unit.Col, unit.Row);
-            return BoardView.SquareAt(cam, screen);
+            }
+            return ground;
         }
 
         void OnSquare(int row, int col)
@@ -382,8 +394,10 @@ namespace ChessWars.Game
             var dest = Armies.SquareToWorld(move.ToRow, move.ToCol);
             bool check = Rules.Rules.IsInCheck(pos, pos.Turn);
             captures.Add(victim != null ? victim.Type : (char?)null);
+            // Whether this move took a unit (asked now: the victim's model is destroyed once it has fallen).
+            bool took = victim != null;
 
-            if (victim != null)
+            if (took)
             {
                 var combo = ComboFor(attacker, victim, victimRow, move.ToCol, check);
                 yield return Capture(attacker, victim, dest, combo);
@@ -398,7 +412,7 @@ namespace ChessWars.Game
             attacker.Col = move.ToCol;
             units[move.ToRow, move.ToCol] = attacker;
             lastMove = move;
-            lastWasCapture = victim != null;
+            lastWasCapture = took;
 
             if (move.Castle != Castle.None)
             {
@@ -434,7 +448,7 @@ namespace ChessWars.Game
             }
             else if (promoted) ui.Narrate("A new champion", $"The {army.Units['p']} rises as a {army.Units[promotion]} on {to}.");
             else if (move.Castle != Castle.None) ui.Narrate("The line holds", $"The {army.Units['k']} retreats behind the {army.Units['r']}.");
-            else if (victim == null) ui.Narrate("Orders carried out", $"{SideName(attacker.Color)} {army.Units[attacker.Type]} advances to {to}.");
+            else if (!took) ui.Narrate("Orders carried out", $"{SideName(attacker.Color)} {army.Units[attacker.Type]} advances to {to}.");
             if (furyNews != null)
             {
                 StartCoroutine(NarrateLater(2.5f, furyNews, furyNewsText));

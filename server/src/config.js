@@ -50,6 +50,13 @@ const config = {
   resendKey: env.RESEND_API_KEY || "",
   mailFrom: env.MAIL_FROM || "Chess Wars <no-reply@chesswars.app>",
   sessionDays: Number(env.SESSION_DAYS || 60),
+  // Android App Links: the Chess Wars app opens invite links (/i/CODE) itself when installed. Android checks
+  // /.well-known/assetlinks.json for the app's package and the SHA-256 fingerprints of the keys that sign it.
+  // Set ANDROID_CERT_SHA256 to the release fingerprints (Play Console → App integrity), comma-separated.
+  // Until then: the development builds' debug key.
+  androidPackage: env.ANDROID_PACKAGE || "com.chesswars.game",
+  androidCerts: list(env.ANDROID_CERT_SHA256 ||
+    "EB:23:5B:D7:0B:A9:B7:6D:49:0B:33:56:9E:A7:FE:58:2A:84:3D:CA:40:33:24:39:0E:2E:D1:3A:7F:2C:C6:B7"),
   enginePath: env.ENGINE_PATH || path.join(__dirname, "..", "..", "js", "engine.js"),
   armiesPath: env.ARMIES_PATH || path.join(__dirname, "..", "..", "js", "armies.js")
 };

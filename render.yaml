@@ -35,6 +35,8 @@ services:
         generateValue: true
       - key: REGISTRATION_CODE   # closed beta code; leave empty to let anyone register
         sync: false
+      - key: ANDROID_CERT_SHA256 # the Android app's signing fingerprints (Play Console → App integrity), so invite links open the app
+        sync: false
       - key: RESEND_API_KEY      # optional, for password-reset emails
         sync: false
       - key: MAIL_FROM

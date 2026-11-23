@@ -246,7 +246,9 @@ namespace ChessWars.Online
         {
             if (string.IsNullOrWhiteSpace(text)) return null;
             text = text.Trim();
-            int at = text.LastIndexOf("/i/", StringComparison.OrdinalIgnoreCase);
+            int at = text.IndexOf("://invite/", StringComparison.OrdinalIgnoreCase);   // chesswars://invite/CODE
+            if (at >= 0) text = text.Substring(at + 10);
+            at = text.LastIndexOf("/i/", StringComparison.OrdinalIgnoreCase);
             if (at >= 0) text = text.Substring(at + 3);
             at = text.IndexOf("invite=", StringComparison.OrdinalIgnoreCase);
             if (at >= 0) text = text.Substring(at + 7);
