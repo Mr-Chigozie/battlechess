@@ -46,6 +46,7 @@ namespace ChessWars.Game
         {
             group = gameObject.AddComponent<CanvasGroup>();
             var safe = SafeArea(root);
+            safe.gameObject.AddComponent<BannerInset>();
             BuildAuth(safe);
             BuildRoom(safe);
             // Cards and toasts sit on their own canvas, above the battle HUD and the kill camera's bars, and stay

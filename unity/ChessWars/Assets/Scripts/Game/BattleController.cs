@@ -88,8 +88,9 @@ namespace ChessWars.Game
             };
             ui.ViewPressed += () => cameraRig.viewColor = cameraRig.viewColor == 'w' ? 'b' : 'w';
             // In an online battle the menu's two buttons are the battle's options and the way back to the War Room.
-            ui.NewGamePressed += () => { if (online != null) OnlineOptions(); else NewGame(); };
-            ui.MainMenuPressed += () => { if (online != null) LeaveOnline(); else ShowTitle(); };
+            // Leaving a skirmish is where a full-screen ad may come (Ads.Break decides whether one is due).
+            ui.NewGamePressed += () => { if (online != null) OnlineOptions(); else Ads.Break(NewGame); };
+            ui.MainMenuPressed += () => { if (online != null) LeaveOnline(); else Ads.Break(ShowTitle); };
             menu = MainMenu.Create();
             menu.Battle += (mine, theirs, side, rank) =>
             {
@@ -103,6 +104,7 @@ namespace ChessWars.Game
             {
                 ShowTitle();
                 if (!string.IsNullOrEmpty(Application.absoluteURL)) OpenLink(Application.absoluteURL);
+                Ads.Init();
             }
         }
 
@@ -291,6 +293,8 @@ namespace ChessWars.Game
 
         void Update()
         {
+            // The banner belongs to the menus and the War Room, never to a battle.
+            Ads.Banner(menu.Open || onlineUi.Open);
             if (online != null)
             {
                 PumpRemote();
@@ -435,6 +439,7 @@ namespace ChessWars.Game
             if (CheckGameOver(key))
             {
                 if (online != null) OnlineBoardEnd();
+                else Ads.BattleFinished();
                 yield break;
             }
 

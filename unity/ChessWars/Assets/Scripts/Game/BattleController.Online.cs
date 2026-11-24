@@ -324,6 +324,7 @@ namespace ChessWars.Game
             game.ResultShown = true;
             yield return new WaitForSecondsRealtime(delay);
             if (online != game) yield break;
+            if (reason != "aborted") Ads.BattleFinished();
             string rival = game.Opponent;
             string title = reason == "aborted" ? "Called off" : outcome == "win" ? "Victory" : outcome == "loss" ? "Defeat" : "Draw";
             string line = reason switch
@@ -351,9 +352,12 @@ namespace ChessWars.Game
             playedMoves.Clear();
             ui.SetOnline(false);
             onlineUi.HideCard();
-            Begin(menu.Army, menu.Enemy, 'b', 2, true);
-            onlineUi.Show();
-            server.RefreshLobby();
+            Ads.Break(() =>
+            {
+                Begin(menu.Army, menu.Enemy, 'b', 2, true);
+                onlineUi.Show();
+                server.RefreshLobby();
+            });
         }
 
         // Draw, resign or report: the menu's options in an online battle (it can't be paused or restarted).

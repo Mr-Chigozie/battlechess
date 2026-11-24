@@ -12,4 +12,12 @@
   </assembly>
   <assembly fullname="System.Net.WebSockets" preserve="all" ignoreIfMissing="1" />
   <assembly fullname="System.Net.WebSockets.Client" preserve="all" ignoreIfMissing="1" />
+  <!-- Google Mobile Ads (Game/Ads.cs): its platform clients are found by reflection and its Java callbacks
+       arrive through AndroidJavaProxy, so keep the plugin whole (its own link.xml sits in a package). -->
+  <assembly fullname="GoogleMobileAds" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="GoogleMobileAds.Core" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="GoogleMobileAds.Common" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="GoogleMobileAds.Android" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="GoogleMobileAds.Ump" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="GoogleMobileAds.Ump.Android" preserve="all" ignoreIfMissing="1" />
 </linker>

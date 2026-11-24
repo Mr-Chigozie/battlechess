@@ -24,7 +24,7 @@ namespace ChessWars.Game
         CanvasGroup group;
         RectTransform title, pick;
         Text pickEyebrow, pickTitle;
-        RectTransform options, next, toBattle;
+        RectTransform options, next, toBattle, privacy;
         readonly Dictionary<string, RectTransform> cards = new Dictionary<string, RectTransform>();
         readonly Dictionary<char, RectTransform> sides = new Dictionary<char, RectTransform>();
         readonly Dictionary<int, RectTransform> ranks = new Dictionary<int, RectTransform>();
@@ -58,6 +58,7 @@ namespace ChessWars.Game
         {
             group = gameObject.AddComponent<CanvasGroup>();
             var safe = SafeArea(root);
+            safe.gameObject.AddComponent<BannerInset>();
             BuildTitle(safe);
             BuildPick(safe);
             Show(0);
@@ -94,6 +95,12 @@ namespace ChessWars.Game
             y -= 0.075f;
             var online = Button("Online", title, new Vector2(0.5f, y), new Vector2(0.5f, y), "Online battle", () => OnlinePressed?.Invoke());
             online.SetOffsets(new Vector2(-320, -60), new Vector2(320, 60));
+            // Where the law asks for it (EEA/UK), a way back to the ad consent choices.
+            y -= 0.06f;
+            privacy = Button("Privacy", title, new Vector2(0.5f, y), new Vector2(0.5f, y), "Privacy choices", Ads.ShowPrivacyOptions);
+            privacy.SetOffsets(new Vector2(-200, -36), new Vector2(200, 36));
+            Style(privacy, false);
+            privacy.gameObject.SetActive(false);
         }
 
         void BuildPick(RectTransform safe)
@@ -243,6 +250,7 @@ namespace ChessWars.Game
         {
             // The phone's back button (Escape to the Input System) steps back through the screens.
             if (Open && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) Back();
+            if (privacy.gameObject.activeSelf != Ads.PrivacyOptionsRequired) privacy.gameObject.SetActive(Ads.PrivacyOptionsRequired);
         }
     }
 }

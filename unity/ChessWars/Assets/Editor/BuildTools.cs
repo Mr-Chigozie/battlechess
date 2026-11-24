@@ -1,7 +1,8 @@
 // Scene setup, preview renders and the Android build, all runnable from the command line:
 //   -executeMethod ChessWars.EditorTools.BuildTools.CreateScene    (writes Assets/Scenes/Battle.unity)
 //   -executeMethod ChessWars.EditorTools.BuildTools.Preview        (renders Builds/preview-*.png)
-//   -buildTarget Android -executeMethod ChessWars.EditorTools.BuildTools.BuildAndroid   (Builds/ChessWars.apk)
+//   -buildTarget Android -executeMethod ChessWars.EditorTools.BuildTools.BuildAndroid   (see BuildAndroid for the kinds)
+//   -executeMethod ChessWars.EditorTools.BuildTools.AppIcon        (Assets/Art/Icon.png, the app icon)
 using System.IO;
 using ChessWars.Game;
 using UnityEditor;
@@ -323,8 +324,7 @@ namespace ChessWars.EditorTools
         [MenuItem("Chess Wars/Export sounds")]
         public static void ExportSounds()
         {
-            string folder = System.Environment.GetEnvironmentVariable("CW_SOUND_DIR");
-            if (string.IsNullOrEmpty(folder)) folder = "Builds/Sounds";
+            string folder = Env("CW_SOUND_DIR") ?? "Builds/Sounds";
             Directory.CreateDirectory(folder);
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var effects = Synth.Effects();
@@ -416,22 +416,160 @@ namespace ChessWars.EditorTools
             Debug.Log($"[BuildTools] portraits written to {folder}");
         }
 
+        // The app icon: two Kings face off, the Knights' and the Undead's, head and shoulders over a dark field with a
+        // gold rim, kept inside the middle of the square so launchers' round and squircle masks don't cut them.
+        // Written to Assets/Art/Icon.png and set as the icon for every size. -executeMethod ...BuildTools.AppIcon
+        [MenuItem("Chess Wars/Render app icon")]
+        public static void AppIcon()
+        {
+            const string path = "Assets/Art/Icon.png";
+            const int size = 1024;
+            EditorSceneManager.OpenScene(ScenePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            ShaderUtil.allowAsyncCompilation = false;
+            Shader.SetGlobalFloat("_CW_OutlineScale", 1f);
+            var cam = Camera.main;
+            cam.GetComponent<UniversalAdditionalCameraData>().renderPostProcessing = false;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0, 0, 0, 0);
+            cam.fieldOfView = 30f;
+            var root = new GameObject("Icon").transform;
+            var left = UnitView.Spawn("knights", 'k', 'w', 0, 0, root);
+            var right = UnitView.Spawn("undead", 'k', 'b', 0, 0, root);
+            float h = Mathf.Max(left.Height, right.Height);
+            float spread = Env("CW_ICON_SPREAD") is string sp ? float.Parse(sp, System.Globalization.CultureInfo.InvariantCulture) : 0.16f;
+            float turn = Env("CW_ICON_TURN") is string tu ? float.Parse(tu, System.Globalization.CultureInfo.InvariantCulture) : 55f;
+            float lookY = Env("CW_ICON_Y") is string ly ? float.Parse(ly, System.Globalization.CultureInfo.InvariantCulture) : 0.6f;
+            float dist = Env("CW_ICON_DIST") is string di ? float.Parse(di, System.Globalization.CultureInfo.InvariantCulture) : 1.45f;
+            left.transform.SetPositionAndRotation(new Vector3(-spread * h, 0, 0), Quaternion.Euler(0, turn, 0));
+            right.transform.SetPositionAndRotation(new Vector3(spread * h, 0, 0), Quaternion.Euler(0, -turn, 0));
+            var look = new Vector3(0, h * lookY, 0);
+            cam.transform.position = look + new Vector3(0, 0.05f, 1f).normalized * h * dist;
+            cam.transform.LookAt(look);
+            var rt = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32) { antiAliasing = 8 };
+            cam.targetTexture = rt;
+            cam.aspect = 1f;
+            cam.Render();   // the first frame renders before materials are ready
+            cam.Render();
+            RenderTexture.active = rt;
+            var art = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            art.ReadPixels(new Rect(0, 0, size, size), 0, 0);
+            art.Apply();
+            RenderTexture.active = null;
+            cam.targetTexture = null;
+            Object.DestroyImmediate(rt);
+            Object.DestroyImmediate(root.gameObject);
+
+            var icon = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color inner = Armies.Hex(0x2c3a22), outer = Armies.Hex(0x07090a), gold = Armies.Hex(0xd6ad66);
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (x + 0.5f) / size - 0.5f, v = (y + 0.5f) / size - 0.5f;
+                    float r = Mathf.Sqrt(u * u + v * v) * 2f;
+                    var bg = Color.Lerp(inner, outer, Mathf.SmoothStep(0, 1, r));
+                    // A faint board behind their shoulders.
+                    if (v < -0.05f && ((Mathf.FloorToInt((u + 2) * 8) + Mathf.FloorToInt((v + 2) * 8)) & 1) == 0) bg = Color.Lerp(bg, inner * 1.6f, 0.25f);
+                    // The gold rim, on the circle a round mask keeps.
+                    float rim = Mathf.Clamp01(1f - Mathf.Abs(r - 0.86f) / 0.012f);
+                    bg = Color.Lerp(bg, gold, rim * 0.9f);
+                    var a = art.GetPixel(x, y);
+                    var c = Color.Lerp(bg, new Color(a.r, a.g, a.b), a.a);
+                    c.a = 1f;
+                    icon.SetPixel(x, y, c);
+                }
+            File.WriteAllBytes(path, icon.EncodeToPNG());
+            Object.DestroyImmediate(art);
+            Object.DestroyImmediate(icon);
+            AssetDatabase.ImportAsset(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Default;
+            importer.mipmapEnabled = false;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.maxTextureSize = 1024;
+            importer.SaveAndReimport();
+            SetIcon();
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[BuildTools] icon written to {path}");
+        }
+
+        static string Env(string key) => System.Environment.GetEnvironmentVariable(key) is string v && v.Length > 0 ? v : null;
+
+        static void SetIcon()
+        {
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/Icon.png");
+            if (tex == null) return;
+            PlayerSettings.SetIcons(UnityEditor.Build.NamedBuildTarget.Unknown, new[] { tex }, IconKind.Any);
+        }
+
+        // The Google Mobile Ads app ID (Ads.AndroidAppId) goes into the plugin's settings, which put it in the manifest.
+        static void SetAdsAppId()
+        {
+            const string path = "Assets/GoogleMobileAds/Resources/GoogleMobileAdsSettings.asset";
+            var settings = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+            if (settings == null)
+            {
+                var type = System.Type.GetType("GoogleMobileAds.Editor.GoogleMobileAdsSettings, GoogleMobileAds.Editor");
+                settings = (ScriptableObject)type.GetMethod("LoadInstance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).Invoke(null, null);
+            }
+            var so = new SerializedObject(settings);
+            so.FindProperty("adMobAndroidAppId").stringValue = Ads.AndroidAppId;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>The Android build. Environment variables choose the kind:
+        ///   CW_DEV=1         a development APK (Builds/ChessWars-dev.apk), which may talk plain HTTP to a test server;
+        ///   CW_KEYSTORE=...  a release signed with your upload key (with CW_KEYSTORE_PASS, CW_KEY_ALIAS, CW_KEY_PASS),
+        ///                    as the Play Store bundle Builds/ChessWars.aab (CW_APK=1 for a signed APK instead);
+        ///   neither          a release APK signed with the debug key, for sideloading (Builds/ChessWars.apk).
+        /// CW_VERSION ("1.0") and CW_VERSION_CODE (1, 2, 3 ... one higher for every upload to Play) set the version.</summary>
         public static void BuildAndroid()
         {
             Directory.CreateDirectory("Builds");
             PlayerSettings.Android.forceInternetPermission = true;   // online play
-            // CW_DEV=1: a development build, which may talk plain HTTP to a test server (see Server.Address).
-            bool dev = System.Environment.GetEnvironmentVariable("CW_DEV") == "1";
             PlayerSettings.insecureHttpOption = InsecureHttpOption.DevelopmentOnly;
-            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            bool dev = Env("CW_DEV") == "1";
+            string keystore = Env("CW_KEYSTORE");
+            bool signed = !dev && keystore != null;
+            bool bundle = signed && Env("CW_APK") != "1";
+            if (Env("CW_VERSION") is string version) PlayerSettings.bundleVersion = version;
+            if (int.TryParse(Env("CW_VERSION_CODE"), out int code)) PlayerSettings.Android.bundleVersionCode = code;
+            SetIcon();
+            SetAdsAppId();
+            if (signed)
             {
-                scenes = new[] { ScenePath },
-                locationPathName = dev ? "Builds/ChessWars-dev.apk" : "Builds/ChessWars.apk",
-                target = BuildTarget.Android,
-                options = dev ? BuildOptions.Development : BuildOptions.None
-            });
+                PlayerSettings.Android.useCustomKeystore = true;
+                PlayerSettings.Android.keystoreName = keystore;
+                PlayerSettings.Android.keystorePass = Env("CW_KEYSTORE_PASS");
+                PlayerSettings.Android.keyaliasName = Env("CW_KEY_ALIAS");
+                PlayerSettings.Android.keyaliasPass = Env("CW_KEY_PASS") ?? Env("CW_KEYSTORE_PASS");
+            }
+            EditorUserBuildSettings.buildAppBundle = bundle;
+            BuildReport report;
+            try
+            {
+                report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = new[] { ScenePath },
+                    locationPathName = dev ? "Builds/ChessWars-dev.apk" : bundle ? "Builds/ChessWars.aab" : "Builds/ChessWars.apk",
+                    target = BuildTarget.Android,
+                    options = dev ? BuildOptions.Development : BuildOptions.None
+                });
+            }
+            finally
+            {
+                // Keep the key's location and the bundle switch out of the project files.
+                PlayerSettings.Android.useCustomKeystore = false;
+                PlayerSettings.Android.keystoreName = "";
+                PlayerSettings.Android.keyaliasName = "";
+                PlayerSettings.Android.keystorePass = "";
+                PlayerSettings.Android.keyaliasPass = "";
+                EditorUserBuildSettings.buildAppBundle = false;
+                AssetDatabase.SaveAssets();
+            }
             var s = report.summary;
-            Debug.Log($"[BuildTools] Android build {s.result}: {s.outputPath} ({s.totalSize / (1024f * 1024f):0.0} MB) in {s.totalTime}, {s.totalErrors} errors");
+            Debug.Log($"[BuildTools] Android build {s.result}: {s.outputPath} ({s.totalSize / (1024f * 1024f):0.0} MB) in {s.totalTime}, {s.totalErrors} errors, version {PlayerSettings.bundleVersion} ({PlayerSettings.Android.bundleVersionCode}){(signed ? ", signed with " + Path.GetFileName(keystore) : "")}");
             if (s.result != BuildResult.Succeeded) EditorApplication.Exit(1);
         }
     }

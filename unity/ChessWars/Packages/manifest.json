@@ -18,6 +18,16 @@
     "com.unity.modules.unitywebrequest": "1.0.0",
     "com.unity.modules.unitywebrequesttexture": "1.0.0",
     "com.unity.cinemachine": "3.1.4",
-    "com.unity.timeline": "1.8.13"
-  }
+    "com.unity.timeline": "1.8.13",
+    "com.google.ads.mobile": "11.7.0"
+  },
+  "scopedRegistries": [
+    {
+      "name": "OpenUPM",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.google.ads.mobile"
+      ]
+    }
+  ]
 }
